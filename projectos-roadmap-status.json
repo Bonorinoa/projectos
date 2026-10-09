@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-09T20:24:06.363Z",
+  "updatedAt": "2026-10-09T20:27:20.268Z",
   "commit": "sha256:e6b0384696d943de600eee250715a09eb1942971b945484286aacf73cc63bae9",
   "sourceSnapshot": "projectos-source-snapshot.json",
   "sourceStats": {
@@ -16,12 +16,12 @@
       "note": "Native macOS arm64 shell builds and launches; local UI and cancellation probes passed. Clean-machine, signing/notarization and full Linux/accessibility/IME/PDF matrix remain open."
     },
     "m0.graph": {
-      "status": "blocked",
+      "status": "implemented",
       "evidence": [
         "evidence/gates/gate-b/report.json",
         "evidence/gates/gate-b/rust-integration.json"
       ],
-      "note": "Evidence is stale; rerun after source changes."
+      "note": "Python embedded contracts pass on macOS; pinned Rust/Tauri probe evidence is separate. Engine selection, license review, universal/Linux packaging and production-scale memory remain open."
     },
     "m0.worker": {
       "status": "blocked",
@@ -45,7 +45,5 @@
       "note": "Mock provider, PKCE callback and encrypted-vault contracts implemented. Native credential/egress boundary, OS keyring, live opt-in conformance and Linux remain open."
     }
   },
-  "diagnostics": [
-    "graph: evidence source mismatch: spikes/gate-b/rust-tauri/Cargo.toml, spikes/gate-b/rust-tauri/Cargo.lock, spikes/gate-b/rust-tauri/src/main.rs, spikes/gate-b/rust-tauri/evidence.mjs"
-  ]
+  "diagnostics": []
 }

@@ -1,2 +1,2 @@
 target/debug/projectos-graph-embedding --contract
-{"checks":6,"engine":"Helix","export":{"columns":["a.sid"],"rows":[["a"],["b"]]},"mode":"in-process Rust","operations":["one-hop","two-hop","update","delete","disk-reopen","read-only write rejection"],"sourceRevision":"c72e64f0c7e480f3d125f071659d5e3ad7b8da15","status":"pass"}
+{"checks":6,"engine":"Helix","export":{"columns":["a.sid"],"rows":[["a"],["b"]]},"mode":"in-process Rust","operations":["one-hop","two-hop","update","delete","disk-reopen","read-only write rejection"],"queryTelemetry":"explicitly-disabled","sourceRevision":"c72e64f0c7e480f3d125f071659d5e3ad7b8da15","status":"pass"}
