@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectOS — Spatial Canvas</title>
+<style>
+  :root {
+    --bg:#101412; --ink:#e6eae4; --muted:#8f9b94; --accent:#7fbf8f; --paper:#e8e2d4; --coral:#c96b4b;
+    --serif: ui-serif, Charter, "Iowan Old Style", Georgia, serif;
+    --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    --ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:var(--ui); font-size:13px; }
+  .top { height:44px; background:#161b18; border-bottom:1px solid #26302c; display:flex; align-items:center; gap:10px; padding:0 14px; color:#aebbb4; z-index:20; position:fixed; top:0; left:0; right:0; }
+  .brand { font-family:var(--serif); font-size:15px; } .brand i { color:var(--accent); }
+  .zoom { display:flex; align-items:center; gap:6px; margin-left:auto; }
+  .zoom button { font:inherit; width:24px; height:24px; border-radius:6px; border:1px solid #26302c; background:transparent; color:var(--muted); cursor:pointer; }
+  #scale { font-family:var(--mono); font-size:11px; color:var(--muted); width:44px; text-align:center; }
+  .hint { font-size:11.5px; color:var(--muted); } .hint b { color:var(--accent); }
+  #cv { position:absolute; top:44px; left:0; right:0; bottom:0; overflow:hidden; background:
+    radial-gradient(circle at 50% 50%, #141a16 0%, #0f1310 60%, #0c0f0d 100%); }
+  #grid { position:absolute; inset:0; background-image:linear-gradient(#1c231f 1px,transparent 1px),linear-gradient(90deg,#1c231f 1px,transparent 1px); background-size:36px 36px; opacity:.5; }
+  .plate { position:absolute; width:224px; background:var(--paper); color:#1d241f; border-radius:12px; box-shadow:0 16px 0 rgba(0,0,0,.4), 0 3px 0 rgba(0,0,0,.5); cursor:grab; font-size:12px; border:1px solid #d9cfc0; transform:translate(-50%,-50%); }
+  .plate .tt { font-family:var(--serif); font-size:14.5px; border-bottom:1px solid #bfb4a2; padding:7px 11px 5px; }
+  .plate .bb { color:#3a413b; padding:6px 11px 6px; font-size:11px; line-height:1.35; }
+  .plate .tag { display:inline-block; font-family:var(--mono); font-size:9.5px; background:#e7d9b8; color:#7a5b1e; border-radius:4px; padding:0 5px; margin-right:5px; }
+  .plate.hot { outline:3px solid var(--accent); outline-offset:2px; box-shadow:0 26px 0 rgba(0,0,0,.5),0 4px 0 rgba(0,0,0,.6); }
+  .plate .live { width:8px;height:8px;border-radius:50%;background:var(--coral);display:inline-block;margin-left:6px; }
+  .datum { position:absolute; right:14px; bottom:14px; font-family:var(--mono); font-size:10.5px; color:#5f6a63; background:#141a17; border:1px solid #26302c; border-radius:6px; padding:4px 9px; }
+  .drawer { position:absolute; right:0; top:44px; bottom:0; width:330px; background:#191f1c; border-left:1px solid #26302c; padding:15px; box-shadow:-18px 0 0 rgba(0,0,0,.35); transform:translateX(330px); transition:transform .3s; }
+  .drawer h3 { font-family:var(--serif); color:#e6e4d8; font-size:16px; }
+  .receipt { white-space:pre-wrap; font-family:var(--mono); font-size:11px; background:#101512; color:#b9c4b6; border:1px solid #26302c; border-radius:8px; padding:10px; margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="top"><div class="brand">Project<i>OS</i></div><span class="hint">canvas — <b>drag</b> plates, layout is yours; double-click a plate to open its drawer.</span>
+  <div class="zoom"><button id="zin">+</button><span id="scale">100%</span><button id="zout">−</button></div></div>
+<div id="cv"><div id="grid"></div></div>
+<div class="drawer" id="drw"><h3 id="d-title">—</h3><div class="receipt" id="d-receipt"></div></div>
+<script>
+const P=[["The economics of attention…","+2,260 · y −120 · S",["SUBSTACK","argue · editor pass", "receipt 0017 · rephrase accepted · route deepseek-v4.1-flash · $0.0023"],"x:340,y:160","econ-attn"],
+["helix-broker","x:840,y:180 · GATE C2",["SOFTWARE","gate C · 2 red", "app-sandbox forked /bin/sh → kept open · memory ceiling unresolved"],"x:780,y:240","broker"],
+["Culture–hierarchy","x:500,y:420 · MEASURING",["ACADEMIC","γ=0.41 [0.33,0.50]", "claim evidence 3 direct / 2 partial / 1 contradiction surfaced"],"x:560,y:470","cult"],
+["Rust for economists","x:1120,y:420 · ch.4",["LEARNING","notes · target: html book", "selected-text proposal stored · no silent mutation"],"x:1240,y:470","rust"],
+["Letters on measurement","x:150,y:600 · PREMISE",["SUBSTACK","series of three", "premise + audience captured; waiting for a draft week"],"x:220,y:640","lett"]];
+const cv=document.getElementById('cv');let z=1,drag=null,openId=-1;
+P.forEach(p=>{ const el=document.createElement('div'); el.className='plate'; el.className='plate'; el.style.left=p[3].split(',')[0].replace('x:','')+'px'; el.style.top=p[3].split(',')[1].replace('y:','')+'px';
+ el.innerHTML=`<div class="tt">${p[0]}<span class="live"></span></div><div class="bb"><span class="tag">${p[2][0]}</span>${p[2][1]}<br>${p[2][2]}</div>`; el.dataset.i=P.indexOf(p);
+ el.addEventListener('mousedown',e=>{ drag={el,dx:e.offsetX,dy:e.offsetY}; el.style.cursor='grabbing'; });
+ el.addEventListener('mouseup',()=>{ drag=null; el.style.cursor='grab'; });
+ el.addEventListener('dblclick',()=>{ openId=+el.dataset.i; document.querySelectorAll('.plate').forEach(x=>x.classList.remove('hot')); el.classList.add('hot');
+   document.getElementById('drw').style.transform='translateX(0)';
+   document.getElementById('d-title').textContent=P[openId][0];
+   document.getElementById('d-receipt').textContent=P[openId][2].join('\n'); });
+ cv.appendChild(el); });
+document.addEventListener('mouseup',()=>drag=null);
+cv.addEventListener('mousemove',e=>{ if(!drag)return; drag.el.style.left=(e.clientX-drag.dx)+'px'; drag.el.style.top=(e.clientY-drag.dy)+'px'; });
+const apply=()=>{ document.querySelectorAll('.plate').forEach(el=>el.style.transform=`translate(-50%,-50%) scale(${z})`); document.getElementById('scale').textContent=Math.round(z*100)+'%'; };
+document.getElementById('zin').onclick=()=>{ z=Math.min(z*1.15,2); apply(); };
+document.getElementById('zout').onclick=()=>{ z=Math.max(z/1.15,.5); apply(); };
+</script>
+</body>
+</html>

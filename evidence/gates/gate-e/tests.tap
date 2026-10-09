@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: streaming and requested/resolved model receipt, credentials stay in transport
+ok 1 - streaming and requested/resolved model receipt, credentials stay in transport
+  ---
+  duration_ms: 3.779292
+  type: 'test'
+  ...
+# Subtest: fixed ordered fallback is visible and no hidden routing
+ok 2 - fixed ordered fallback is visible and no hidden routing
+  ---
+  duration_ms: 0.529708
+  type: 'test'
+  ...
+# Subtest: invalid route is rejected before any credential or payload is sent
+ok 3 - invalid route is rejected before any credential or payload is sent
+  ---
+  duration_ms: 0.853708
+  type: 'test'
+  ...
+# Subtest: credential cannot be reused after endpoint change or logout
+ok 4 - credential cannot be reused after endpoint change or logout
+  ---
+  duration_ms: 0.363583
+  type: 'test'
+  ...
+# Subtest: redirect response refuses stream and leaves truthful unknown outcome
+ok 5 - redirect response refuses stream and leaves truthful unknown outcome
+  ---
+  duration_ms: 0.653708
+  type: 'test'
+  ...
+# Subtest: changed response endpoint rejected
+ok 6 - changed response endpoint rejected
+  ---
+  duration_ms: 0.279334
+  type: 'test'
+  ...
+# Subtest: auto routing requires opt-in and still records resolved model
+ok 7 - auto routing requires opt-in and still records resolved model
+  ---
+  duration_ms: 0.277042
+  type: 'test'
+  ...
+# Subtest: provider error containing secrets is normalized and never retried automatically
+ok 8 - provider error containing secrets is normalized and never retried automatically
+  ---
+  duration_ms: 0.2065
+  type: 'test'
+  ...
+# Subtest: timeout aborts transport and forbids ambiguous retry
+ok 9 - timeout aborts transport and forbids ambiguous retry
+  ---
+  duration_ms: 10.858625
+  type: 'test'
+  ...
+# Subtest: midstream cancellation stops events and aborts transport
+ok 10 - midstream cancellation stops events and aborts transport
+  ---
+  duration_ms: 0.68025
+  type: 'test'
+  ...
+# Subtest: pre-cancelled request does not call transport
+ok 11 - pre-cancelled request does not call transport
+  ---
+  duration_ms: 0.153542
+  type: 'test'
+  ...
+# Subtest: missing resolved model fails instead of pretending requested model served
+ok 12 - missing resolved model fails instead of pretending requested model served
+  ---
+  duration_ms: 0.170125
+  type: 'test'
+  ...
+# Subtest: cost estimate, usage, billed amount stay separate
+ok 13 - cost estimate, usage, billed amount stay separate
+  ---
+  duration_ms: 0.144292
+  type: 'test'
+  ...
+# Subtest: unknown bill and unknown usage prevent additional spending
+ok 14 - unknown bill and unknown usage prevent additional spending
+  ---
+  duration_ms: 0.429459
+  type: 'test'
+  ...
+# Subtest: spend and total token ceilings block calls before send
+ok 15 - spend and total token ceilings block calls before send
+  ---
+  duration_ms: 0.3305
+  type: 'test'
+  ...
+# Subtest: provider ceiling violation is visible and blocks all further calls
+ok 16 - provider ceiling violation is visible and blocks all further calls
+  ---
+  duration_ms: 0.149875
+  type: 'test'
+  ...
+# Subtest: concurrent requests cannot race the cost budget
+ok 17 - concurrent requests cannot race the cost budget
+  ---
+  duration_ms: 0.161209
+  type: 'test'
+  ...
+# Subtest: offline draft survives reconnect and requires exact hash review
+ok 18 - offline draft survives reconnect and requires exact hash review
+  ---
+  duration_ms: 0.316875
+  type: 'test'
+  ...
+# Subtest: input change outside exact egress approval is denied
+ok 19 - input change outside exact egress approval is denied
+  ---
+  duration_ms: 0.077292
+  type: 'test'
+  ...
+# Subtest: credential echoed by provider is redacted even across chunk boundaries
+ok 20 - credential echoed by provider is redacted even across chunk boundaries
+  ---
+  duration_ms: 0.185917
+  type: 'test'
+  ...
+# Subtest: stream redaction handles self-overlapping secret prefixes
+ok 21 - stream redaction handles self-overlapping secret prefixes
+  ---
+  duration_ms: 0.0675
+  type: 'test'
+  ...
+# Subtest: revocation during transport open retains request-lifetime secret redaction
+ok 22 - revocation during transport open retains request-lifetime secret redaction
+  ---
+  duration_ms: 0.242458
+  type: 'test'
+  ...
+# Subtest: switching offline during a stream cancels the active call
+ok 23 - switching offline during a stream cancels the active call
+  ---
+  duration_ms: 0.160542
+  type: 'test'
+  ...
+# Subtest: request snapshot cannot be changed while transport waits
+ok 24 - request snapshot cannot be changed while transport waits
+  ---
+  duration_ms: 0.13275
+  type: 'test'
+  ...
+# Subtest: OAuth PKCE S256 uses random state, ephemeral loopback, exact callback and one shot
+ok 25 - OAuth PKCE S256 uses random state, ephemeral loopback, exact callback and one shot
+  ---
+  duration_ms: 26.137541
+  type: 'test'
+  ...
+# Subtest: passphrase vault encrypts, locks, recovers encrypted backup and rejects wrong passphrase
+ok 26 - passphrase vault encrypts, locks, recovers encrypted backup and rejects wrong passphrase
+  ---
+  duration_ms: 252.157209
+  type: 'test'
+  ...
+# Subtest: logout during OAuth exchange revokes late-arriving credential
+ok 27 - logout during OAuth exchange revokes late-arriving credential
+  ---
+  duration_ms: 4.436833
+  type: 'test'
+  ...
+# Subtest: transient OAuth revocation failure remains retryable and success is one shot
+ok 28 - transient OAuth revocation failure remains retryable and success is one shot
+  ---
+  duration_ms: 1.817625
+  type: 'test'
+  ...
+# Subtest: vault capacity rejects oversized writes before mutation and accepted backup restores
+ok 29 - vault capacity rejects oversized writes before mutation and accepted backup restores
+  ---
+  duration_ms: 172.274167
+  type: 'test'
+  ...
+# Subtest: vault handles cannot collide with inherited object properties
+ok 30 - vault handles cannot collide with inherited object properties
+  ---
+  duration_ms: 121.962917
+  type: 'test'
+  ...
+# Subtest: vault tampering is authenticated and never falls back to plaintext
+ok 31 - vault tampering is authenticated and never falls back to plaintext
+  ---
+  duration_ms: 304.900875
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1001.245666

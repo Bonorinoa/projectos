@@ -1,0 +1,119 @@
+{
+  "gate": "C",
+  "generatedAt": "2026-10-09T01:26:03.578Z",
+  "kind": "supported-app-sandbox-native-probe",
+  "compile": {
+    "command": [
+      "/usr/bin/cc",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/app-sandbox-probe.c",
+      "-o",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app/Contents/MacOS/app-sandbox-probe"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": ""
+  },
+  "generatedMetadataCleanup": {
+    "command": [
+      "/usr/bin/xattr",
+      "-cr",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": ""
+  },
+  "signing": {
+    "command": [
+      "/usr/bin/codesign",
+      "--force",
+      "--sign",
+      "-",
+      "--entitlements",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/app-sandbox.entitlements.plist",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app: replacing existing signature\n"
+  },
+  "signature": {
+    "command": [
+      "/usr/bin/codesign",
+      "--display",
+      "--entitlements",
+      "-",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app/Contents/MacOS/app-sandbox-probe"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "[Dict]\n\t[Key] com.apple.security.app-sandbox\n\t[Value]\n\t\t[Bool] true\n",
+    "stderr": "Executable=/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app/Contents/MacOS/app-sandbox-probe\n"
+  },
+  "execution": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/ProjectOSSandboxProbe.app/Contents/MacOS/app-sandbox-probe",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ambientFileErrno\":1,\"localhostErrno\":1,\"dnsReturn\":8,\"forkErrno\":0,\"childExit\":42}\n",
+    "stderr": ""
+  },
+  "result": {
+    "ambientFileErrno": 1,
+    "localhostErrno": 1,
+    "dnsReturn": 8,
+    "forkErrno": 0,
+    "childExit": 42
+  },
+  "controlCompile": {
+    "command": [
+      "/usr/bin/cc",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/app-sandbox-probe.c",
+      "-o",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/app-sandbox-control"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": ""
+  },
+  "controlExecution": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/app-sandbox-control",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ambientFileErrno\":0,\"localhostErrno\":61,\"dnsReturn\":8,\"forkErrno\":0,\"childExit\":42}\n",
+    "stderr": ""
+  },
+  "sourceHashes": {
+    "spikes/gate-c/app-sandbox-probe.c": "7a109ec121ae38abc1a2d095e086105a7c99762a563aca7b8ae4abb6188c9150",
+    "spikes/gate-c/app-sandbox.entitlements.plist": "2029dc93bcf7d42441f95e6dfa64b98af67e71d4a168542fd208c6e84da6af17",
+    "spikes/gate-c/app-sandbox.Info.plist": "c3e77af96893199b74f5213566a2b9b8f08ae838d3b93b86bb12e4f653d66ad7",
+    "spikes/gate-c/run-app-sandbox.mjs": "42bbb47167598cbab0da2169e0106690721642425c725a7d209207bf9342651a"
+  },
+  "decision": "filesystem-and-network-subset-proven",
+  "limitations": [
+    "Native helper only: no TS runtime or broker IPC integration.",
+    "Ad hoc signature only: universal/notarization/clean-machine distribution untested.",
+    "DNS failure alone does not prove policy denial.",
+    "A successful fork/child exit 42 means locked child-process boundary FAILS.",
+    "OS memory ceiling remains unproven; this probe does not weaken it."
+  ]
+}

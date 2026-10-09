@@ -1,0 +1,30 @@
+Observed 2026-10-06 on the available host.
+
+$ uname -a
+Darwin Augustos-MacBook-Pro.local 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:17:26 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6041 arm64
+
+$ sw_vers
+ProductName: macOS
+ProductVersion: 26.6.2
+BuildVersion: 25G83
+
+$ uname -m
+arm64
+
+$ node --version
+v22.22.3
+
+$ npm --version
+10.9.8
+
+$ cargo --version
+zsh: command not found: cargo
+
+$ rustc --version
+zsh: command not found: rustc
+
+$ rustup show active-toolchain
+zsh: command not found: rustup
+
+$ pkg-config --version
+zsh: command not found: pkg-config

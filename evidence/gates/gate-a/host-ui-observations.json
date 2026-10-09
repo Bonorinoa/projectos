@@ -1,0 +1,14 @@
+{
+  "observedDate": "2026-10-08",
+  "method": "Native macOS accessibility and visual inspection through computer-use tools",
+  "scope": "development host macOS arm64; initial debug bundle before cancellation regression fix",
+  "observations": [
+    {"id":"launch","status":"pass","evidence":"Window ProjectOS · Gate A shell probe, URL tauri://localhost; metadata Tauri 2.12.0 macos aarch64"},
+    {"id":"accessibility-tree","status":"pass","evidence":"Headings, named text editor, file upload control, named buttons and progress state exposed. Full VoiceOver/usability matrix remains untested."},
+    {"id":"file-dialog","status":"pass","evidence":"Native Open dialog selected active-content.html (890 bytes); frontend showed exact fixture text in inert selectable preview."},
+    {"id":"hostile-html","status":"pass","evidence":"script, iframe, remote image/base and navigation payload remained text; app stayed at tauri://localhost. Network capture and privileged-IPC attack instrumentation not performed."},
+    {"id":"ipc-cancel","status":"pass","evidence":"Started real five-second Rust job; clicked Cancel; result probe_1791508603439: 169/200 steps; cancelled=true."},
+    {"id":"visual-layout","status":"pass","evidence":"Observed two-column labeled probe cards, visible buttons/editor and inert text preview. 200 percent zoom not executed."}
+  ],
+  "untested": ["clean installation","notarization","Linux","drag/drop","clipboard roundtrip","real IME","PDF extraction/selection","full screen-reader exercise","200 percent zoom","no-GPU launch"]
+}

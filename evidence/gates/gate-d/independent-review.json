@@ -1,0 +1,57 @@
+{
+  "gate": "D",
+  "reviewer": "provider_contract (independent of recovery_complete implementation)",
+  "scope": "Read-only adversarial review of the offline JSON recovery model, independent host-filesystem reproductions under temporary /private/tmp directories and full suite rerun.",
+  "source_sha256": {
+    "spikes/gate-d/recovery_harness.py": "315c1159dc8b26f715a58a888aacb87ce93d51925e6da8742a9a526e0d2b2d9c",
+    "spikes/gate-d/test_recovery.py": "f5f844a31de87750c400c63bb202de78617cb3a382258b6f68ca1cfcb3cba2e4"
+  },
+  "suite": {
+    "command": "python3 -B spikes/gate-d/test_recovery.py --report /private/tmp/projectos-gate-d-review-report.json",
+    "exit_code": 0,
+    "total": 113,
+    "passed": 113,
+    "failed": 0,
+    "errors": 0,
+    "independent_raw_report": "/private/tmp/projectos-gate-d-review-report.json"
+  },
+  "reproductions": [
+    {
+      "issue": "Acknowledged schema and pack migrations lost after live graph corruption",
+      "steps": "Create temporary RecoveryHarness; commit accepted artifact; migrate_pack(firstparty.software,2,transform); overwrite graph_path with corrupt bytes; recover. Separately start graph schema 2, commit artifact, migrate(2), corrupt live graph and recover.",
+      "before_fix": "Successful pack migration restored without pack_versions; successful schema 3 migration restored schema 2.",
+      "after_fix": "Pack version firstparty.software=2 and migrated schema=3 survive corrupt-live-graph recovery.",
+      "status": "reproduced_and_independently_verified_fixed"
+    },
+    {
+      "issue": "Snapshot ordering metadata outside integrity checksum could hide later acknowledged mutations",
+      "steps": "Commit m-first then m-second; change only m-first snapshot sequence to 999; corrupt live graph; recover and inspect revision mutation IDs.",
+      "before_fix": "Older snapshot accepted with forged ordering; revisions contained only m-first while artifact held second bytes.",
+      "after_fix": "Full snapshot envelope integrity rejects ordering corruption; revision IDs remain m-first and m-second.",
+      "status": "reproduced_and_independently_verified_fixed"
+    },
+    {
+      "issue": "Pack migration callback could erase immutable global receipt history",
+      "steps": "Commit accepted artifact; call migrate_pack(firstparty.software,2,lambda payload:payload.update(receipts=[])); compare global receipts before and after.",
+      "before_fix": "Whole-state callback erased graph receipts and migration returned success.",
+      "after_fix": "Callback changes only pack_data[firstparty.software]; immutable global receipts remain equal to pre-migration history.",
+      "status": "reproduced_and_independently_verified_fixed"
+    }
+  ],
+  "descriptor_review": {
+    "source_inspection": "ScopedFS retains opened project root; ancestor traversal and leaf opens use descriptor-relative O_NOFOLLOW; mutation retains destination parent through apply; staged and applied bytes are checked; restore installs with no-replace link semantics.",
+    "independent_reproduction": "At after_prepared hook, rename original project root and create a replacement directory containing sentinel artifact. Complete mutation using original harness. Verified original retained directory contains accepted bytes, replacement sentinel is unchanged, and replacement has no sidecar.",
+    "suite_coverage": "113-case independent rerun includes concurrent leaf symlink swaps, deterministic post-check leaf swap, parent/root replacement, hardlinked staging, FIFO denial, sidecar/lock symlinks, staged-source swap and no-replace restore race.",
+    "outcome": "Reviewed descriptor containment and current suite pass on this macOS host; no new concrete containment failure reproduced."
+  },
+  "conclusion": "The reviewed JSON model suite passes and the three independently demonstrated defects are repaired. Descriptor confinement has host-tested evidence. This is not full Gate D acceptance.",
+  "limitations": [
+    "No embedded Helix/Ladybug transaction or WAL integration verified.",
+    "No hardware power-loss durability, real disk-full fault, cloud/network filesystem behavior or Linux parity verified.",
+    "Concurrent external regular-file edits after final hash check cannot be atomically excluded by the current rename protocol; Unicode/case equivalence and cross-platform filesystem parity remain unverified.",
+    "External attempt ledger is an in-memory semantics fixture, not durable production recovery.",
+    "Profile restore is a JSON fixture; production profile adapter/journal integration remains unverified.",
+    "Schema migration coordination with canonical project.toml envelope versions remains an explicit gap.",
+    "Manual user acceptance remains outstanding."
+  ]
+}

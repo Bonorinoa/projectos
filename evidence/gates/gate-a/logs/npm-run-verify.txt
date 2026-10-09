@@ -1,0 +1,6 @@
+/Users/bonorinoa/.hermes/node/bin/node tests/verify-gate-a.mjs
+{
+  "status": "pass",
+  "checks": 31,
+  "note": "Static harness/configuration contract passed; this is not native platform evidence."
+}

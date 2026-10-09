@@ -1,0 +1,21 @@
+[package]
+name = "projectos-graph-embedding"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.97.1"
+publish = false
+
+[dependencies]
+helix-db = { git = "https://github.com/HelixDB/helix-db.git", rev = "c72e64f0c7e480f3d125f071659d5e3ad7b8da15", features = ["embedded"] }
+helix-core-db = { package = "db", git = "https://github.com/HelixDB/helix-db.git", rev = "c72e64f0c7e480f3d125f071659d5e3ad7b8da15" }
+serde_json = "=1.0.151"
+tokio = { version = "=1.53.2", features = ["rt-multi-thread", "macros"] }
+tempfile = "=3.27.0"
+tauri = { version = "=2.12.0", optional = true , features = [] }
+
+[build-dependencies]
+tauri-build = { version = "=2.7.0", optional = true , features = [] }
+
+[features]
+desktop = ["dep:tauri", "dep:tauri-build", "tauri/custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

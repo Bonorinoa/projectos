@@ -1,0 +1,88 @@
+{
+  "gate": "B",
+  "status": "partial_unverified",
+  "generatedAt": "2026-10-09T01:36:48.607Z",
+  "upstreamRevision": "c72e64f0c7e480f3d125f071659d5e3ad7b8da15",
+  "rustToolchain": "1.97.1",
+  "checks": [
+    {
+      "id": "desktop-build",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-desktop-build.txt"
+    },
+    {
+      "id": "desktop-bundle",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-desktop-bundle.txt"
+    },
+    {
+      "id": "contract",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-contract.txt"
+    },
+    {
+      "id": "dynamic-libraries",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-dynamic-libraries.txt"
+    },
+    {
+      "id": "dependency-inventory",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-dependency-inventory.txt"
+    }
+  ],
+  "receipt": {
+    "checks": 6,
+    "engine": "Helix",
+    "export": {
+      "columns": [
+        "a.sid"
+      ],
+      "rows": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
+    },
+    "mode": "in-process Rust",
+    "operations": [
+      "one-hop",
+      "two-hop",
+      "update",
+      "delete",
+      "disk-reopen",
+      "read-only write rejection"
+    ],
+    "sourceRevision": "c72e64f0c7e480f3d125f071659d5e3ad7b8da15",
+    "status": "pass"
+  },
+  "sourceHashes": {
+    "spikes/gate-b/rust-tauri/Cargo.toml": "b3a2494917f51dbd7b130be0977da34c68d8fe83a747d3970a0ceae33cc1e1d4",
+    "spikes/gate-b/rust-tauri/Cargo.lock": "d4162bc98b319020ccb461982f674542010ba7eae0ec5f0ec7517fcba9f7bbc1",
+    "spikes/gate-b/rust-tauri/rust-toolchain.toml": "3003a09987459e5921dcddde94f8ea929b2d5e66efbbc30160e9d78de7ff010a",
+    "spikes/gate-b/rust-tauri/build.rs": "4379ba89924184a9a57d189938af36565f876df56bc4edcca39fc5a2bd282e8a",
+    "spikes/gate-b/rust-tauri/src/main.rs": "164453317a9bd932769b6ab3c710928329908a8df9ad7048d9cc99e55c0f77ba",
+    "spikes/gate-b/rust-tauri/tauri.conf.json": "7334cafec7ea259b8d390c22d17e0befe40337d203f841cf1b4443e03a3dbdc4",
+    "spikes/gate-b/rust-tauri/ui/index.html": "a64a6350dbadc96a8b770f409e88147960e73f7c856b6984963d29d52ab9a5c4",
+    "spikes/gate-b/rust-tauri/ui/probe.js": "20c7d565bf4711084d00ed428c70b6a94cbeb219519d26e47b938a7d50783130",
+    "spikes/gate-b/rust-tauri/evidence.mjs": "ff9056fff906854b6a5f2c9ad120030021707bc28dbf9df0d8f2583e43014bb1",
+    "spikes/gate-b/rust-tauri/README.md": "3b93421ed1ff255355e8454b1cfb32fd307650ffecbd536126fe17bcd1cd7e07",
+    "spikes/gate-a/src-tauri/icons/icon.png": "f551c6ff1f68f768e159d47052a350e39600319e25af3e414e2ffc7b0e1e0d9d"
+  },
+  "licenseInventory": "evidence/gates/gate-b/dependency-license-inventory.json",
+  "binarySha256": "c57743e9504e213804f46694efc300c30b4dcf271cf653e75efdb29accfa5774",
+  "limitations": [
+    "Published helix-db 3.0.0 crate has no embedded feature; this pins Git source with embedded enabled. Rust 1.90 fails an upstream parent-module import; the pinned upstream toolchain 1.97.1 succeeds.",
+    "Six Rust operations on a tiny corpus are not the entire shared engine gate. Python adapter has separately rerun eight contract groups for each candidate.",
+    "Clean universal/macOS/Linux installation, signing, dependency license review, full Rust adapter/export/recovery/concurrency and production-scale memory remain unverified.",
+    "The SDK has network-capable dependencies for other modes; this probe only opens local Disk sources. Production central egress enforcement remains required."
+  ]
+}

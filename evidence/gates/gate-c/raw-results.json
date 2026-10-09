@@ -1,0 +1,1303 @@
+{
+  "compile_file-broker": {
+    "command": [
+      "/usr/bin/cc",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/file-broker.c",
+      "-o",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": "",
+    "error": null
+  },
+  "compile_broker-race-test": {
+    "command": [
+      "/usr/bin/cc",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/broker-race-test.c",
+      "-o",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-race-test"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": "",
+    "error": null
+  },
+  "broker_race": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-race-test",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/race-root",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/race-outside"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"attempts\":50000,\"allowed\":989,\"denied\":49011,\"escaped\":0}\n",
+    "stderr": "",
+    "error": null
+  },
+  "mkfifo": {
+    "command": [
+      "/usr/bin/mkfifo",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract/fifo"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": "",
+    "error": null
+  },
+  "native_allowed": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "allowed.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":true,\"result\":{\"hex\":\"494e534944450a\",\"bytes\":7,\"device\":\"16777232\",\"inode\":\"73906721\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": true,
+      "result": {
+        "hex": "494e534944450a",
+        "bytes": 7,
+        "device": "16777232",
+        "inode": "73906721"
+      }
+    },
+    "passed": true
+  },
+  "native_absolute": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "/etc/passwd"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_PATH_ABSOLUTE\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_PATH_ABSOLUTE",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_traversal": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "sub/../allowed.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_PATH_ESCAPE\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_PATH_ESCAPE",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_final_symlink": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "final-link"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_SYMLINK\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_SYMLINK",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_parent_symlink": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "parent-link/data.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_SYMLINK\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_SYMLINK",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_root_identity": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "0",
+      "allowed.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_ROOT_CHANGED\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_ROOT_CHANGED",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_size": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "oversized.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_SIZE_LIMIT\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_SIZE_LIMIT",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "native_fifo": {
+    "command": [
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/file-broker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/broker-contract",
+      "16777232",
+      "73906720",
+      "fifo"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\"ok\":false,\"error\":{\"code\":\"CAP_NOT_FILE\",\"message\":\"native scoped read denied\"}}\n",
+    "stderr": "",
+    "error": null,
+    "payload": {
+      "ok": false,
+      "error": {
+        "code": "CAP_NOT_FILE",
+        "message": "native scoped read denied"
+      }
+    },
+    "passed": true
+  },
+  "runtime_dependency_audit": {
+    "command": [
+      "/usr/bin/otool",
+      "-L",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node:\n\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3038.1.255)\n\t/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61439.1.1)\n\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1800.101.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "stderr": "",
+    "error": null
+  },
+  "compile": {
+    "command": [
+      "/usr/bin/cc",
+      "-std=c11",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-O2",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/guardian.c",
+      "-o",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "",
+    "stderr": "",
+    "error": null
+  },
+  "environment": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "env-report"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"keys\": [\n      \"PROJECTOS_PROTOCOL_VERSION\",\n      \"__CF_USER_TEXT_ENCODING\"\n    ],\n    \"values\": {\n      \"PROJECTOS_PROTOCOL_VERSION\": \"1\"\n    }\n  },\n  \"action\": \"env-report\",\n  \"elapsedMs\": 1298,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-1\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"keys\": [\n          \"PROJECTOS_PROTOCOL_VERSION\",\n          \"__CF_USER_TEXT_ENCODING\"\n        ],\n        \"values\": {\n          \"PROJECTOS_PROTOCOL_VERSION\": \"1\"\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "keys": [
+          "PROJECTOS_PROTOCOL_VERSION",
+          "__CF_USER_TEXT_ENCODING"
+        ],
+        "values": {
+          "PROJECTOS_PROTOCOL_VERSION": "1"
+        }
+      },
+      "action": "env-report",
+      "elapsedMs": 1298,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-1",
+          "replyTo": "run-1",
+          "payload": {
+            "keys": [
+              "PROJECTOS_PROTOCOL_VERSION",
+              "__CF_USER_TEXT_ENCODING"
+            ],
+            "values": {
+              "PROJECTOS_PROTOCOL_VERSION": "1"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "broker_allowed": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "broker-read",
+      "--cap-root",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/capability-root",
+      "--relative-path",
+      "allowed.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"broker\": {\n      \"ok\": true,\n      \"result\": {\n        \"bytes\": 24,\n        \"device\": \"16777232\",\n        \"inode\": \"73097799\",\n        \"content\": \"gate-c brokered content\\n\"\n      }\n    }\n  },\n  \"action\": \"broker-read\",\n  \"elapsedMs\": 91,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"broker.request\",\n      \"id\": \"broker-1\",\n      \"payload\": {\n        \"op\": \"fs.read\",\n        \"capability\": \"cap:zciFIb038RZTP_oIffkXoXh-Z6iP901b\",\n        \"args\": {\n          \"relativePath\": \"allowed.txt\"\n        }\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-2\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"broker\": {\n          \"ok\": true,\n          \"result\": {\n            \"bytes\": 24,\n            \"device\": \"16777232\",\n            \"inode\": \"73097799\",\n            \"content\": \"gate-c brokered content\\n\"\n          }\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "broker": {
+          "ok": true,
+          "result": {
+            "bytes": 24,
+            "device": "16777232",
+            "inode": "73097799",
+            "content": "gate-c brokered content\n"
+          }
+        }
+      },
+      "action": "broker-read",
+      "elapsedMs": 91,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "broker.request",
+          "id": "broker-1",
+          "payload": {
+            "op": "fs.read",
+            "capability": "cap:zciFIb038RZTP_oIffkXoXh-Z6iP901b",
+            "args": {
+              "relativePath": "allowed.txt"
+            }
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-2",
+          "replyTo": "run-1",
+          "payload": {
+            "broker": {
+              "ok": true,
+              "result": {
+                "bytes": 24,
+                "device": "16777232",
+                "inode": "73097799",
+                "content": "gate-c brokered content\n"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "broker_invalid": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "broker-read",
+      "--cap-root",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/capability-root",
+      "--relative-path",
+      "allowed.txt",
+      "--invalid-capability",
+      "true"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"broker\": {\n      \"ok\": false,\n      \"error\": {\n        \"code\": \"CAPABILITY_DENIED\",\n        \"message\": \"unknown or invalid capability\"\n      }\n    }\n  },\n  \"action\": \"broker-read\",\n  \"elapsedMs\": 90,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"broker.request\",\n      \"id\": \"broker-1\",\n      \"payload\": {\n        \"op\": \"fs.read\",\n        \"capability\": \"cap:invalid\",\n        \"args\": {\n          \"relativePath\": \"allowed.txt\"\n        }\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-2\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"broker\": {\n          \"ok\": false,\n          \"error\": {\n            \"code\": \"CAPABILITY_DENIED\",\n            \"message\": \"unknown or invalid capability\"\n          }\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "broker": {
+          "ok": false,
+          "error": {
+            "code": "CAPABILITY_DENIED",
+            "message": "unknown or invalid capability"
+          }
+        }
+      },
+      "action": "broker-read",
+      "elapsedMs": 90,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "broker.request",
+          "id": "broker-1",
+          "payload": {
+            "op": "fs.read",
+            "capability": "cap:invalid",
+            "args": {
+              "relativePath": "allowed.txt"
+            }
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-2",
+          "replyTo": "run-1",
+          "payload": {
+            "broker": {
+              "ok": false,
+              "error": {
+                "code": "CAPABILITY_DENIED",
+                "message": "unknown or invalid capability"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "path_traversal": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "broker-read",
+      "--cap-root",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/capability-root",
+      "--relative-path",
+      "../outside.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"broker\": {\n      \"ok\": false,\n      \"error\": {\n        \"code\": \"CAP_PATH_ESCAPE\",\n        \"message\": \"native scoped read denied\"\n      }\n    }\n  },\n  \"action\": \"broker-read\",\n  \"elapsedMs\": 91,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"broker.request\",\n      \"id\": \"broker-1\",\n      \"payload\": {\n        \"op\": \"fs.read\",\n        \"capability\": \"cap:-HGxjqv_90EchCLBOeKA7nbuN-gjekAD\",\n        \"args\": {\n          \"relativePath\": \"../outside.txt\"\n        }\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-2\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"broker\": {\n          \"ok\": false,\n          \"error\": {\n            \"code\": \"CAP_PATH_ESCAPE\",\n            \"message\": \"native scoped read denied\"\n          }\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "broker": {
+          "ok": false,
+          "error": {
+            "code": "CAP_PATH_ESCAPE",
+            "message": "native scoped read denied"
+          }
+        }
+      },
+      "action": "broker-read",
+      "elapsedMs": 91,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "broker.request",
+          "id": "broker-1",
+          "payload": {
+            "op": "fs.read",
+            "capability": "cap:-HGxjqv_90EchCLBOeKA7nbuN-gjekAD",
+            "args": {
+              "relativePath": "../outside.txt"
+            }
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-2",
+          "replyTo": "run-1",
+          "payload": {
+            "broker": {
+              "ok": false,
+              "error": {
+                "code": "CAP_PATH_ESCAPE",
+                "message": "native scoped read denied"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "symlink_escape": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "broker-read",
+      "--cap-root",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/capability-root",
+      "--relative-path",
+      "escape-link.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"broker\": {\n      \"ok\": false,\n      \"error\": {\n        \"code\": \"CAP_SYMLINK\",\n        \"message\": \"native scoped read denied\"\n      }\n    }\n  },\n  \"action\": \"broker-read\",\n  \"elapsedMs\": 92,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"broker.request\",\n      \"id\": \"broker-1\",\n      \"payload\": {\n        \"op\": \"fs.read\",\n        \"capability\": \"cap:9U9j8312dbS4dHHz4U4_UuySwfQPmzXu\",\n        \"args\": {\n          \"relativePath\": \"escape-link.txt\"\n        }\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-2\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"broker\": {\n          \"ok\": false,\n          \"error\": {\n            \"code\": \"CAP_SYMLINK\",\n            \"message\": \"native scoped read denied\"\n          }\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "broker": {
+          "ok": false,
+          "error": {
+            "code": "CAP_SYMLINK",
+            "message": "native scoped read denied"
+          }
+        }
+      },
+      "action": "broker-read",
+      "elapsedMs": 92,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "broker.request",
+          "id": "broker-1",
+          "payload": {
+            "op": "fs.read",
+            "capability": "cap:9U9j8312dbS4dHHz4U4_UuySwfQPmzXu",
+            "args": {
+              "relativePath": "escape-link.txt"
+            }
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-2",
+          "replyTo": "run-1",
+          "payload": {
+            "broker": {
+              "ok": false,
+              "error": {
+                "code": "CAP_SYMLINK",
+                "message": "native scoped read denied"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "ambient_file": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "direct-file",
+      "--path",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"denied\": true,\n    \"error\": {\n      \"name\": \"Error\",\n      \"code\": \"EPERM\",\n      \"message\": \"EPERM: operation not permitted, open '/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt'\"\n    }\n  },\n  \"action\": \"direct-file\",\n  \"elapsedMs\": 88,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-1\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"denied\": true,\n        \"error\": {\n          \"name\": \"Error\",\n          \"code\": \"EPERM\",\n          \"message\": \"EPERM: operation not permitted, open '/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt'\"\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "denied": true,
+        "error": {
+          "name": "Error",
+          "code": "EPERM",
+          "message": "EPERM: operation not permitted, open '/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt'"
+        }
+      },
+      "action": "direct-file",
+      "elapsedMs": 88,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-1",
+          "replyTo": "run-1",
+          "payload": {
+            "denied": true,
+            "error": {
+              "name": "Error",
+              "code": "EPERM",
+              "message": "EPERM: operation not permitted, open '/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt'"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "network": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "network"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"dns\": {\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"ENOTFOUND\",\n        \"message\": \"getaddrinfo ENOTFOUND example.com\"\n      }\n    },\n    \"ipv4\": {\n      \"host\": \"93.184.216.34\",\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"EPERM\",\n        \"message\": \"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"\n      }\n    },\n    \"ipv6\": {\n      \"host\": \"2606:2800:220:1:248:1893:25c8:1946\",\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"EPERM\",\n        \"message\": \"connect EPERM 2606:2800:220:1:248:1893:25c8:1946:80 - Local (:::0)\"\n      }\n    },\n    \"localhost4\": {\n      \"host\": \"127.0.0.1\",\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"EPERM\",\n        \"message\": \"connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)\"\n      }\n    },\n    \"localhost6\": {\n      \"host\": \"::1\",\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"EPERM\",\n        \"message\": \"connect EPERM ::1:9 - Local (:::0)\"\n      }\n    }\n  },\n  \"action\": \"network\",\n  \"elapsedMs\": 97,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-1\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"dns\": {\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"ENOTFOUND\",\n            \"message\": \"getaddrinfo ENOTFOUND example.com\"\n          }\n        },\n        \"ipv4\": {\n          \"host\": \"93.184.216.34\",\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"EPERM\",\n            \"message\": \"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"\n          }\n        },\n        \"ipv6\": {\n          \"host\": \"2606:2800:220:1:248:1893:25c8:1946\",\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"EPERM\",\n            \"message\": \"connect EPERM 2606:2800:220:1:248:1893:25c8:1946:80 - Local (:::0)\"\n          }\n        },\n        \"localhost4\": {\n          \"host\": \"127.0.0.1\",\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"EPERM\",\n            \"message\": \"connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)\"\n          }\n        },\n        \"localhost6\": {\n          \"host\": \"::1\",\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"EPERM\",\n            \"message\": \"connect EPERM ::1:9 - Local (:::0)\"\n          }\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "dns": {
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "ENOTFOUND",
+            "message": "getaddrinfo ENOTFOUND example.com"
+          }
+        },
+        "ipv4": {
+          "host": "93.184.216.34",
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "EPERM",
+            "message": "connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)"
+          }
+        },
+        "ipv6": {
+          "host": "2606:2800:220:1:248:1893:25c8:1946",
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "EPERM",
+            "message": "connect EPERM 2606:2800:220:1:248:1893:25c8:1946:80 - Local (:::0)"
+          }
+        },
+        "localhost4": {
+          "host": "127.0.0.1",
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "EPERM",
+            "message": "connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)"
+          }
+        },
+        "localhost6": {
+          "host": "::1",
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "EPERM",
+            "message": "connect EPERM ::1:9 - Local (:::0)"
+          }
+        }
+      },
+      "action": "network",
+      "elapsedMs": 97,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-1",
+          "replyTo": "run-1",
+          "payload": {
+            "dns": {
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "ENOTFOUND",
+                "message": "getaddrinfo ENOTFOUND example.com"
+              }
+            },
+            "ipv4": {
+              "host": "93.184.216.34",
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "EPERM",
+                "message": "connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)"
+              }
+            },
+            "ipv6": {
+              "host": "2606:2800:220:1:248:1893:25c8:1946",
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "EPERM",
+                "message": "connect EPERM 2606:2800:220:1:248:1893:25c8:1946:80 - Local (:::0)"
+              }
+            },
+            "localhost4": {
+              "host": "127.0.0.1",
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "EPERM",
+                "message": "connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)"
+              }
+            },
+            "localhost6": {
+              "host": "::1",
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "EPERM",
+                "message": "connect EPERM ::1:9 - Local (:::0)"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "redirect": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "redirect"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"firstHop\": {\n      \"host\": \"93.184.216.34\",\n      \"denied\": true,\n      \"error\": {\n        \"name\": \"Error\",\n        \"code\": \"EPERM\",\n        \"message\": \"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"\n      }\n    },\n    \"redirectFollowed\": false\n  },\n  \"action\": \"redirect\",\n  \"elapsedMs\": 91,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-1\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"firstHop\": {\n          \"host\": \"93.184.216.34\",\n          \"denied\": true,\n          \"error\": {\n            \"name\": \"Error\",\n            \"code\": \"EPERM\",\n            \"message\": \"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"\n          }\n        },\n        \"redirectFollowed\": false\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "firstHop": {
+          "host": "93.184.216.34",
+          "denied": true,
+          "error": {
+            "name": "Error",
+            "code": "EPERM",
+            "message": "connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)"
+          }
+        },
+        "redirectFollowed": false
+      },
+      "action": "redirect",
+      "elapsedMs": 91,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-1",
+          "replyTo": "run-1",
+          "payload": {
+            "firstHop": {
+              "host": "93.184.216.34",
+              "denied": true,
+              "error": {
+                "name": "Error",
+                "code": "EPERM",
+                "message": "connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)"
+              }
+            },
+            "redirectFollowed": false
+          }
+        }
+      ]
+    }
+  },
+  "child_process": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "child"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"completed\",\n  \"helloSeen\": true,\n  \"result\": {\n    \"denied\": true,\n    \"error\": {\n      \"name\": \"Error\",\n      \"code\": \"EPERM\",\n      \"message\": \"spawn EPERM\"\n    }\n  },\n  \"action\": \"child\",\n  \"elapsedMs\": 89,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"result-1\",\n      \"replyTo\": \"run-1\",\n      \"payload\": {\n        \"denied\": true,\n        \"error\": {\n          \"name\": \"Error\",\n          \"code\": \"EPERM\",\n          \"message\": \"spawn EPERM\"\n        }\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "completed",
+      "helloSeen": true,
+      "result": {
+        "denied": true,
+        "error": {
+          "name": "Error",
+          "code": "EPERM",
+          "message": "spawn EPERM"
+        }
+      },
+      "action": "child",
+      "elapsedMs": 89,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "result-1",
+          "replyTo": "run-1",
+          "payload": {
+            "denied": true,
+            "error": {
+              "name": "Error",
+              "code": "EPERM",
+              "message": "spawn EPERM"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "protocol_mismatch": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "env-report",
+      "--expected-version",
+      "2"
+    ],
+    "status": 2,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"terminated\",\n  \"reason\": \"protocol-mismatch\",\n  \"action\": \"env-report\",\n  \"elapsedMs\": 88,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "terminated",
+      "reason": "protocol-mismatch",
+      "action": "env-report",
+      "elapsedMs": 88,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "wall_cancel": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "sleep",
+      "--timeout-ms",
+      "500"
+    ],
+    "status": 2,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"terminated\",\n  \"reason\": \"wall-time-ceiling\",\n  \"action\": \"sleep\",\n  \"elapsedMs\": 501,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "terminated",
+      "reason": "wall-time-ceiling",
+      "action": "sleep",
+      "elapsedMs": 501,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "cpu_limit": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "cpu",
+      "--cpu-seconds",
+      "1",
+      "--timeout-ms",
+      "5000"
+    ],
+    "status": 2,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"terminated\",\n  \"reason\": \"worker-exit\",\n  \"code\": 152,\n  \"signal\": null,\n  \"helloSeen\": true,\n  \"action\": \"cpu\",\n  \"elapsedMs\": 994,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "terminated",
+      "reason": "worker-exit",
+      "code": 152,
+      "signal": null,
+      "helloSeen": true,
+      "action": "cpu",
+      "elapsedMs": 994,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "output_backpressure": {
+    "command": [
+      "/Users/bonorinoa/.hermes/node/bin/node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/supervisor.mjs",
+      "--node",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/runtime/node",
+      "--guardian",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/build/guardian",
+      "--worker",
+      "/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/worker.ts",
+      "--action",
+      "flood",
+      "--timeout-ms",
+      "5000"
+    ],
+    "status": 2,
+    "signal": null,
+    "stdout": "{\n  \"status\": \"terminated\",\n  \"reason\": \"output-backpressure\",\n  \"action\": \"flood\",\n  \"elapsedMs\": 87,\n  \"stderr\": \"setrlimit RLIMIT_AS: Invalid argument\\n\",\n  \"transcript\": [\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"hello\",\n      \"id\": \"hello-1\",\n      \"payload\": {\n        \"worker\": {\n          \"name\": \"projectos-gate-c\",\n          \"version\": \"0.1.0\"\n        },\n        \"supportedVersions\": [\n          1\n        ]\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"flood-1\",\n      \"payload\": {\n        \"intermediate\": true,\n        \"block\": \"<8192 bytes>\"\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"flood-2\",\n      \"payload\": {\n        \"intermediate\": true,\n        \"block\": \"<8192 bytes>\"\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"flood-3\",\n      \"payload\": {\n        \"intermediate\": true,\n        \"block\": \"<8192 bytes>\"\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"flood-4\",\n      \"payload\": {\n        \"intermediate\": true,\n        \"block\": \"<8192 bytes>\"\n      }\n    },\n    {\n      \"protocol\": \"projectos.worker\",\n      \"version\": 1,\n      \"type\": \"result\",\n      \"id\": \"flood-5\",\n      \"payload\": {\n        \"intermediate\": true,\n        \"block\": \"<8192 bytes>\"\n      }\n    }\n  ]\n}\n",
+    "stderr": "",
+    "error": null,
+    "parsed": {
+      "status": "terminated",
+      "reason": "output-backpressure",
+      "action": "flood",
+      "elapsedMs": 87,
+      "stderr": "setrlimit RLIMIT_AS: Invalid argument\n",
+      "transcript": [
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "hello",
+          "id": "hello-1",
+          "payload": {
+            "worker": {
+              "name": "projectos-gate-c",
+              "version": "0.1.0"
+            },
+            "supportedVersions": [
+              1
+            ]
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "flood-1",
+          "payload": {
+            "intermediate": true,
+            "block": "<8192 bytes>"
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "flood-2",
+          "payload": {
+            "intermediate": true,
+            "block": "<8192 bytes>"
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "flood-3",
+          "payload": {
+            "intermediate": true,
+            "block": "<8192 bytes>"
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "flood-4",
+          "payload": {
+            "intermediate": true,
+            "block": "<8192 bytes>"
+          }
+        },
+        {
+          "protocol": "projectos.worker",
+          "version": 1,
+          "type": "result",
+          "id": "flood-5",
+          "payload": {
+            "intermediate": true,
+            "block": "<8192 bytes>"
+          }
+        }
+      ]
+    }
+  },
+  "parent_crash": {
+    "parentPid": 54105,
+    "workerPid": 54107,
+    "children": [],
+    "workerAlive": false,
+    "signal": "SIGKILL",
+    "stdout": "",
+    "stderr": ""
+  },
+  "tree_cancel": {
+    "parentPid": 54112,
+    "workerPid": 54114,
+    "children": [
+      {
+        "pid": 54116,
+        "command": "/bin/sleep 300",
+        "alive": false
+      }
+    ],
+    "workerAlive": false,
+    "signal": "SIGTERM",
+    "stdout": "",
+    "stderr": ""
+  },
+  "sandbox_exec_manual": {
+    "command": [
+      "/usr/bin/man",
+      "sandbox-exec"
+    ],
+    "status": 0,
+    "signal": null,
+    "stdout": "SANDBOX-EXEC(1)             General Commands Manual            SANDBOX-EXEC(1)\n\nN\bNA\bAM\bME\bE\n     s\bsa\ban\bnd\bdb\bbo\box\bx-\b-e\bex\bxe\bec\bc – execute within a sandbox (DEPRECATED)\n\nS\bSY\bYN\bNO\bOP\bPS\bSI\bIS\bS\n     s\bsa\ban\bnd\bdb\bbo\box\bx-\b-e\bex\bxe\bec\bc [-\b-f\bf _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bf_\bi_\bl_\be] [-\b-n\bn _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bn_\ba_\bm_\be] [-\b-p\bp _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bs_\bt_\br_\bi_\bn_\bg]\n                  [-\b-D\bD _\bk_\be_\by=_\bv_\ba_\bl_\bu_\be _\b._\b._\b.] _\bc_\bo_\bm_\bm_\ba_\bn_\bd [_\ba_\br_\bg_\bu_\bm_\be_\bn_\bt_\bs _\b._\b._\b.]\n\nD\bDE\bES\bSC\bCR\bRI\bIP\bPT\bTI\bIO\bON\bN\n     The s\bsa\ban\bnd\bdb\bbo\box\bx-\b-e\bex\bxe\bec\bc command is D\bDE\bEP\bPR\bRE\bEC\bCA\bAT\bTE\bED\bD.  Developers who wish to sandbox\n     an app should instead adopt the App Sandbox feature described in the App\n     Sandbox Design Guide.  The s\bsa\ban\bnd\bdb\bbo\box\bx-\b-e\bex\bxe\bec\bc command enters a sandbox using a\n     profile specified by the -\b-f\bf, -\b-n\bn, or -\b-p\bp option and executes _\bc_\bo_\bm_\bm_\ba_\bn_\bd with\n     _\ba_\br_\bg_\bu_\bm_\be_\bn_\bt_\bs.\n\n     The options are as follows:\n\n     -\b-f\bf _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bf_\bi_\bl_\be\n             Read the profile from the file named _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bf_\bi_\bl_\be.\n\n     -\b-n\bn _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bn_\ba_\bm_\be\n             Use the pre-defined profile _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bn_\ba_\bm_\be.\n\n     -\b-p\bp _\bp_\br_\bo_\bf_\bi_\bl_\be_\b-_\bs_\bt_\br_\bi_\bn_\bg\n             Specify the profile to be used on the command line.\n\n     -\b-D\bD _\bk_\be_\by=_\bv_\ba_\bl_\bu_\be\n             Set the profile parameter _\bk_\be_\by to _\bv_\ba_\bl_\bu_\be.\n\nS\bSE\bEE\bE A\bAL\bLS\bSO\bO\n     sandbox_init(3), sandbox(7), sandboxd(8)\n\nMac OS X                         March 9, 2017                        Mac OS X\n",
+    "stderr": "",
+    "error": null
+  }
+}

@@ -1,0 +1,25 @@
+/Users/bonorinoa/.hermes/node/bin/node node_modules/@tauri-apps/cli/tauri.js build --debug --bundles app
+        Info Looking up installed tauri packages to check mismatched versions...
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.0
+   Compiling block2 v0.6.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.1
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.1
+   Compiling tauri-runtime-wry v2.12.1
+   Compiling tauri v2.12.0
+   Compiling projectos-gate-a-shell v0.0.1 (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-a/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.53s
+       Built application at: /Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-a/src-tauri/target/debug/projectos-gate-a-shell
+    Bundling ProjectOS Gate A.app (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-a/src-tauri/target/debug/bundle/macos/ProjectOS Gate A.app)
+    Finished 1 bundle at:
+        /Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-a/src-tauri/target/debug/bundle/macos/ProjectOS Gate A.app (24.50 MiB)
+

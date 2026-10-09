@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "gate": "C",
+  "milestone": "M0",
+  "generatedAt": "2026-10-09T20:22:41.887Z",
+  "decision": "fail",
+  "recommendedRoadmapStatus": "blocked",
+  "decisionBasis": [
+    "Gate C requires a worker that ships on both macOS and Linux; Linux is untested.",
+    "A pinned local runtime bundle and native descriptor-relative broker are implemented; universal/signing/distribution proof remains incomplete.",
+    "The current macOS enforcement probe uses sandbox-exec, which the installed manual marks deprecated and unsuitable as the selected production boundary.",
+    "Darwin rejected RLIMIT_AS, so this spike does not prove an enforceable OS memory ceiling.",
+    "Computer-use isolation remains separately untested."
+  ],
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v22.22.3",
+    "nodePath": "/Users/bonorinoa/.hermes/node/bin/node",
+    "swVers": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+    "uname": "Darwin Mac.local.tld 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:17:26 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6041 arm64"
+  },
+  "hashes": {
+    "nodeRuntimeSha256": "5d9d3872911e2340a43b707962e68143de8a4e8d54628845c0c4f2de1fb7cd5c",
+    "workerSha256": "3ba073c3612e1fb87c93d3313529a86e5b633b9064d613972d816ed4815cd89c",
+    "protocolSha256": "f5874d527748d6ee9ab5e61bed833469275ff69f6e4f39cfb6517a5e2a2846c1",
+    "supervisorSha256": "e015eab2266e8f9fe67f6a54d638e3d78d18daa015d5a873e6e9220138bab8a6",
+    "guardianSourceSha256": "dab99e242a88f449e573058bfe63b8cc4d83cb874c38d7525f59f799d5c3a528",
+    "guardianBinarySha256": "0dda6ca9a6012b8f870ca91d175cfc3f8db6125844e683273f8e45fd77f50a35",
+    "nativeBrokerSourceSha256": "bdf01c4718d820477dfb6cba824d2639584fd6b74c79647a5149ee40f7cb0d60",
+    "nativeBrokerBinarySha256": "1c7a9af2bdc8d76aed7ea2752d779b0d1f4630e1c3ed081abaac2948870bc94c",
+    "brokerRaceSourceSha256": "3c40ee2e478451d7c9755d49d0a5521671e8d382635f557618bdcad2853fdf53",
+    "runnerSha256": "2446804fdf97fd3833f6c467a4a9b6e4db9605816a09950416d47bd396606a7e",
+    "runtimePinSha256": "32f4218bfc17fff7aec48bee0d43fe8ddf275979e3b7c1b76cd7c602e2503121"
+  },
+  "sourceHashes": {
+    "spikes/gate-c/worker.ts": "3ba073c3612e1fb87c93d3313529a86e5b633b9064d613972d816ed4815cd89c",
+    "spikes/gate-c/protocol.schema.json": "f5874d527748d6ee9ab5e61bed833469275ff69f6e4f39cfb6517a5e2a2846c1",
+    "spikes/gate-c/supervisor.mjs": "e015eab2266e8f9fe67f6a54d638e3d78d18daa015d5a873e6e9220138bab8a6",
+    "spikes/gate-c/guardian.c": "dab99e242a88f449e573058bfe63b8cc4d83cb874c38d7525f59f799d5c3a528",
+    "spikes/gate-c/file-broker.c": "bdf01c4718d820477dfb6cba824d2639584fd6b74c79647a5149ee40f7cb0d60",
+    "spikes/gate-c/broker-race-test.c": "3c40ee2e478451d7c9755d49d0a5521671e8d382635f557618bdcad2853fdf53",
+    "spikes/gate-c/runtime-pin.json": "32f4218bfc17fff7aec48bee0d43fe8ddf275979e3b7c1b76cd7c602e2503121",
+    "spikes/gate-c/run-tests.mjs": "2446804fdf97fd3833f6c467a4a9b6e4db9605816a09950416d47bd396606a7e",
+    "spikes/gate-c/README.md": "07ff9681a83667cfcf95c876e9f7702c145a2cde360f1dd1d1347d9cb0ff4965",
+    "spikes/gate-c/app-sandbox-probe.c": "7a109ec121ae38abc1a2d095e086105a7c99762a563aca7b8ae4abb6188c9150",
+    "spikes/gate-c/app-sandbox.entitlements.plist": "2029dc93bcf7d42441f95e6dfa64b98af67e71d4a168542fd208c6e84da6af17",
+    "spikes/gate-c/app-sandbox.Info.plist": "c3e77af96893199b74f5213566a2b9b8f08ae838d3b93b86bb12e4f653d66ad7",
+    "spikes/gate-c/run-app-sandbox.mjs": "42bbb47167598cbab0da2169e0106690721642425c725a7d209207bf9342651a",
+    "docs/adr-worker-isolation.md": "925e22cff50468db115744dc7876609ed3a8d42321776c8d78df2db8d0151938"
+  },
+  "counts": {
+    "pass": 24,
+    "fail": 3,
+    "untested": 10
+  },
+  "criteria": [
+    {
+      "id": "C-PROTOCOL-POSITIVE",
+      "label": "Protocol v1 negotiation",
+      "status": "pass",
+      "evidence": "helloSeen=true; worker completed=true",
+      "blocker": null
+    },
+    {
+      "id": "C-PROTOCOL-NEGATIVE",
+      "label": "Unsupported protocol rejected",
+      "status": "pass",
+      "evidence": "reason=protocol-mismatch",
+      "blocker": null
+    },
+    {
+      "id": "C-PACKAGE-MACOS",
+      "label": "Shippable TypeScript worker package on macOS",
+      "status": "fail",
+      "evidence": "The worker now runs a locally copied SHA256-pinned Node v22.22.3 arm64 runtime. This proves local bundling only: upstream provenance/license bundle, universal build, supported confinement, signing/notarization and clean-machine install remain unproven.",
+      "blocker": "Complete the signed distributable package matrix before claiming macOS shipment."
+    },
+    {
+      "id": "C-PACKAGE-LINUX",
+      "label": "TypeScript worker ships on frozen Linux matrix",
+      "status": "untested",
+      "evidence": "No Linux host or frozen distribution/package matrix was available in this run.",
+      "blocker": "Gate C requires both operating systems."
+    },
+    {
+      "id": "C-ENV",
+      "label": "No inherited secrets",
+      "status": "pass",
+      "evidence": "Worker environment keys: PROJECTOS_PROTOCOL_VERSION, __CF_USER_TEXT_ENCODING",
+      "blocker": null
+    },
+    {
+      "id": "C-CAPABILITY-VALID",
+      "label": "Valid opaque capability permits brokered read",
+      "status": "pass",
+      "evidence": "{\"ok\":true,\"result\":{\"bytes\":24,\"device\":\"16777232\",\"inode\":\"73097799\",\"content\":\"gate-c brokered content\\n\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-CAPABILITY-INVALID",
+      "label": "Invalid capability is denied",
+      "status": "pass",
+      "evidence": "{\"ok\":false,\"error\":{\"code\":\"CAPABILITY_DENIED\",\"message\":\"unknown or invalid capability\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-PATH-ESCAPE",
+      "label": "Parent path traversal is denied",
+      "status": "pass",
+      "evidence": "{\"ok\":false,\"error\":{\"code\":\"CAP_PATH_ESCAPE\",\"message\":\"native scoped read denied\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-SYMLINK-STATIC",
+      "label": "Static symlink escape is denied",
+      "status": "pass",
+      "evidence": "{\"ok\":false,\"error\":{\"code\":\"CAP_SYMLINK\",\"message\":\"native scoped read denied\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-SYMLINK-RACE",
+      "label": "Adversarial symlink-swap race is denied",
+      "status": "pass",
+      "evidence": "{\"attempts\":50000,\"allowed\":989,\"denied\":49011,\"escaped\":0}",
+      "blocker": null
+    },
+    {
+      "id": "C-NATIVE-BROKER-CONTRACT",
+      "label": "Native root identity, symlink, traversal, FIFO and byte limits",
+      "status": "pass",
+      "evidence": "[{\"name\":\"allowed\",\"passed\":true},{\"name\":\"absolute\",\"passed\":true},{\"name\":\"traversal\",\"passed\":true},{\"name\":\"final_symlink\",\"passed\":true},{\"name\":\"parent_symlink\",\"passed\":true},{\"name\":\"root_identity\",\"passed\":true},{\"name\":\"size\",\"passed\":true},{\"name\":\"fifo\",\"passed\":true}]",
+      "blocker": null
+    },
+    {
+      "id": "C-RUNTIME-PIN",
+      "label": "Pinned local runtime bundle",
+      "status": "pass",
+      "evidence": "Copied reviewed v22.22.3 darwin/arm64 runtime into build/runtime/node; SHA256=5d9d3872911e2340a43b707962e68143de8a4e8d54628845c0c4f2de1fb7cd5c; dependency audit retained. Signing/universal/Linux distribution remains unproven.",
+      "blocker": null
+    },
+    {
+      "id": "C-APP-SANDBOX-SUBSET",
+      "label": "Supported App Sandbox native file/network subset",
+      "status": "pass",
+      "evidence": "{\"ambientFileErrno\":1,\"localhostErrno\":1,\"dnsReturn\":8,\"forkErrno\":0,\"childExit\":42}",
+      "blocker": "This subset is not TS/XPC integration; child-process denial and memory remain unproven."
+    },
+    {
+      "id": "C-AMBIENT-FS",
+      "label": "Ambient filesystem read is denied",
+      "status": "pass",
+      "evidence": "{\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"EPERM: operation not permitted, open '/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-c/fixtures/ambient-secret.txt'\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-DNS",
+      "label": "DNS egress is denied",
+      "status": "pass",
+      "evidence": "{\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"ENOTFOUND\",\"message\":\"getaddrinfo ENOTFOUND example.com\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-IPV4",
+      "label": "Direct IPv4 egress is denied by policy",
+      "status": "pass",
+      "evidence": "{\"host\":\"93.184.216.34\",\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-IPV6",
+      "label": "Direct IPv6 egress is denied by policy",
+      "status": "pass",
+      "evidence": "{\"host\":\"2606:2800:220:1:248:1893:25c8:1946\",\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"connect EPERM 2606:2800:220:1:248:1893:25c8:1946:80 - Local (:::0)\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-LOCALHOST4",
+      "label": "IPv4 localhost egress is denied",
+      "status": "pass",
+      "evidence": "{\"host\":\"127.0.0.1\",\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-LOCALHOST6",
+      "label": "IPv6 localhost egress is denied",
+      "status": "pass",
+      "evidence": "{\"host\":\"::1\",\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"connect EPERM ::1:9 - Local (:::0)\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-REDIRECT",
+      "label": "Redirects cannot widen egress",
+      "status": "pass",
+      "evidence": "{\"firstHop\":{\"host\":\"93.184.216.34\",\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"connect EPERM 93.184.216.34:80 - Local (0.0.0.0:0)\"}},\"redirectFollowed\":false}",
+      "blocker": null
+    },
+    {
+      "id": "C-CHILD-SPAWN",
+      "label": "Ungoverned child-process spawning is denied",
+      "status": "pass",
+      "evidence": "{\"denied\":true,\"error\":{\"name\":\"Error\",\"code\":\"EPERM\",\"message\":\"spawn EPERM\"}}",
+      "blocker": null
+    },
+    {
+      "id": "C-WALL-CANCEL",
+      "label": "Wall-time cancellation terminates worker",
+      "status": "pass",
+      "evidence": "status=terminated; reason=wall-time-ceiling; elapsedMs=501",
+      "blocker": null
+    },
+    {
+      "id": "C-CPU-CEILING",
+      "label": "CPU-time ceiling terminates worker",
+      "status": "pass",
+      "evidence": "status=terminated; reason=worker-exit; code=152; elapsedMs=994",
+      "blocker": null
+    },
+    {
+      "id": "C-PARENT-CRASH",
+      "label": "Parent crash does not orphan worker",
+      "status": "pass",
+      "evidence": "{\"started\":true,\"controlledChildStarted\":true,\"workerAlive\":false,\"childStates\":[]}",
+      "blocker": null
+    },
+    {
+      "id": "C-TREE-CANCEL",
+      "label": "Cancellation kills full controlled process tree",
+      "status": "pass",
+      "evidence": "{\"started\":true,\"controlledChildStarted\":true,\"workerAlive\":false,\"childStates\":[{\"pid\":54116,\"command\":\"/bin/sleep 300\",\"alive\":false}]}",
+      "blocker": null
+    },
+    {
+      "id": "C-BACKPRESSURE",
+      "label": "Output cap terminates flooding worker",
+      "status": "pass",
+      "evidence": "status=terminated; reason=output-backpressure; elapsedMs=87",
+      "blocker": null
+    },
+    {
+      "id": "C-MEMORY-CEILING",
+      "label": "OS-enforced memory ceiling",
+      "status": "fail",
+      "evidence": "Darwin rejected setrlimit(RLIMIT_AS) with EINVAL; the spike has no proven OS-enforced memory ceiling.",
+      "blocker": "A supported macOS memory-confinement mechanism must be selected and proven; V8 heap flags alone are not an OS authority boundary."
+    },
+    {
+      "id": "C-MACOS-PRODUCTION-CONFINEMENT",
+      "label": "Supported production macOS confinement",
+      "status": "fail",
+      "evidence": "sandbox-exec is deprecated. A signed App Sandbox app-bundle native helper now proves file/localhost denial, but fork and /bin/sh execution succeed (exit 42). No TS/XPC production integration is proven.",
+      "blocker": "Minimal App Sandbox entitlements do not deny child execution; prove an additional runtime boundary and scoped broker IPC without weakening the locked gate."
+    },
+    {
+      "id": "C-LINUX-CONFINEMENT",
+      "label": "Linux confinement and packaging",
+      "status": "untested",
+      "evidence": "No Linux host was available; bubblewrap/namespace/cgroup/seccomp behavior was not tested.",
+      "blocker": "Freeze and execute the required Linux matrix."
+    },
+    {
+      "id": "C-CU-TARGET",
+      "label": "Computer use: explicit target identity",
+      "status": "untested",
+      "evidence": "Computer-use worker is a separate hard gate and is not implemented in this spike.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-CONSENT-STOP",
+      "label": "Computer use: visible consent and emergency stop",
+      "status": "untested",
+      "evidence": "Computer-use worker is a separate hard gate and is not implemented in this spike.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-CAPTURE",
+      "label": "Computer use: scoped/redacted capture",
+      "status": "untested",
+      "evidence": "Computer-use worker is a separate hard gate and is not implemented in this spike.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-IDENTITY-LOSS",
+      "label": "Computer use: pause on target identity loss",
+      "status": "untested",
+      "evidence": "Computer-use worker is a separate hard gate and is not implemented in this spike.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-X11",
+      "label": "Computer use: Linux X11 matrix",
+      "status": "untested",
+      "evidence": "No Linux/X11 host or portal matrix was available.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-WAYLAND",
+      "label": "Computer use: Linux Wayland matrix",
+      "status": "untested",
+      "evidence": "No Linux/Wayland compositor or portal matrix was available.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-PERMISSIONS",
+      "label": "Computer use: permission denial and revocation",
+      "status": "untested",
+      "evidence": "Accessibility and screen-capture denial/revocation were not exercised.",
+      "blocker": null
+    },
+    {
+      "id": "C-CU-CREDENTIALS",
+      "label": "Computer use: allowlisted credential-exclusion profile",
+      "status": "untested",
+      "evidence": "No allowlisted test application/profile was configured.",
+      "blocker": null
+    }
+  ],
+  "artifacts": {
+    "protocol": "spikes/gate-c/protocol.schema.json",
+    "worker": "spikes/gate-c/worker.ts",
+    "supervisor": "spikes/gate-c/supervisor.mjs",
+    "guardian": "spikes/gate-c/guardian.c",
+    "testRunner": "spikes/gate-c/run-tests.mjs",
+    "rawResults": "evidence/gates/gate-c/raw-results.json"
+  }
+}

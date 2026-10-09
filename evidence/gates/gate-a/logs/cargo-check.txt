@@ -1,0 +1,8 @@
+Command: cargo check --manifest-path src-tauri/Cargo.toml
+Working directory: spikes/gate-a
+Observed: 2026-10-06
+Exit code: 127
+
+zsh: command not found: cargo
+
+Classification: untested, not fail. The native source was never compiled.

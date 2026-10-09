@@ -1,0 +1,6 @@
+# Exact versions executed by the Gate B Python-hosted feasibility harness.
+# The intended ProjectOS integration remains Rust; these bindings exercise the
+# same embedded native engines on this host because no Rust toolchain is present.
+ladybug==0.21.1
+helix-db==0.3.4
+helix-db-embedded==0.3.3

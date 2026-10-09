@@ -1,0 +1,53 @@
+# --- dependencies / build artifacts ---
+node_modules/
+target/
+build/
+dist/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- editors / OS ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+*.iml
+
+# --- secrets / credentials (never commit) ---
+.env
+.env.*
+*.pem
+*.key
+*id_rsa*
+*id_ed25519*
+.credentials*
+secrets/
+!*.example
+
+# --- toolchain / runtimes (large spike downloads) ---
+/private/tmp/
+rust-toolchain/
+.cargo/
+rustup/
+toolchains/
+
+# --- codebase-memory artifacts ---
+.codebase-memory/
+
+# --- spike runtime noise ---
+spikes/**/work/
+spikes/gate-c/build/
+spikes/**/*.db
+spikes/**/*.db-shm
+spikes/**/*.db-wal
+
+# --- temp evidence / re-runs (keep raw results only via evidence/) ---
+evidence/**/tmp/
+*.log
+nohup.out

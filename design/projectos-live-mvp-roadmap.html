@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ProjectOS — Live MVP Roadmap</title>
+  <style>
+    :root {
+      --canvas: #e9e6dd;
+      --paper: #f8f6ef;
+      --paper-strong: #fffdf8;
+      --ink: #17201d;
+      --muted: #5b6661;
+      --faint: #7b857f;
+      --rule: #c8cec7;
+      --rule-strong: #9ca9a1;
+      --shell: #151c19;
+      --shell-soft: #202925;
+      --moss: #1f5b4e;
+      --moss-dark: #133d34;
+      --moss-soft: #dcebe4;
+      --coral: #ad4b2e;
+      --coral-soft: #f3dfd8;
+      --blue: #2857c7;
+      --blue-soft: #dfe7ff;
+      --gold: #8b6505;
+      --gold-soft: #f3e7c5;
+      --danger: #a7332c;
+      --danger-soft: #f7dfdc;
+      --shadow: 0 18px 48px rgba(23, 32, 29, .12);
+      --shadow-soft: 0 8px 24px rgba(23, 32, 29, .08);
+      --ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --editorial: ui-serif, Charter, "Iowan Old Style", Georgia, serif;
+      --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        linear-gradient(rgba(23, 32, 29, .026) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 32, 29, .026) 1px, transparent 1px),
+        var(--canvas);
+      background-size: 28px 28px;
+      color: var(--ink);
+      font-family: var(--ui);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      left: 14px;
+      top: 10px;
+      transform: translateY(-180%);
+      background: white;
+      color: var(--ink);
+      padding: 9px 13px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      min-height: 66px;
+      background: rgba(21, 28, 25, .97);
+      color: #f8f7f1;
+      border-bottom: 1px solid #34403b;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      align-self: stretch;
+      padding: 0 22px;
+      border-right: 1px solid #34403b;
+      font-weight: 760;
+      letter-spacing: -.02em;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border: 1px solid #8ca198;
+      border-radius: 9px 9px 9px 2px;
+      color: #cce9dc;
+      font-family: var(--editorial);
+      font-size: 18px;
+    }
+    .brand small { display: block; color: #9eaaa5; font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+
+    .live-strip {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 10px;
+      padding: 0 18px;
+      color: #d9dfdc;
+      font-size: 12px;
+    }
+    .live-dot {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e0bb5f;
+      box-shadow: 0 0 0 4px rgba(224,187,95,.13);
+    }
+    .live-dot.connected { background: #72d0a5; box-shadow: 0 0 0 4px rgba(114,208,165,.14); }
+    .live-strip strong { color: white; }
+    .live-strip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 13px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 9px;
+      background: var(--paper-strong);
+      color: var(--ink);
+      font-weight: 720;
+      cursor: pointer;
+    }
+    .button:hover { border-color: #718078; background: white; }
+    .button.primary { border-color: var(--moss); background: var(--moss); color: white; }
+    .button.primary:hover { background: var(--moss-dark); }
+    .button.dark { border-color: #4a5852; background: #222b27; color: #f8f7f1; }
+    .button.dark:hover { background: #2c3732; }
+    .button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+    .button.small { min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .button:disabled { cursor: not-allowed; opacity: .46; }
+
+    .page { width: min(1500px, 100%); margin: 0 auto; padding: 28px clamp(18px, 3vw, 46px) 80px; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 28px;
+      align-items: end;
+      padding: 34px 0 28px;
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--moss);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 19px; height: 2px; background: var(--moss); }
+    h1, h2, h3, p { margin-top: 0; }
+    .hero h1 {
+      max-width: 880px;
+      margin: 11px 0 12px;
+      font-family: var(--editorial);
+      font-size: clamp(42px, 6vw, 76px);
+      font-weight: 600;
+      line-height: .98;
+      letter-spacing: -.05em;
+    }
+    .hero-copy { max-width: 760px; margin: 0; color: var(--muted); font-size: 17px; }
+    .snapshot-stamp {
+      min-width: 225px;
+      padding: 18px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 14px;
+      background: rgba(248, 246, 239, .78);
+      box-shadow: var(--shadow-soft);
+    }
+    .snapshot-stamp small { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .snapshot-stamp strong { display: block; margin: 5px 0 2px; font-family: var(--editorial); font-size: 21px; }
+    .snapshot-stamp span { color: var(--muted); font-size: 12px; }
+
+    .status-board {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr) minmax(250px, .72fr);
+      overflow: hidden;
+      border: 1px solid #93a098;
+      border-radius: 18px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .progress-cell {
+      display: grid;
+      place-items: center;
+      padding: 28px 22px;
+      background: var(--shell);
+      color: white;
+    }
+    .progress-ring {
+      --progress: 9;
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 146px;
+      height: 146px;
+      border-radius: 50%;
+      background: conic-gradient(#7fd0ae calc(var(--progress) * 1%), #34423c 0);
+    }
+    .progress-ring::after { content: ""; position: absolute; inset: 11px; border-radius: 50%; background: var(--shell); }
+    .ring-label { position: relative; z-index: 1; text-align: center; }
+    .ring-label strong { display: block; font-family: var(--editorial); font-size: 41px; font-weight: 600; line-height: 1; }
+    .ring-label span { display: block; margin-top: 5px; color: #aebbb5; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .progress-note { margin-top: 15px; color: #aebbb5; font-size: 11px; text-align: center; }
+
+    .now-cell { padding: 28px clamp(24px, 4vw, 46px); border-right: 1px solid var(--rule); }
+    .now-label { color: var(--coral); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .now-cell h2 { margin: 9px 0 9px; font-family: var(--editorial); font-size: clamp(27px, 3vw, 39px); font-weight: 600; letter-spacing: -.025em; }
+    .now-cell p { max-width: 690px; margin-bottom: 16px; color: var(--muted); }
+    .truth-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .truth-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 27px;
+      padding: 3px 9px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      background: white;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .truth-pill .mark { color: var(--moss); }
+
+    .next-cell { display: flex; flex-direction: column; padding: 27px 24px; background: #edf0e9; }
+    .next-cell h3 { margin: 0 0 14px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    .next-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+    .next-list li { display: grid; grid-template-columns: 23px 1fr; gap: 9px; color: var(--muted); font-size: 12px; }
+    .next-list strong { display: block; color: var(--ink); font-size: 13px; }
+    .step-number { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #99a69e; border-radius: 50%; color: var(--moss); font-size: 10px; font-weight: 800; }
+    .next-cell .button { align-self: flex-start; margin-top: auto; }
+
+    .control-deck {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin: 26px 0 18px;
+      padding: 12px;
+      border: 1px solid var(--rule);
+      border-radius: 13px;
+      background: rgba(248, 246, 239, .87);
+      box-shadow: var(--shadow-soft);
+    }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .filter-button {
+      min-height: 34px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .filter-button[aria-pressed="true"] { background: var(--ink); color: white; }
+    .deck-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    input[type="file"] { display: none; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 13px;
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule-strong); }
+    .legend .detected { background: var(--blue); }
+    .legend .implemented { background: var(--gold); }
+    .legend .verified { background: var(--moss); }
+    .legend .blocked { background: var(--danger); }
+
+    .roadmap-shell { display: grid; grid-template-columns: minmax(0, 1fr) 325px; gap: 18px; align-items: start; }
+    .roadmap { position: relative; display: grid; gap: 14px; }
+    .roadmap::before {
+      content: "";
+      position: absolute;
+      left: 27px;
+      top: 41px;
+      bottom: 41px;
+      width: 2px;
+      background: linear-gradient(var(--moss), var(--rule) 20%, var(--rule) 87%, var(--coral));
+    }
+
+    .stage-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+      border: 1px solid var(--rule);
+      border-radius: 15px;
+      background: var(--paper);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      transition: transform 160ms ease, border-color 160ms ease;
+    }
+    .stage-card:hover { border-color: #9aa69f; transform: translateY(-1px); }
+    .stage-card[hidden] { display: none; }
+    .stage-index { position: relative; z-index: 2; display: flex; justify-content: center; padding-top: 24px; background: #efede6; }
+    .stage-index span {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 2px solid var(--rule-strong);
+      border-radius: 50%;
+      background: var(--paper-strong);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .stage-card[data-state="verified"] .stage-index span { border-color: var(--moss); background: var(--moss); color: white; }
+    .stage-card[data-state="active"] .stage-index span { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 5px var(--gold-soft); }
+    .stage-card[data-state="blocked"] .stage-index span { border-color: var(--danger); color: var(--danger); }
+    .stage-main { min-width: 0; padding: 21px 22px 18px; }
+    .stage-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
+      cursor: pointer;
+    }
+    .stage-kicker { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .stage-head h2 { margin: 4px 0 5px; font-family: var(--editorial); font-size: 25px; font-weight: 600; letter-spacing: -.02em; }
+    .stage-head p { max-width: 720px; margin: 0; color: var(--muted); font-size: 13px; }
+    .stage-meter { min-width: 92px; text-align: right; }
+    .stage-meter strong { display: block; font-family: var(--editorial); font-size: 25px; font-weight: 600; }
+    .meter-track { width: 92px; height: 5px; margin-top: 5px; overflow: hidden; border-radius: 99px; background: #d9ddd7; }
+    .meter-track span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--moss); }
+    .stage-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 25px;
+      padding: 3px 8px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      background: white;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .chip.state-verified { border-color: #a7c8b9; background: var(--moss-soft); color: var(--moss-dark); }
+    .chip.state-active { border-color: #d6c185; background: var(--gold-soft); color: #654804; }
+    .chip.state-blocked { border-color: #d7a7a2; background: var(--danger-soft); color: var(--danger); }
+    .chip.manual { border-color: #d49c88; background: var(--coral-soft); color: #7a2f1d; }
+
+    .stage-details { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
+    .stage-details[hidden] { display: none; }
+    .task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .task {
+      display: grid;
+      grid-template-columns: 13px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 10px 11px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: rgba(255,255,255,.52);
+    }
+    .task:hover { border-color: var(--rule); background: white; }
+    .task-dot { width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; background: var(--rule-strong); }
+    .task[data-status="detected"] .task-dot { background: var(--blue); }
+    .task[data-status="implemented"] .task-dot { background: var(--gold); }
+    .task[data-status="verified"], .task[data-status="accepted"] { background: rgba(220,235,228,.47); }
+    .task[data-status="verified"] .task-dot, .task[data-status="accepted"] .task-dot { background: var(--moss); }
+    .task[data-status="blocked"] .task-dot { background: var(--danger); }
+    .task strong { display: block; font-size: 13px; }
+    .task small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .task-state { color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+    .task-evidence { grid-column: 2 / -1; color: var(--blue); font-family: var(--mono); font-size: 9px; overflow-wrap: anywhere; }
+    .manual-check { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .manual-check input { accent-color: var(--moss); }
+    .stage-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 13px; }
+
+    .inspector {
+      position: sticky;
+      top: 84px;
+      border: 1px solid var(--rule);
+      border-radius: 15px;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow-soft);
+    }
+    .inspector-head { padding: 20px; background: var(--shell); color: white; }
+    .inspector-head small { color: #9eaba5; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .inspector-head h2 { margin: 7px 0 5px; font-family: var(--editorial); font-size: 25px; font-weight: 600; }
+    .inspector-head p { margin: 0; color: #b7c1bc; font-size: 12px; }
+    .inspector-body { padding: 18px; }
+    .inspector-section + .inspector-section { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--rule); }
+    .inspector-section h3 { margin: 0 0 9px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .inspector-section p { margin: 0; color: var(--muted); font-size: 12px; }
+    .exit-box { padding: 12px; border-left: 3px solid var(--moss); background: var(--moss-soft); color: #29433a; font-size: 12px; }
+    .signal-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .signal-list li { display: grid; grid-template-columns: 16px 1fr; gap: 7px; color: var(--muted); font-size: 11px; }
+    .signal-list b { color: var(--ink); }
+    .scanner-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .stat { padding: 9px 7px; border: 1px solid var(--rule); border-radius: 8px; background: white; text-align: center; }
+    .stat strong { display: block; font-family: var(--editorial); font-size: 19px; }
+    .stat span { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+
+    .final-gate {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      padding: 28px;
+      border: 1px solid #b4745f;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f6e7e1, #f8f6ef 66%);
+      box-shadow: var(--shadow-soft);
+    }
+    .final-gate h2 { margin: 5px 0 7px; font-family: var(--editorial); font-size: 30px; font-weight: 600; }
+    .final-gate p { max-width: 820px; margin: 0; color: var(--muted); }
+    .gate-seal { min-width: 170px; padding: 17px; border: 1px dashed var(--coral); border-radius: 12px; text-align: center; }
+    .gate-seal strong { display: block; color: var(--coral); font-family: var(--editorial); font-size: 20px; }
+    .gate-seal span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 90;
+      max-width: 410px;
+      padding: 12px 15px;
+      border-radius: 10px;
+      background: var(--shell);
+      color: white;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .toast.is-visible { opacity: 1; transform: translateY(0); }
+
+    dialog {
+      width: min(760px, calc(100% - 28px));
+      max-height: calc(100vh - 40px);
+      padding: 0;
+      border: 1px solid var(--rule-strong);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 28px 100px rgba(0,0,0,.26);
+      color: var(--ink);
+    }
+    dialog::backdrop { background: rgba(14,19,17,.64); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; justify-content: space-between; gap: 20px; padding: 21px 23px; background: var(--shell); color: white; }
+    .dialog-head h2 { margin: 0; font-family: var(--editorial); font-size: 25px; font-weight: 600; }
+    .close { width: 34px; height: 34px; border: 1px solid #53615b; border-radius: 8px; background: transparent; color: white; cursor: pointer; }
+    .dialog-body { padding: 23px; overflow: auto; }
+    .dialog-body p, .dialog-body li { color: var(--muted); font-size: 13px; }
+    pre { overflow: auto; padding: 14px; border: 1px solid var(--rule); border-radius: 10px; background: #eceae3; font: 11px/1.55 var(--mono); }
+
+    @media (max-width: 1080px) {
+      .status-board { grid-template-columns: 190px minmax(0, 1fr); }
+      .next-cell { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 16px; border-top: 1px solid var(--rule); }
+      .next-cell .next-list { grid-template-columns: repeat(3, 1fr); }
+      .next-cell .button { align-self: center; margin-top: 0; }
+      .roadmap-shell { grid-template-columns: 1fr; }
+      .inspector { position: static; display: grid; grid-template-columns: 270px 1fr; }
+      .inspector-body { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+      .inspector-section + .inspector-section { margin-top: 0; padding-top: 0; border-top: 0; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+      .brand { padding: 0 14px; }
+      .brand small, .live-strip { display: none; }
+      .top-actions .button span { display: none; }
+      .page { padding-inline: 14px; }
+      .hero { grid-template-columns: 1fr; }
+      .snapshot-stamp { min-width: 0; }
+      .status-board { grid-template-columns: 1fr; }
+      .progress-cell { padding-block: 22px; }
+      .progress-ring { width: 120px; height: 120px; }
+      .now-cell { border-right: 0; border-top: 1px solid var(--rule); }
+      .next-cell { grid-template-columns: 1fr; }
+      .next-cell .next-list { grid-template-columns: 1fr; }
+      .control-deck { grid-template-columns: 1fr; }
+      .deck-actions { justify-content: flex-start; }
+      .roadmap::before { left: 20px; }
+      .stage-card { grid-template-columns: 42px minmax(0, 1fr); }
+      .stage-index span { width: 26px; height: 26px; }
+      .stage-main { padding: 18px 14px 16px; }
+      .stage-head { grid-template-columns: 1fr; }
+      .stage-meter { text-align: left; }
+      .task { grid-template-columns: 12px minmax(0, 1fr); }
+      .task-state { grid-column: 2; }
+      .inspector { display: block; }
+      .inspector-body { grid-template-columns: 1fr; }
+      .final-gate { grid-template-columns: 1fr; }
+      .gate-seal { min-width: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#roadmap">Skip to roadmap</a>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">P</span><span>ProjectOS <small>MVP flight plan</small></span></div>
+    <div class="live-strip" aria-live="polite"><span class="live-dot" id="live-dot"></span><span><strong id="connection-label">Design snapshot</strong> · <span id="scan-label">not connected to a folder</span></span></div>
+    <div class="top-actions">
+      <button class="button dark" type="button" id="method-button" aria-haspopup="dialog"><span>How status works</span><b aria-hidden="true">?</b></button>
+      <button class="button primary" type="button" id="connect-button"><span>Connect codebase</span><b aria-hidden="true">↻</b></button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <span class="eyebrow">From concept to something you can trust</span>
+        <h1 id="page-title">The road to a usable MVP.</h1>
+        <p class="hero-copy">A living, evidence-based map of what exists, what must be proven next, and what remains before the final human test. Sequence is intentional; dates are not invented.</p>
+      </div>
+      <aside class="snapshot-stamp" aria-label="Current roadmap snapshot">
+        <small>Current truth</small>
+        <strong>Foundation proofs</strong>
+        <span id="snapshot-note">Native shell and contract spikes are implemented. Full platform gates remain open.</span>
+      </aside>
+    </section>
+
+    <section class="status-board" aria-label="Roadmap summary">
+      <div class="progress-cell">
+        <div class="progress-ring" id="progress-ring" aria-label="Overall evidence-weighted progress 9 percent">
+          <div class="ring-label"><strong id="overall-progress">9%</strong><span>evidence coverage</span></div>
+        </div>
+        <div class="progress-note">Detected work counts less than verified work.</div>
+      </div>
+      <div class="now-cell">
+        <div class="now-label">You are here · M0</div>
+        <h2>The foundations now have executable tests.</h2>
+        <p>The native shell runs on this Mac. Graph, isolation, recovery and provider spikes now have evidence. Cross-platform packaging and the production worker boundary still need proof before the kernel and feature stages.</p>
+        <div class="truth-row">
+          <span class="truth-pill"><span class="mark">✓</span> Architecture brief</span>
+          <span class="truth-pill"><span class="mark">✓</span> Interactive concept</span>
+          <span class="truth-pill"><span class="mark">✓</span> Acceptance criteria</span>
+          <span class="truth-pill"><span class="mark">✓</span> Native shell running</span>
+        </div>
+      </div>
+      <div class="next-cell">
+        <div>
+          <h3>Next outcomes</h3>
+          <ol class="next-list">
+            <li><span class="step-number">1</span><span><strong>Prove the gates</strong>Shell, graph, isolation, recovery, providers.</span></li>
+            <li><span class="step-number">2</span><span><strong>Build the kernel</strong>Folder identity, authority, receipts, offline.</span></li>
+            <li><span class="step-number">3</span><span><strong>Close the loop</strong>Subagents test until only your judgment remains.</span></li>
+          </ol>
+        </div>
+        <button class="button small" type="button" data-focus-stage="m0">Inspect next gate →</button>
+      </div>
+    </section>
+
+    <div class="control-deck" aria-label="Roadmap controls">
+      <div class="filter-group" role="group" aria-label="Filter roadmap stages">
+        <button class="filter-button" type="button" aria-pressed="true" data-filter="all">All stages</button>
+        <button class="filter-button" type="button" aria-pressed="false" data-filter="active">Current</button>
+        <button class="filter-button" type="button" aria-pressed="false" data-filter="remaining">Remaining</button>
+        <button class="filter-button" type="button" aria-pressed="false" data-filter="blocked">Blocked</button>
+      </div>
+      <div class="deck-actions">
+        <button class="button small" type="button" id="refresh-button" disabled>Refresh scan</button>
+        <button class="button small" type="button" id="import-button">Import status JSON</button>
+        <button class="button small" type="button" id="export-button">Export snapshot</button>
+      </div>
+    </div>
+
+    <div class="legend" aria-label="Evidence status legend">
+      <span><i></i> Planned</span><span><i class="detected"></i> Detected in codebase</span><span><i class="implemented"></i> Reported implemented</span><span><i class="verified"></i> Verified by evidence</span><span><i class="blocked"></i> Blocked</span>
+    </div>
+
+    <div class="roadmap-shell">
+      <section class="roadmap" id="roadmap" aria-label="MVP roadmap stages"></section>
+
+      <aside class="inspector" aria-live="polite">
+        <div class="inspector-head">
+          <small id="inspector-kicker">Selected stage</small>
+          <h2 id="inspector-title">M0 · Feasibility proofs</h2>
+          <p id="inspector-summary">Eliminate foundational risk before feature work begins.</p>
+        </div>
+        <div class="inspector-body">
+          <section class="inspector-section">
+            <h3>Exit condition</h3>
+            <div class="exit-box" id="inspector-exit">Every gate has reproducible evidence, a pass/fail decision, and a recorded fallback where relevant.</div>
+          </section>
+          <section class="inspector-section">
+            <h3>Why it matters</h3>
+            <p id="inspector-why">If these assumptions fail later, large parts of the product would need to be redesigned.</p>
+          </section>
+          <section class="inspector-section">
+            <h3>Scanner snapshot</h3>
+            <div class="scanner-stats">
+              <div class="stat"><strong id="file-count">3</strong><span>files</span></div>
+              <div class="stat"><strong id="source-count">2</strong><span>source</span></div>
+              <div class="stat"><strong id="test-count">0</strong><span>tests</span></div>
+            </div>
+          </section>
+          <section class="inspector-section">
+            <h3>Evidence policy</h3>
+            <ul class="signal-list">
+              <li><span>○</span><span><b>Detected</b> means matching files exist.</span></li>
+              <li><span>◐</span><span><b>Implemented</b> requires a status record.</span></li>
+              <li><span>●</span><span><b>Verified</b> requires linked test evidence.</span></li>
+            </ul>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <section class="final-gate" aria-labelledby="final-gate-title">
+      <div>
+        <span class="eyebrow">The only gate agents cannot close</span>
+        <h2 id="final-gate-title">Your manual acceptance test.</h2>
+        <p>Subagents can pressure-test implementation, recovery, security, accessibility, and the golden paths. The release is still not a usable MVP until you install the frozen candidate, complete both workflows yourself, and decide that the system is understandable and trustworthy.</p>
+      </div>
+      <div class="gate-seal"><strong id="manual-seal">LOCKED</strong><span id="manual-seal-note">agent gauntlet incomplete</span></div>
+    </section>
+  </main>
+
+  <input type="file" id="directory-input" webkitdirectory multiple aria-label="Choose ProjectOS codebase folder">
+  <input type="file" id="status-input" accept="application/json,.json" aria-label="Import roadmap status JSON">
+
+  <dialog id="method-dialog" aria-labelledby="method-title">
+    <div class="dialog-head"><h2 id="method-title">How live status stays honest</h2><button class="close" type="button" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p>This page can scan a selected ProjectOS folder while it remains open. It counts code and test files, recognizes expected implementation surfaces, and refreshes every 20 seconds when the browser grants a persistent folder handle.</p>
+      <p>A filename is weak evidence, so the scanner only labels it <b>detected</b>. Implementation and verification come from <code>projectos-roadmap-status.json</code>, written later by development agents or CI and backed by evidence paths.</p>
+      <pre>{
+  "updatedAt": "ISO timestamp",
+  "commit": "git commit or tree identifier",
+  "tasks": {
+    "m0.shell": {
+      "status": "verified",
+      "evidence": ["evidence/gates/gate-a/report.json"]
+    },
+    "m0.graph": {
+      "status": "blocked",
+      "note": "Candidate failed packaging gate"
+    }
+  }
+}</pre>
+      <p>Allowed states are <code>planned</code>, <code>detected</code>, <code>implemented</code>, <code>verified</code>, and <code>blocked</code>. The dashboard never executes tests or modifies the codebase. Manual acceptance checkboxes live only in this browser.</p>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- STATUS_SNAPSHOT_START -->
+  <script id="status-snapshot" type="application/json">{"updatedAt":"2026-10-09T20:24:06.363Z","commit":"sha256:e6b0384696d943de600eee250715a09eb1942971b945484286aacf73cc63bae9","sourceSnapshot":"projectos-source-snapshot.json","sourceStats":{"files":79,"source":37,"tests":10},"tasks":{"m0.shell":{"status":"implemented","evidence":["evidence/gates/gate-a/report.json"],"note":"Native macOS arm64 shell builds and launches; local UI and cancellation probes passed. Clean-machine, signing/notarization and full Linux/accessibility/IME/PDF matrix remain open."},"m0.graph":{"status":"blocked","evidence":["evidence/gates/gate-b/report.json","evidence/gates/gate-b/rust-integration.json"],"note":"Evidence is stale; rerun after source changes."},"m0.worker":{"status":"blocked","evidence":["evidence/gates/gate-c/report.json"],"note":"Native file broker and active symlink-swap tests pass. Supported production confinement, hard OS memory ceiling and signed cross-platform package remain blocked."},"m0.recovery":{"status":"implemented","evidence":["evidence/gates/gate-d/report.json"],"note":"Reproducible fault-injection contract model implemented. Real selected graph-engine, power-loss durability and cross-platform filesystem proof remain open."},"m0.provider":{"status":"implemented","evidence":["evidence/gates/gate-e/report.json"],"note":"Mock provider, PKCE callback and encrypted-vault contracts implemented. Native credential/egress boundary, OS keyring, live opt-in conformance and Linux remain open."}},"diagnostics":["graph: evidence source mismatch: spikes/gate-b/rust-tauri/Cargo.toml, spikes/gate-b/rust-tauri/Cargo.lock, spikes/gate-b/rust-tauri/src/main.rs, spikes/gate-b/rust-tauri/evidence.mjs"]}</script>
+  <!-- STATUS_SNAPSHOT_END -->
+  <script>
+    (() => {
+      const STATUS_RANK = { planned: 0, detected: .35, implemented: .68, verified: 1, accepted: 1, blocked: 0 };
+      const VALID_STATUSES = new Set(['planned', 'detected', 'implemented', 'verified', 'blocked']);
+      const SOURCE_RE = /\.(rs|ts|tsx|js|jsx|py|go|swift|kt|java|c|cc|cpp|h|html|css)$/i;
+      const TEST_RE = /(^|\/)(tests?|specs?|e2e)(\/|$)|\.(test|spec)\.[^.]+$/i;
+      const IGNORE_DIRS = new Set(['node_modules', 'target', 'dist', 'build', '.git', '.cache', 'coverage', '.next']);
+      const baselineFiles = [
+        'docs/projectos-architecture-brief.md',
+        'design/projectos-interface-concept.html',
+        'design/projectos-live-mvp-roadmap.html'
+      ];
+
+      const stages = [
+        {
+          id: 'baseline', number: '00', milestone: 'Current state', title: 'Product contract and interaction concept',
+          summary: 'Define the product, its trust model, its golden paths, and a coherent interface before implementation.',
+          exit: 'A reviewable architecture, acceptance criteria, interaction prototype, and progress map agree on what “usable MVP” means.',
+          why: 'This keeps engineering activity tied to a stable product contract instead of accumulating disconnected features.',
+          tasks: [
+            { id: 'baseline.architecture', title: 'Architecture and trust boundaries', note: 'Local-first topology, authority, recovery, providers, and data ownership.', detect: [/docs\/projectos-architecture-brief\.md$/], initial: 'verified', evidence: ['docs/projectos-architecture-brief.md'] },
+            { id: 'baseline.prototype', title: 'Interactive interface concept', note: 'Portfolio, artifact workspace, recipe board, context lens, and trace drawer.', detect: [/design\/projectos-interface-concept\.html$/], initial: 'verified', evidence: ['design/projectos-interface-concept.html'] },
+            { id: 'baseline.acceptance', title: 'MVP acceptance contract', note: 'Golden paths, offline rules, recovery, model disclosure, and accessibility.', detect: [/docs\/projectos-architecture-brief\.md$/], initial: 'verified', evidence: ['docs/projectos-architecture-brief.md §19'] },
+            { id: 'baseline.roadmap', title: 'Live evidence roadmap', note: 'This dashboard; status ingestion is ready before implementation starts.', detect: [/design\/projectos-live-mvp-roadmap\.html$/], initial: 'verified', evidence: ['design/projectos-live-mvp-roadmap.html'] }
+          ]
+        },
+        {
+          id: 'm0', number: 'M0', milestone: 'Proofs before features', title: 'Feasibility gates',
+          summary: 'Resolve the five engineering assumptions capable of invalidating the architecture.',
+          exit: 'Every gate has reproducible evidence, a pass/fail decision, and a recorded fallback where relevant.',
+          why: 'If these assumptions fail later, large parts of the product would need to be redesigned.',
+          tasks: [
+            { id: 'm0.shell', title: 'Gate A · macOS and Linux shell', note: 'Packaging, rendering, accessibility, IPC cancellation, and hostile document fixtures.', detect: [/src-tauri\/tauri\.conf/, /evidence\/gates\/gate-a/i] },
+            { id: 'm0.graph', title: 'Gate B · embedded graph engine', note: 'LadybugDB/HelixDB pre-screen, adapter corpus, crash/reopen, export/import.', detect: [/graph.*adapter/i, /evidence\/gates\/gate-b/i] },
+            { id: 'm0.worker', title: 'Gate C · brokered worker isolation', note: 'No ambient authority, egress controls, cancellation, budgets, and orphan cleanup.', detect: [/worker.*protocol/i, /worker.*supervisor/i, /evidence\/gates\/gate-c/i] },
+            { id: 'm0.recovery', title: 'Gate D · mutation and graph recovery', note: 'Fault injection across PREPARED, FILES_APPLIED, COMMITTED, journal, and snapshot states.', detect: [/recovery.*(test|spec)/i, /evidence\/gates\/gate-d/i] },
+            { id: 'm0.provider', title: 'Gate E · provider contract', note: 'Credential isolation, streaming, fallback, model disclosure, cancellation, and spend ceilings.', detect: [/provider.*adapter/i, /evidence\/gates\/gate-e/i] }
+          ]
+        },
+        {
+          id: 'm1', number: 'M1', milestone: 'Trusted foundation', title: 'Kernel skeleton',
+          summary: 'Create the smallest real desktop core that can safely open, move, recover, and inspect a project.',
+          exit: 'A folder-backed project and the profile graph can be opened, moved, recovered, and inspected without any provider.',
+          why: 'Everything above this layer depends on identity, permissions, mutations, recovery, and observability being reliable.',
+          tasks: [
+            { id: 'm1.registry', title: 'Folder registration and stable project identity', note: 'Portable project.toml envelope; paths remain local bindings.', detect: [/project.*registry/i, /project\.toml$/i] },
+            { id: 'm1.graphs', title: 'Project/profile graph split', note: 'Project semantics travel; cross-project links remain profile-owned.', detect: [/profile.*graph/i, /project.*graph/i] },
+            { id: 'm1.capabilities', title: 'Capability and approval broker', note: 'Scoped read, propose, modify, external-effect, and control permissions.', detect: [/capabilit(y|ies).*\.(rs|ts)$/i, /approval.*\.(rs|ts)$/i] },
+            { id: 'm1.mutation', title: 'Atomic mutation and revision recovery', note: 'Before-images, conflict preservation, journal, snapshots, and startup reconciliation.', detect: [/mutation.*\.(rs|ts)$/i, /revision.*store/i] },
+            { id: 'm1.trace', title: 'Receipts and trace viewer', note: 'Durable redacted facts plus separately retained raw event records.', detect: [/receipt.*\.(rs|ts|tsx)$/i, /trace.*viewer/i] },
+            { id: 'm1.offline', title: 'Central offline enforcement', note: 'Deny provider, telemetry, redirects, remote assets, and remote Git egress.', detect: [/offline.*(broker|policy|test)/i] }
+          ]
+        },
+        {
+          id: 'm2', number: 'M2', milestone: 'First usable vertical', title: 'Substack golden path',
+          summary: 'Turn the design prototype into a complete, recoverable writing workflow.',
+          exit: 'Two independent writing projects complete the eight-step golden path with truthful receipts and restorable milestones.',
+          why: 'This is the first moment ProjectOS becomes useful for real work rather than merely technically sound.',
+          tasks: [
+            { id: 'm2.editor', title: 'Artifact editor and robust selection anchors', note: 'Markdown/text plus LaTeX source; stale selections fail safely.', detect: [/artifact.*editor/i, /selection.*anchor/i] },
+            { id: 'm2.actions', title: 'Typed selection actions', note: 'Rephrase, Explain, Complete, and Fact-check with explicit contracts.', detect: [/substack.*action/i, /selection.*action/i] },
+            { id: 'm2.diff', title: 'Proposal, diff, approval, and revision loop', note: 'No silent insertion; every accepted mutation remains recoverable.', detect: [/diff.*review/i, /revision.*timeline/i] },
+            { id: 'm2.recipe', title: 'Publish-readiness recipe', note: 'Structure, claims, citations, voice, human gate, and declared outputs.', detect: [/publish.*readiness/i, /substack.*recipe/i] },
+            { id: 'm2.context', title: 'Evidence and lineage lenses', note: 'One/two-hop context with equivalent map, list, and table representations.', detect: [/evidence.*lens/i, /lineage.*lens/i] },
+            { id: 'm2.milestone', title: 'Named milestone and export', note: 'Publish candidate restores correctly and exports without lock-in.', detect: [/publish.*candidate/i, /milestone.*(test|spec)/i] },
+            { id: 'm2.e2e', title: 'End-to-end Substack receipt', note: 'Exact inputs, model route, tools, evidence, approvals, mutation, cost, and outcome.', detect: [/substack.*e2e/i, /golden.*substack/i] }
+          ]
+        },
+        {
+          id: 'm3', number: 'M3', milestone: 'Second vertical', title: 'Software golden path',
+          summary: 'Prove the kernel generalizes from prose to repositories, patches, tests, and explicit Git effects.',
+          exit: 'Two repositories produce reviewed patches in isolation without silent commit, push, PR creation, or application control.',
+          why: 'A contrasting vertical demonstrates that ProjectOS is a project kernel, not only a writing application.',
+          tasks: [
+            { id: 'm3.git', title: 'Repository and Git broker', note: 'Status, diff, worktree, commit, and separately approved remote operations.', detect: [/git.*broker/i, /repository.*adapter/i] },
+            { id: 'm3.worktree', title: 'Isolated worktree execution', note: 'Ephemeral staging tied to the canonical project and exact run.', detect: [/worktree.*(runner|recipe|test)/i] },
+            { id: 'm3.patch', title: 'Patch and test review surface', note: 'Review by file, semantic unit, recipe step, and agent run.', detect: [/patch.*review/i, /test.*result.*view/i] },
+            { id: 'm3.ui', title: 'Constrained computer-use checks', note: 'Visible approved target, bounded capture, emergency stop, identity loss pause.', detect: [/computer.*use/i, /ui.*check.*recipe/i] },
+            { id: 'm3.effects', title: 'Explicit local and remote Git effects', note: 'Commit is explicit; push and PR creation remain separate approvals.', detect: [/push.*approval/i, /pull.*request.*approval/i] },
+            { id: 'm3.e2e', title: 'End-to-end Software receipt', note: 'Patch, tests, capabilities, approvals, exact tree hash, and final status.', detect: [/software.*e2e/i, /golden.*software/i] }
+          ]
+        },
+        {
+          id: 'm4', number: 'M4', milestone: 'Release candidate', title: 'Hardening and packaging',
+          summary: 'Make the deep paths installable, recoverable, accessible, documented, and repeatable on clean machines.',
+          exit: 'Signed/notarized macOS and supported Linux installers pass the frozen matrix and disaster-recovery exercise.',
+          why: 'A feature-complete build is not usable if installation, migration, accessibility, or recovery is fragile.',
+          tasks: [
+            { id: 'm4.accessibility', title: 'Accessibility conformance', note: 'Keyboard, focus, screen reader, reduced motion, zoom, and non-color meaning.', detect: [/accessibility.*(test|report)/i, /a11y/i] },
+            { id: 'm4.packaging', title: 'macOS and Linux packaging', note: 'Clean-machine installation, signing/notarization, and supported formats.', detect: [/packaging.*(test|report)/i, /notar/i, /appimage|deb|rpm/i] },
+            { id: 'm4.recovery', title: 'Full disaster-recovery drill', note: 'Project/profile graphs, revisions, migrations, tombstones, and divergent lineage.', detect: [/disaster.*recovery/i, /recovery.*drill/i] },
+            { id: 'm4.security', title: 'Threat model and adversarial suite', note: 'Path races, egress, secrets, child processes, redirects, and external ambiguity.', detect: [/threat.*model/i, /adversarial.*(test|suite)/i] },
+            { id: 'm4.docs', title: 'Contributor and data-format documentation', note: 'Apache-2.0, setup, graph/export formats, recovery, and support boundaries.', detect: [/LICENSE$/i, /CONTRIBUTING/i, /data.*format/i] },
+            { id: 'm4.clean', title: 'Clean install and upgrade matrix', note: 'Fresh install plus N-1/N-2 migration on every supported target.', detect: [/clean.*install/i, /upgrade.*matrix/i] }
+          ]
+        },
+        {
+          id: 'agents', number: 'QA', milestone: 'Continuous until handoff', title: 'Subagent test gauntlet',
+          summary: 'Independent agents repeatedly challenge the release candidate until no machine-verifiable blocker remains.',
+          exit: 'The frozen candidate has no open critical/high findings, all required suites are green, and every uncertainty is disclosed for manual review.',
+          why: 'Independent adversarial passes reduce blind spots and reserve your time for the judgments only a human owner can make.',
+          tasks: [
+            { id: 'agents.functional', title: 'Golden-path agent', note: 'Runs Substack and Software workflows from clean state and preserves raw evidence.', detect: [/agent.*golden.*path/i, /qa\/functional/i] },
+            { id: 'agents.security', title: 'Authority and security agent', note: 'Attempts scope escape, secret exposure, egress, unapproved effects, and unsafe retries.', detect: [/agent.*security/i, /qa\/security/i] },
+            { id: 'agents.recovery', title: 'Recovery and fault-injection agent', note: 'Crashes every mutation boundary and audits acknowledged-state restoration.', detect: [/agent.*recovery/i, /qa\/recovery/i] },
+            { id: 'agents.accessibility', title: 'Accessibility and usability agent', note: 'Keyboard, semantics, zoom, failure language, and approval comprehension.', detect: [/agent.*accessibility/i, /qa\/accessibility/i] },
+            { id: 'agents.audit', title: 'Independent evidence auditor', note: 'Challenges every “done” claim against receipts, tests, code, and unresolved risk.', detect: [/independent.*audit/i, /qa\/audit/i] },
+            { id: 'agents.freeze', title: 'Release candidate frozen', note: 'Exact commit/build identifiers; no changes after green suite without rerunning affected checks.', detect: [/release.*candidate.*manifest/i, /qa\/release/i] }
+          ]
+        },
+        {
+          id: 'manual', number: 'YOU', milestone: 'Final gate', title: 'Owner manual acceptance',
+          summary: 'You decide whether the frozen candidate is useful, understandable, and trustworthy in real use.',
+          exit: 'All manual scenarios pass on the frozen candidate and you explicitly sign off—or return a finding to the roadmap.',
+          why: 'Agents can verify contracts. They cannot decide whether this is a tool you are willing to depend on.',
+          manual: true,
+          tasks: [
+            { id: 'manual.install', title: 'Install on a clean machine', note: 'No development tools, hidden services, or undocumented setup.' },
+            { id: 'manual.substack', title: 'Complete a real Substack workflow', note: 'Use your own folder and content; inspect the diff, evidence, receipt, and restore point.' },
+            { id: 'manual.software', title: 'Complete a real Software workflow', note: 'Review an isolated patch and verify commit/push boundaries feel explicit.' },
+            { id: 'manual.offline', title: 'Trust the offline boundary', note: 'Disconnect and confirm the product remains useful without transmitting.' },
+            { id: 'manual.recovery', title: 'Recover something you intentionally break', note: 'Restore a project or revision and judge whether the recovery story is legible.' },
+            { id: 'manual.traces', title: 'Understand what the system did', note: 'Use the receipt and evidence UI without needing developer logs.' },
+            { id: 'manual.signoff', title: 'Explicit MVP acceptance', note: 'Record pass, return with findings, or reject. Silence is not acceptance.' }
+          ]
+        }
+      ];
+
+      const state = {
+        statuses: {}, evidence: {}, notes: {}, manual: {}, files: [...baselineFiles],
+        handle: null, timer: null, connected: false, manifest: null,
+        stats: { files: 3, source: 2, tests: 0 }, selectedStage: 'm0'
+      };
+
+      stages.forEach(stage => stage.tasks.forEach(task => {
+        state.statuses[task.id] = task.initial || 'planned';
+        state.evidence[task.id] = task.evidence ? [...task.evidence] : [];
+      }));
+
+      const roadmap = document.getElementById('roadmap');
+      const toast = document.getElementById('toast');
+      const directoryInput = document.getElementById('directory-input');
+      const statusInput = document.getElementById('status-input');
+      const methodDialog = document.getElementById('method-dialog');
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => toast.classList.remove('is-visible'), 3200);
+      }
+
+      function statusLabel(value) {
+        return ({ planned: 'planned', detected: 'detected', implemented: 'implemented', verified: 'verified', accepted: 'accepted', blocked: 'blocked' })[value] || 'planned';
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      }
+
+      function taskProgress(task) {
+        return STATUS_RANK[state.statuses[task.id] || 'planned'];
+      }
+
+      function stageProgress(stage) {
+        if (!stage.tasks.length) return 0;
+        return stage.tasks.reduce((sum, task) => sum + taskProgress(task), 0) / stage.tasks.length;
+      }
+
+      function stageState(stage) {
+        const values = stage.tasks.map(task => state.statuses[task.id]);
+        if (values.includes('blocked')) return 'blocked';
+        if (values.every(value => value === 'verified' || value === 'accepted')) return 'verified';
+        if (values.some(value => value !== 'planned')) return 'active';
+        return 'planned';
+      }
+
+      function overallProgress() {
+        const all = stages.flatMap(stage => stage.tasks);
+        return Math.round(all.reduce((sum, task) => sum + taskProgress(task), 0) / all.length * 100);
+      }
+
+      function manualUnlocked() {
+        return stages.filter(stage => !stage.manual && stage.id !== 'baseline').every(stage => stage.tasks.every(task => state.statuses[task.id] === 'verified'));
+      }
+
+      function render() {
+        roadmap.innerHTML = stages.map((stage, index) => {
+          const progress = Math.round(stageProgress(stage) * 100);
+          const sState = stageState(stage);
+          const open = stage.id === state.selectedStage;
+          const lockedManual = stage.manual && !manualUnlocked();
+          const stateText = sState === 'verified' ? 'complete' : sState === 'active' ? 'in evidence' : sState;
+          return `
+            <article class="stage-card" id="stage-${stage.id}" data-stage="${stage.id}" data-state="${sState}">
+              <div class="stage-index"><span>${sState === 'verified' ? '✓' : stage.number}</span></div>
+              <div class="stage-main">
+                <div class="stage-head" tabindex="0" role="button" aria-expanded="${open}" data-toggle-stage="${stage.id}">
+                  <div><span class="stage-kicker">${stage.milestone}</span><h2>${stage.title}</h2><p>${stage.summary}</p></div>
+                  <div class="stage-meter"><strong>${progress}%</strong><div class="meter-track" aria-hidden="true"><span style="width:${progress}%"></span></div></div>
+                </div>
+                <div class="stage-meta">
+                  <span class="chip state-${sState}">${stateText}</span>
+                  <span class="chip">${stage.tasks.length} checks</span>
+                  ${stage.manual ? '<span class="chip manual">human-only</span>' : ''}
+                  ${lockedManual ? '<span class="chip state-blocked">locked by QA</span>' : ''}
+                </div>
+                <div class="stage-details" ${open ? '' : 'hidden'}>
+                  <ul class="task-list">
+                    ${stage.tasks.map(task => {
+                      const status = state.statuses[task.id];
+                      const evidence = state.evidence[task.id] || [];
+                      const checked = state.manual[task.id] === true;
+                      return `<li class="task" data-status="${status}">
+                        <span class="task-dot" aria-hidden="true"></span>
+                        <span><strong>${task.title}</strong><small>${task.note}</small></span>
+                        ${stage.manual ? `<label class="manual-check"><input type="checkbox" data-manual-task="${task.id}" ${checked ? 'checked' : ''} ${lockedManual ? 'disabled' : ''}> passed</label>` : `<span class="task-state">${statusLabel(status)}</span>`}
+                        ${evidence.length ? `<span class="task-evidence">${escapeHtml(evidence.slice(0, 3).join(' · '))}</span>` : ''}
+                        ${state.notes[task.id] ? `<span class="task-evidence" style="color:var(--danger)">${escapeHtml(state.notes[task.id])}</span>` : ''}
+                      </li>`;
+                    }).join('')}
+                  </ul>
+                  <div class="stage-actions"><button class="button ghost small" type="button" data-inspect-stage="${stage.id}">Show exit condition</button>${stage.manual && lockedManual ? '<span class="task-state">Available after subagent gauntlet</span>' : ''}</div>
+                </div>
+              </div>
+            </article>`;
+        }).join('');
+
+        const overall = overallProgress();
+        document.getElementById('overall-progress').textContent = `${overall}%`;
+        const ring = document.getElementById('progress-ring');
+        ring.style.setProperty('--progress', overall);
+        ring.setAttribute('aria-label', `Overall evidence-weighted progress ${overall} percent`);
+        document.getElementById('file-count').textContent = state.stats.files;
+        document.getElementById('source-count').textContent = state.stats.source;
+        document.getElementById('test-count').textContent = state.stats.tests;
+
+        const unlocked = manualUnlocked();
+        document.getElementById('manual-seal').textContent = unlocked ? 'READY' : 'LOCKED';
+        document.getElementById('manual-seal-note').textContent = unlocked ? 'awaiting your test' : 'agent gauntlet incomplete';
+        restoreFilter();
+      }
+
+      function selectStage(id, scroll = false) {
+        state.selectedStage = id;
+        const stage = stages.find(item => item.id === id);
+        if (!stage) return;
+        document.getElementById('inspector-kicker').textContent = stage.milestone;
+        document.getElementById('inspector-title').textContent = `${stage.number} · ${stage.title}`;
+        document.getElementById('inspector-summary').textContent = stage.summary;
+        document.getElementById('inspector-exit').textContent = stage.exit;
+        document.getElementById('inspector-why').textContent = stage.why;
+        render();
+        if (scroll) document.getElementById(`stage-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function detectFromFiles(paths) {
+        const normalized = paths.map(path => path.replace(/\\/g, '/'));
+        stages.forEach(stage => stage.tasks.forEach(task => {
+          if (task.initial === 'verified' || stage.manual || !task.detect) return;
+          const matches = normalized.filter(path => task.detect.some(pattern => pattern.test(path)));
+          if (matches.length && state.statuses[task.id] === 'planned') state.statuses[task.id] = 'detected';
+          if (matches.length) state.evidence[task.id] = matches.slice(0, 4);
+        }));
+      }
+
+      function applyManifest(manifest) {
+        if (!manifest || typeof manifest !== 'object' || !manifest.tasks || typeof manifest.tasks !== 'object') throw new Error('Status JSON must contain a tasks object.');
+        if (state.manifest && manifest.commit !== state.manifest.commit) {
+          state.manual = {};
+          stages.filter(stage => stage.id !== 'baseline').forEach(stage => stage.tasks.forEach(task => {
+            state.statuses[task.id] = 'planned'; state.evidence[task.id] = []; delete state.notes[task.id];
+          }));
+        }
+        const warnings = [];
+        if (!manifest.commit || !manifest.updatedAt) warnings.push('Missing source revision or evaluation time');
+        if (manifest.updatedAt && Date.now() - Date.parse(manifest.updatedAt) > 24 * 60 * 60 * 1000) warnings.push('Evidence snapshot is over 24 hours old');
+        Object.entries(manifest.tasks).forEach(([id, record]) => {
+          if (!Object.hasOwn(state.statuses, id)) { warnings.push(`Unknown task: ${id}`); return; }
+          if (stages.some(stage => stage.manual && stage.tasks.some(task => task.id === id))) { warnings.push(`Human-only task ignored: ${id}`); return; }
+          if (!record || !VALID_STATUSES.has(record.status)) { warnings.push(`Invalid status: ${id}`); return; }
+          if (record.status === 'verified' && (!manifest.commit || !Array.isArray(record.evidence) || !record.evidence.length)) { warnings.push(`Verification has no evidence: ${id}`); return; }
+          state.statuses[id] = record.status;
+          if (Array.isArray(record.evidence)) state.evidence[id] = record.evidence.map(String);
+          if (record.note) state.notes[id] = String(record.note);
+        });
+        state.manifest = manifest;
+        if (manifest.sourceStats && Object.values(manifest.sourceStats).every(value => Number.isInteger(value) && value >= 0)) state.stats = manifest.sourceStats;
+        warnings.push(...(Array.isArray(manifest.diagnostics) ? manifest.diagnostics : []));
+        document.getElementById('snapshot-note').textContent = warnings.length ? warnings.join(' · ') : `Evidence evaluated ${new Date(manifest.updatedAt).toLocaleString()} · ${String(manifest.commit).slice(0, 23)}…`;
+      }
+
+      async function refreshServedManifest() {
+        if (!['http:', 'https:'].includes(location.protocol) || !['127.0.0.1', 'localhost'].includes(location.hostname)) return;
+        try {
+          const response = await fetch('/projectos-roadmap-status.json', {cache:'no-store'});
+          if (!response.ok) throw new Error('Status manifest unavailable');
+          const manifest = await response.json();
+          const sourceResponse = await fetch('/projectos-source-snapshot.json', {cache:'no-store'});
+          if (!sourceResponse.ok) throw new Error('Source snapshot unavailable');
+          const snapshot = await sourceResponse.json();
+          if (snapshot.revision !== manifest.commit) throw new Error('Source revision differs from status evidence');
+          applyManifest(manifest);
+          document.getElementById('connection-label').textContent = 'Live local evidence';
+          document.getElementById('scan-label').textContent = 'status refresh every 5 seconds';
+          render();
+        } catch (error) { document.getElementById('snapshot-note').textContent = `Refresh warning: ${error.message}`; }
+      }
+
+      async function walkDirectory(handle, prefix = '', files = [], depth = 0) {
+        if (files.length >= 5000 || depth > 12) return files;
+        for await (const entry of handle.values()) {
+          if (files.length >= 5000) break;
+          if (entry.name.startsWith('.') && entry.name !== '.projectos') continue;
+          if (entry.kind === 'directory' && IGNORE_DIRS.has(entry.name)) continue;
+          const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+          if (entry.kind === 'directory') await walkDirectory(entry, path, files, depth + 1);
+          else files.push({ path, handle: entry });
+        }
+        return files;
+      }
+
+      async function scanHandle(handle, quiet = false) {
+        const permission = await handle.queryPermission?.({ mode: 'read' });
+        if (permission === 'denied') throw new Error('Folder permission was denied.');
+        const entries = await walkDirectory(handle);
+        const paths = entries.map(entry => entry.path);
+        state.files = paths;
+        state.stats = {
+          files: paths.length,
+          source: paths.filter(path => SOURCE_RE.test(path) && !TEST_RE.test(path)).length,
+          tests: paths.filter(path => TEST_RE.test(path)).length
+        };
+        detectFromFiles(paths);
+        const manifestEntry = entries.find(entry => /(^|\/)projectos-roadmap-status\.json$/.test(entry.path));
+        if (manifestEntry) {
+          const file = await manifestEntry.handle.getFile();
+          applyManifest(JSON.parse(await file.text()));
+        }
+        state.connected = true;
+        document.getElementById('live-dot').classList.add('connected');
+        document.getElementById('connection-label').textContent = handle.name || 'Connected codebase';
+        document.getElementById('scan-label').textContent = `scanned ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        document.getElementById('refresh-button').disabled = false;
+        render();
+        if (!quiet) showToast(`Scanned ${paths.length} files. File detection never counts as verification.`);
+      }
+
+      async function connectCodebase() {
+        if ('showDirectoryPicker' in window) {
+          try {
+            const handle = await window.showDirectoryPicker({ mode: 'read' });
+            state.handle = handle;
+            await scanHandle(handle);
+            clearInterval(state.timer);
+            state.timer = setInterval(() => scanHandle(handle, true).catch(() => clearInterval(state.timer)), 20000);
+          } catch (error) {
+            if (error.name !== 'AbortError') showToast(error.message || 'Could not scan the folder.');
+          }
+        } else {
+          directoryInput.click();
+        }
+      }
+
+      async function scanFileList(fileList) {
+        const files = [...fileList];
+        const paths = files.map(file => file.webkitRelativePath || file.name);
+        state.files = paths;
+        state.stats = {
+          files: paths.length,
+          source: paths.filter(path => SOURCE_RE.test(path) && !TEST_RE.test(path)).length,
+          tests: paths.filter(path => TEST_RE.test(path)).length
+        };
+        detectFromFiles(paths);
+        const manifestFile = files.find(file => /(^|\/)projectos-roadmap-status\.json$/.test(file.webkitRelativePath || file.name));
+        if (manifestFile) applyManifest(JSON.parse(await manifestFile.text()));
+        state.connected = true;
+        document.getElementById('live-dot').classList.add('connected');
+        document.getElementById('connection-label').textContent = paths[0]?.split('/')[0] || 'Selected folder';
+        document.getElementById('scan-label').textContent = 'snapshot scan · reselect to refresh';
+        render();
+        showToast(`Scanned ${paths.length} files. This browser requires reselecting the folder to refresh.`);
+      }
+
+      function exportSnapshot() {
+        const tasks = {};
+        stages.forEach(stage => stage.tasks.forEach(task => {
+          tasks[task.id] = { status: state.statuses[task.id], evidence: state.evidence[task.id] || [], ...(state.notes[task.id] ? { note: state.notes[task.id] } : {}) };
+        }));
+        const payload = { updatedAt: new Date().toISOString(), source: state.connected ? 'live-roadmap-scan' : 'design-baseline', commit: state.manifest?.commit || null, tasks };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'projectos-roadmap-snapshot.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('Roadmap snapshot exported.');
+      }
+
+      let activeFilter = 'all';
+      function restoreFilter() {
+        const firstRemaining = stages.find(stage => stageState(stage) !== 'verified');
+        document.querySelectorAll('.stage-card').forEach(card => {
+          const stage = stages.find(item => item.id === card.dataset.stage);
+          const sState = stageState(stage);
+          card.hidden = activeFilter === 'active'
+            ? !(stage.id === state.selectedStage || stage.id === firstRemaining?.id)
+            : activeFilter === 'remaining'
+              ? sState === 'verified'
+              : activeFilter === 'blocked'
+                ? sState !== 'blocked'
+                : false;
+        });
+      }
+
+      document.addEventListener('click', event => {
+        const toggle = event.target.closest('[data-toggle-stage]');
+        if (toggle) {
+          const id = toggle.dataset.toggleStage;
+          state.selectedStage = state.selectedStage === id ? '' : id;
+          render();
+          if (state.selectedStage) selectStage(id, false);
+          return;
+        }
+        const inspect = event.target.closest('[data-inspect-stage]');
+        if (inspect) { selectStage(inspect.dataset.inspectStage, false); return; }
+        const focus = event.target.closest('[data-focus-stage]');
+        if (focus) { selectStage(focus.dataset.focusStage, true); return; }
+        const filter = event.target.closest('[data-filter]');
+        if (filter) {
+          activeFilter = filter.dataset.filter;
+          document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button === filter)));
+          restoreFilter();
+        }
+      });
+
+      document.addEventListener('keydown', event => {
+        const toggle = event.target.closest('[data-toggle-stage]');
+        if (toggle && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); toggle.click(); }
+      });
+
+      document.addEventListener('change', event => {
+        const checkbox = event.target.closest('[data-manual-task]');
+        if (!checkbox) return;
+        if (!manualUnlocked()) { checkbox.checked = false; return; }
+        state.manual[checkbox.dataset.manualTask] = checkbox.checked;
+        state.statuses[checkbox.dataset.manualTask] = checkbox.checked ? 'accepted' : 'planned';
+        try { localStorage.setItem('projectos-roadmap-manual', JSON.stringify({commit:state.manifest?.commit,tasks:state.manual})); } catch {}
+        render();
+      });
+
+      document.getElementById('connect-button').addEventListener('click', connectCodebase);
+      document.getElementById('refresh-button').addEventListener('click', () => state.handle ? scanHandle(state.handle) : directoryInput.click());
+      directoryInput.addEventListener('change', () => directoryInput.files.length && scanFileList(directoryInput.files).catch(error => showToast(error.message)));
+      document.getElementById('import-button').addEventListener('click', () => statusInput.click());
+      statusInput.addEventListener('change', async () => {
+        try {
+          applyManifest(JSON.parse(await statusInput.files[0].text()));
+          render();
+          showToast('Status manifest imported. Claims remain visible with their evidence paths.');
+        } catch (error) { showToast(error.message || 'Invalid status JSON.'); }
+        statusInput.value = '';
+      });
+      document.getElementById('export-button').addEventListener('click', exportSnapshot);
+      document.getElementById('method-button').addEventListener('click', () => methodDialog.showModal());
+      methodDialog.querySelector('.close').addEventListener('click', () => methodDialog.close());
+      methodDialog.addEventListener('click', event => { if (event.target === methodDialog) methodDialog.close(); });
+
+      detectFromFiles(baselineFiles);
+      applyManifest(JSON.parse(document.getElementById('status-snapshot').textContent));
+      try {
+        const saved = JSON.parse(localStorage.getItem('projectos-roadmap-manual') || '{}');
+        if (saved.commit && saved.commit === state.manifest.commit && manualUnlocked()) state.manual = saved.tasks || {};
+      } catch {}
+      Object.entries(state.manual).forEach(([id, value]) => { if (value && stages.some(stage => stage.manual && stage.tasks.some(task => task.id === id))) state.statuses[id] = 'accepted'; });
+      render();
+      selectStage('m0');
+      refreshServedManifest();
+      setInterval(refreshServedManifest, 5000);
+    })();
+  </script>
+</body>
+</html>

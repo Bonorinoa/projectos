@@ -1,0 +1,49 @@
+cargo +1.97.1 build --locked --offline --features desktop
+   Compiling objc2-exception-helper v0.1.1
+   Compiling aws-lc-sys v0.45.0
+   Compiling ring v0.17.14
+   Compiling zstd-sys v2.1.0+zstd.1.5.7
+   Compiling lz4-sys v1.11.1+lz4-1.10.0
+   Compiling objc2 v0.6.5
+   Compiling projectos-graph-embedding v0.0.1 (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri)
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.0
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling dispatch2 v0.3.1
+   Compiling lz4 v1.28.1
+   Compiling objc2-io-kit v0.3.2
+   Compiling zstd-safe v7.3.0
+   Compiling sysinfo v0.35.2
+   Compiling zstd v0.13.3
+   Compiling foyer-storage v0.22.3
+   Compiling tantivy-sstable v0.7.0
+   Compiling tantivy-columnar v0.7.0
+   Compiling tantivy v0.26.2
+   Compiling foyer v0.22.3
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.1
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.1
+   Compiling tauri-runtime-wry v2.12.1
+   Compiling tauri v2.12.0
+   Compiling aws-lc-rs v1.18.1
+   Compiling rustls v0.23.45
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.6
+   Compiling rustls-platform-verifier v0.7.1
+   Compiling hyper-rustls v0.27.10
+   Compiling reqwest v0.13.5
+   Compiling reqwest v0.12.28
+   Compiling helix-metrics v0.1.1 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
+   Compiling object_store v0.12.5
+   Compiling object_store v0.14.2
+   Compiling slatedb-common v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
+   Compiling slatedb-txn-obj v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
+   Compiling slatedb v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
+   Compiling db v0.1.0 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
+   Compiling helix-db v3.0.0 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 33s

@@ -1,0 +1,41 @@
+{
+  "reviewer": "provider_contract (independent of roadmap and Gate A implementation)",
+  "scope": "Behavioral regression tests using Node VM DOM stubs and isolated temporary repository copies. No real browser rendering or native UI execution is claimed by this review.",
+  "command": "node --test scripts/test-roadmap.mjs",
+  "result": { "exit_code": 0, "total": 10, "passed": 10, "failed": 0, "skipped": 0 },
+  "source_sha256": {
+    "scripts/test-roadmap.mjs": "2af6c1fd5088cc67b819b500eac4d6975f432f9e79ed0e2e4388c07400e1dce2",
+    "scripts/update-roadmap.mjs": "9fa375e4e59a64781b43e92a98ad7ee79d76043fd002cfca316917fa71ceb928",
+    "scripts/serve-roadmap.mjs": "2377db8b6fe42d696b2cb16c17ab71381f7db85bc229305fc1cc9cea87fa2a23"
+  },
+  "html_normalized_sha256": "b49c215bba08070026d7c7f330e067292139a285e10717e0a5297049a469148d",
+  "html_hash_rule": "Read design/projectos-live-mvp-roadmap.html as UTF-8, replace the entire STATUS_SNAPSHOT_START through STATUS_SNAPSHOT_END comment block with <!-- STATUS_SNAPSHOT_EXCLUDED -->, then SHA-256. This excludes regenerated status data while binding reviewed code and layout.",
+  "verified": [
+    "Inline JavaScript compiles; literal getElementById references exist and HTML IDs are unique.",
+    "Imported malicious note/evidence markup is escaped before render interpolation.",
+    "Agent manifests cannot set human-only tasks accepted or verified; locked checkbox events cannot accept them.",
+    "Manual acceptance restores only for the same fully verified candidate revision.",
+    "A different source revision clears manual acceptance and previous nonbaseline QA verification.",
+    "Mismatched served source snapshot does not apply an unbound status manifest.",
+    "Fresh failing Gate A, D and E reports block promotion.",
+    "Missing source hashes prevent an implemented evidence claim.",
+    "Changing source changes source revision and blocks stale source-hashed reports.",
+    "Server refresh regenerates on code changes and skips unchanged fingerprints, tested without opening a socket."
+  ],
+  "gate_a_review": {
+    "duplicate_cancel_registration": "Atomic mutex registration rejects duplicate active ID without replacing original Arc; regression test verifies retained handle identity.",
+    "job_bound": "Atomic registration enforces at most 16 active jobs.",
+    "source_hashes_match": true,
+    "native_artifact_hash_matches": true,
+    "executed_document_safety_and_static_verification_tests_hashed": true,
+    "native_build_evidence": "Recorded cargo regression tests and debug bundle build succeeded; independently checked report source hashes and built binary SHA-256. Did not rerun the native build or UI in this review.",
+    "stale_report_blockers_reconciled": true,
+    "remaining_gate_status": "partial_unverified"
+  },
+  "limitations": [
+    "VM DOM stubs do not execute HTML event attributes or prove browser CSP, accessibility, appearance or real user interactions.",
+    "Server refresh logic is executed in a VM against temporary filesystem fixtures, not an actual HTTP socket.",
+    "These checks protect imported data and revision semantics; they are not an authentication boundary against arbitrary code running in the same local browser origin.",
+    "Final manual user acceptance, clean-machine installation and full platform matrix remain outstanding."
+  ]
+}

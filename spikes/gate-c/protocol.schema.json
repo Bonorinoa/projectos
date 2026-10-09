@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://projectos.local/schemas/worker-protocol-v1.json",
+  "title": "ProjectOS worker protocol v1",
+  "type": "object",
+  "required": ["protocol", "version", "type", "id"],
+  "properties": {
+    "protocol": { "const": "projectos.worker" },
+    "version": { "const": 1 },
+    "type": {
+      "enum": [
+        "hello",
+        "hello_ack",
+        "run",
+        "cancel",
+        "broker.request",
+        "broker.response",
+        "result",
+        "error"
+      ]
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "replyTo": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false
+}

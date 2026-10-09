@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ProjectOS · Gate A</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./main.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to probes</a>
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">ProjectOS · M0 · Gate A</p>
+      <h1>Desktop shell field rig</h1>
+      <p class="lede">A deliberately small surface for collecting shell evidence. Green here means a probe ran—not that the cross-platform gate passed.</p>
+    </div>
+    <div class="host-card" aria-live="polite">
+      <span class="signal" id="runtime-signal"></span>
+      <div><strong id="runtime-label">Browser preview</strong><small id="runtime-detail">Native IPC unavailable</small></div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="contract" aria-labelledby="contract-title">
+      <div><p class="eyebrow">Test contract</p><h2 id="contract-title">Observed evidence only</h2></div>
+      <p>Run every probe on each frozen matrix target. Record screenshots, logs, package hashes, accessibility output, and failures. A source file is implementation evidence; only an executed probe is platform evidence.</p>
+    </section>
+
+    <section class="probe-grid" aria-label="Gate A probes">
+      <article class="probe" id="file-probe">
+        <div class="probe-head"><span>01</span><h2>File dialog & drag/drop</h2><output class="badge" id="file-status">Ready</output></div>
+        <p>Uses the system WebView file picker. Bytes remain in the frontend and are rendered as text.</p>
+        <label class="button" for="file-input">Choose hostile fixture</label>
+        <input id="file-input" type="file" accept=".md,.txt,.tex,.html,.pdf,application/pdf,text/*">
+        <div class="drop-zone" id="drop-zone" tabindex="0">Drop one fixture here</div>
+      </article>
+
+      <article class="probe">
+        <div class="probe-head"><span>02</span><h2>Clipboard & IME</h2><output class="badge" id="input-status">Ready</output></div>
+        <label for="editor">Composition-aware Markdown / LaTeX editor</label>
+        <textarea id="editor" rows="8" spellcheck="true"># 選択テスト\n\nInline math: $E = mc^2$\n\nمرحبا · नमस्ते · 안녕하세요</textarea>
+        <div class="button-row"><button id="copy-button" type="button">Copy</button><button id="paste-button" type="button">Paste</button></div>
+        <p class="event-log" id="ime-log" aria-live="polite">No composition event observed.</p>
+      </article>
+
+      <article class="probe wide">
+        <div class="probe-head"><span>03</span><h2>Hostile document renderer</h2><output class="badge" id="document-status">Text-only</output></div>
+        <div class="document-layout">
+          <div><h3>Untrusted source</h3><pre id="source-view" tabindex="0"></pre></div>
+          <div><h3>Selectable preview</h3><pre id="safe-preview" tabindex="0" aria-label="Untrusted document rendered as inert selectable text"></pre></div>
+        </div>
+        <p class="safety-note" id="safety-note">No document loaded. The probe never assigns document bytes to innerHTML.</p>
+      </article>
+
+      <article class="probe">
+        <div class="probe-head"><span>04</span><h2>IPC cancellation</h2><output class="badge" id="ipc-status">Not run</output></div>
+        <p>A bounded Rust command advances every 25 ms. Cancellation sets an atomic flag in the trusted process.</p>
+        <div class="button-row"><button id="start-ipc" type="button">Start 5-second job</button><button id="cancel-ipc" type="button" disabled>Cancel</button></div>
+        <progress id="ipc-progress" value="0" max="100">0%</progress>
+        <p class="event-log" id="ipc-log" aria-live="polite">Run inside Tauri to test the command boundary.</p>
+      </article>
+
+      <article class="probe">
+        <div class="probe-head"><span>05</span><h2>200% zoom & accessibility</h2><output class="badge">Manual</output></div>
+        <p>At 200% zoom: no horizontal page scroll, all controls remain keyboard reachable, focus remains visible, and landmark/name/state data remains meaningful.</p>
+        <button id="focus-tour" type="button">Start focus tour</button>
+        <p class="event-log" id="focus-log" aria-live="polite">Use the platform accessibility inspector for the authoritative tree.</p>
+      </article>
+
+      <article class="probe wide">
+        <div class="probe-head"><span>06</span><h2>10,000-row virtual list</h2><output class="badge" id="list-status">Ready</output></div>
+        <p>Only visible rows are mounted. Inspect scrolling stability with and without GPU acceleration.</p>
+        <div class="virtual-list" id="virtual-list" role="list" aria-label="Ten thousand synthetic artifacts" tabindex="0"><div id="virtual-spacer"><div id="virtual-window"></div></div></div>
+      </article>
+    </section>
+  </main>
+
+  <footer>Gate A spike · no filesystem, network, credential, shell, Git, or provider capabilities are granted.</footer>
+</body>
+</html>

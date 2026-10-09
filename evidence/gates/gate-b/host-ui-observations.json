@@ -1,0 +1,15 @@
+{
+  "gate": "B",
+  "observedAt": "2026-10-08",
+  "method": "Native macOS accessibility observation and button invocation through computer-use",
+  "application": "spikes/gate-b/rust-tauri/target/debug/bundle/macos/ProjectOS Graph Probe.app",
+  "observations": [
+    "Bundled app opened a native window titled ProjectOS embedded graph probe at tauri://localhost.",
+    "Clicked Run six graph checks through the native accessibility button.",
+    "Visible response reported status pass, checks 6, engine Helix and mode in-process Rust.",
+    "Visible operations: one-hop, two-hop, update, delete, disk-reopen and read-only write rejection.",
+    "Visible sourceRevision matched c72e64f0c7e480f3d125f071659d5e3ad7b8da15."
+  ],
+  "scope": "Pre-telemetry-fix host arm64 debug bundle and actual Tauri IPC; not current-source verification, signed release packaging, full adapter coverage, clean-machine or Linux proof. Independent review subsequently found default upstream telemetry; delivery was not measured. Reobserve the explicitly disabled configuration before claiming current native IPC proof.",
+  "automatedSourceAndBinaryHashes": "evidence/gates/gate-b/rust-integration.json"
+}

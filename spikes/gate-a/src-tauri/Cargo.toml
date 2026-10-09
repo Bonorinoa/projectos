@@ -1,0 +1,20 @@
+[package]
+name = "projectos-gate-a-shell"
+version = "0.0.1"
+description = "ProjectOS Gate A desktop shell feasibility spike"
+authors = ["ProjectOS contributors"]
+edition = "2024"
+rust-version = "1.90"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "=2.7.0", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "=2.12.0", features = [] }
+tokio = { version = "=1.53.2", features = ["time"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

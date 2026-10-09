@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "gate": "M0 Gate B - local graph database evaluation",
+  "as_of": "2026-10-06",
+  "decision": "not_ready_to_select",
+  "roadmap_recommendation": {
+    "task": "m0.graph",
+    "status": "implemented",
+    "note": "Both embedded candidates pass the host-level shared contract. Verification remains open for Rust/Tauri integration, clean macOS universal packaging/signing, Linux x86_64/aarch64 packaging, license metadata closure, and a frozen representative corpus."
+  },
+  "selection_recommendation": {
+    "preferred_for_next_bakeoff": "helix",
+    "confidence": "provisional",
+    "rationale": [
+      "Both engines produced the same canonical export hash and passed the same host-level correctness/recovery harness.",
+      "Helix published a universal2 embedded runtime and showed lower store bytes and slightly lower peak RSS on the spike corpus.",
+      "Ladybug has clearer MIT licensing and a mature embedded/concurrency contract, but the tested macOS Python artifact was thin arm64 and linked Homebrew OpenSSL paths.",
+      "Helix cannot be selected yet because the Python SDK/runtime published versions differ, the runtime wheel has no license metadata, and Rust/Linux/Tauri packaging was not exercised."
+    ],
+    "next_decision_test": "Run the same adapter through pinned Rust crates in a minimal Tauri sidecar-free shell, package/sign a universal macOS app and Linux x86_64/aarch64 artifacts on clean hosts, then repeat crash/migration and memory tests on the frozen release corpus."
+  },
+  "hard_fail_screen": {
+    "ladybug": {
+      "status": "pass",
+      "evidence": "Official docs describe an in-process embedded database; live process used no listening TCP port."
+    },
+    "helix": {
+      "status": "pass",
+      "evidence": "Current official docs describe no-HTTP embedded disk/in-memory handles; live process used no listening TCP port. This supersedes the earlier server-only hypothesis in the architecture brief."
+    }
+  },
+  "candidates": {
+    "ladybug": {
+      "versions": {
+        "python_binding": "0.21.1"
+      },
+      "criteria": {
+        "supported_in_process_embedding": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json",
+            "sources/ladybug-readme-v0.21.1.md",
+            "sources/ladybug-concurrency-doc.html"
+          ]
+        },
+        "transactional_node_edge_upsert_delete": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "one_two_hop_queries": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "lineage_and_impact_traversal": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "full_text_or_companion_mapping": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "note": "Used a disposable SQLite FTS5 companion keyed only by graph stable_id; no dynamic Ladybug extension was installed."
+        },
+        "concurrent_read_controlled_write": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "crash_reopen_and_journal_replay": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "scope": "Abrupt exit after three committed operations; reopen plus twice-idempotent ProjectOS journal replay."
+        },
+        "deterministic_export_import": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+        },
+        "copy_on_write_migration": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "bounded_memory": {
+          "status": "untested",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "note": "Measured 94,765,056-byte peak RSS on 603 nodes/600 edges, below the spike ceiling; production representative scale has not been frozen."
+        },
+        "macos_universal_packaging_signing": {
+          "status": "untested",
+          "evidence": [
+            "packaging-inspection.json",
+            "sources/ladybug-pypi-0.21.1.json"
+          ],
+          "note": "Test binding was thin arm64, ad-hoc signed, and linked /opt/homebrew OpenSSL. Rust/product artifact was not built."
+        },
+        "linux_x86_64_aarch64_packaging": {
+          "status": "untested",
+          "evidence": [
+            "sources/ladybug-pypi-0.21.1.json",
+            "sources/ladybug-system-requirements-doc.html"
+          ]
+        },
+        "license_compatibility": {
+          "status": "pass",
+          "evidence": [
+            "sources/ladybug-license-v0.21.1.txt",
+            "sources/ladybug-pypi-0.21.1.json"
+          ],
+          "license": "MIT"
+        },
+        "rust_adapter_and_wrapper_core_pin": {
+          "status": "untested",
+          "evidence": [
+            "sources/ladybug-rust-cargo-main.toml"
+          ],
+          "note": "Host has no Rust toolchain; Python binding was pinned only."
+        }
+      }
+    },
+    "helix": {
+      "versions": {
+        "python_sdk": "0.3.4",
+        "embedded_runtime": "0.3.3"
+      },
+      "criteria": {
+        "supported_in_process_embedding": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json",
+            "sources/helix-embedded-doc.html",
+            "sources/helix-readme-main.md"
+          ]
+        },
+        "transactional_node_edge_upsert_delete": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "one_two_hop_queries": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "lineage_and_impact_traversal": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "full_text_or_companion_mapping": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "note": "Used the same disposable SQLite FTS5 companion keyed only by graph stable_id."
+        },
+        "concurrent_read_controlled_write": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "crash_reopen_and_journal_replay": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "scope": "Abrupt exit after three committed operations; reopen plus twice-idempotent ProjectOS journal replay."
+        },
+        "deterministic_export_import": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+        },
+        "copy_on_write_migration": {
+          "status": "pass",
+          "evidence": [
+            "runtime-results.json"
+          ]
+        },
+        "bounded_memory": {
+          "status": "untested",
+          "evidence": [
+            "runtime-results.json"
+          ],
+          "note": "Measured 92,815,360-byte peak RSS on 603 nodes/600 edges, below the spike ceiling; production representative scale has not been frozen."
+        },
+        "macos_universal_packaging_signing": {
+          "status": "untested",
+          "evidence": [
+            "packaging-inspection.json",
+            "sources/helix-embedded-pypi.json"
+          ],
+          "note": "Published runtime is universal2 and only links system libraries, but it is ad-hoc signed and was not embedded in a signed/notarized Tauri product."
+        },
+        "linux_x86_64_aarch64_packaging": {
+          "status": "untested",
+          "evidence": [
+            "sources/helix-embedded-pypi.json"
+          ],
+          "note": "Both manylinux wheel architectures are published but were not installed on clean Linux targets."
+        },
+        "license_compatibility": {
+          "status": "untested",
+          "evidence": [
+            "sources/helix-license-main.txt",
+            "sources/helix-pypi.json",
+            "sources/helix-embedded-pypi.json"
+          ],
+          "note": "Repository is Apache-2.0, SDK metadata says MIT, and embedded runtime metadata declares no license; reconcile before selection."
+        },
+        "rust_adapter_and_sdk_runtime_pin": {
+          "status": "untested",
+          "evidence": [
+            "sources/helix-embedded-doc.html",
+            "sources/helix-pypi.json",
+            "sources/helix-embedded-pypi.json"
+          ],
+          "note": "Host has no Rust toolchain; current Python SDK 0.3.4 and runtime 0.3.3 are not the same version despite docs requiring a matching runtime."
+        }
+      }
+    }
+  },
+  "limitations": [
+    "The host lacked rustc/cargo, so the native engines were exercised through official Python bindings rather than the intended Rust kernel adapter.",
+    "Only macOS 26.6.2 arm64 was executed; Linux and macOS x86_64 behavior is package metadata, not runtime proof.",
+    "The crash test is narrow and does not replace Gate D fault injection across disk-full, torn journal, permission loss, corrupt stores, or N-1/N-2 migrations.",
+    "The memory corpus is deterministic but small; no production representative corpus or acceptance ceiling is yet approved.",
+    "No candidate was silently replaced and no server/sidecar mode was used."
+  ],
+  "updatedAt": "2026-10-09T01:36:48.607Z",
+  "rustIntegration": "evidence/gates/gate-b/rust-integration.json",
+  "sourceHashes": {
+    "spikes/gate-b/rust-tauri/Cargo.toml": "b3a2494917f51dbd7b130be0977da34c68d8fe83a747d3970a0ceae33cc1e1d4",
+    "spikes/gate-b/rust-tauri/Cargo.lock": "d4162bc98b319020ccb461982f674542010ba7eae0ec5f0ec7517fcba9f7bbc1",
+    "spikes/gate-b/rust-tauri/rust-toolchain.toml": "3003a09987459e5921dcddde94f8ea929b2d5e66efbbc30160e9d78de7ff010a",
+    "spikes/gate-b/rust-tauri/build.rs": "4379ba89924184a9a57d189938af36565f876df56bc4edcca39fc5a2bd282e8a",
+    "spikes/gate-b/rust-tauri/src/main.rs": "164453317a9bd932769b6ab3c710928329908a8df9ad7048d9cc99e55c0f77ba",
+    "spikes/gate-b/rust-tauri/tauri.conf.json": "7334cafec7ea259b8d390c22d17e0befe40337d203f841cf1b4443e03a3dbdc4",
+    "spikes/gate-b/rust-tauri/ui/index.html": "a64a6350dbadc96a8b770f409e88147960e73f7c856b6984963d29d52ab9a5c4",
+    "spikes/gate-b/rust-tauri/ui/probe.js": "20c7d565bf4711084d00ed428c70b6a94cbeb219519d26e47b938a7d50783130",
+    "spikes/gate-b/rust-tauri/evidence.mjs": "ff9056fff906854b6a5f2c9ad120030021707bc28dbf9df0d8f2583e43014bb1",
+    "spikes/gate-b/rust-tauri/README.md": "3b93421ed1ff255355e8454b1cfb32fd307650ffecbd536126fe17bcd1cd7e07",
+    "spikes/gate-a/src-tauri/icons/icon.png": "f551c6ff1f68f768e159d47052a350e39600319e25af3e414e2ffc7b0e1e0d9d",
+    "spikes/gate-b/requirements.lock": "4be1537d8b3e507bbe0e4a3049fa20e01454f883c349a8ba104bcb6bb7c37e46",
+    "spikes/gate-b/fixtures/corpus.json": "f540c606c4f3b0e2c9d95e57a5cdd42379292fcc8f0d1ff0b50eff39713b8615",
+    "spikes/gate-b/src/run_gate_b.py": "ff0d568f3efcdbbb0e1947f369e8a9be97ab29aca098024ffa6cda0679bae285",
+    "spikes/gate-b/src/common.py": "42ab80b8ff931f9a12c30be7fed7b6e6c383cfc3a9bcb48add2540fae74f82a8",
+    "spikes/gate-b/src/ladybug_adapter.py": "89ea8dd586e95260343ea3e32f68fb484f279d0db25bfccf4a9fd53cb742b90f",
+    "spikes/gate-b/src/helix_adapter.py": "cf0bd0d70ff5a96e0b2bb4dcd8266a4c6360bf936ef81db351a49c2bcfd344e0"
+  },
+  "rustIntegrationStatus": "partial_unverified",
+  "checks": [
+    {
+      "id": "desktop-build",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-desktop-build.txt"
+    },
+    {
+      "id": "desktop-bundle",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-desktop-bundle.txt"
+    },
+    {
+      "id": "contract",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-contract.txt"
+    },
+    {
+      "id": "dynamic-libraries",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-dynamic-libraries.txt"
+    },
+    {
+      "id": "dependency-inventory",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-b/logs/rust-dependency-inventory.txt"
+    }
+  ]
+}

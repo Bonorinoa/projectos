@@ -1,0 +1,27 @@
+{
+  "gate": "D",
+  "status": "partial_unverified",
+  "evidence_level": "offline JSON protocol model on macOS host, not embedded graph adapter",
+  "requirements": [
+    {"requirement": "Before/after PREPARED, object flush/rename, staged flush/fsync, file rename/directory fsync, FILES_APPLIED, COMMITTED, journal fsync/emission, snapshot fsync/swap", "status": "model_tested", "evidence": "test_fault_*", "remaining": "Repeat against actual engine transactions and platform filesystem guarantees"},
+    {"requirement": "Abrupt crash and startup recovery", "status": "host_process_tested", "evidence": "test_process_exit_*; eight os._exit child-process failures", "remaining": "Power loss, engine WAL fault injection, mount/device flush behavior"},
+    {"requirement": "Disk-full and permission loss", "status": "partial", "evidence": "Injected ENOSPC/EACCES plus real chmod denial before graph replacement", "remaining": "Real disk exhaustion and permission revocation at all I/O boundaries"},
+    {"requirement": "Second writer", "status": "host_model_tested", "evidence": "test_second_writer_blocked_then_released and subprocess crash lock release", "remaining": "Engine/process writer ownership and network filesystem locks"},
+    {"requirement": "Torn/truncated/corrupt journal and corrupt live database", "status": "model_tested", "evidence": "test_*journal*, test_corrupt_*, test_structurally_corrupt_graph_*", "remaining": "Real database corruption, recovery adapter invariant audit"},
+    {"requirement": "N-1/N-2 migrations and atomic swap", "status": "model_tested", "evidence": "test_migrate_n_minus_* at seven failpoints plus success", "remaining": "Actual engine schema migration and export compatibility"},
+    {"requirement": "Full clone restores promised bytes; metadata clone restores checkpoints and truthful tombstones", "status": "model_tested", "evidence": "test_acknowledged_export_*, test_metadata_clone_*, test_every_acknowledged_*", "remaining": "Multi-artifact topology, recipe/receipt/manifest transport and declared retention profile"},
+    {"requirement": "No secret leakage in portable state", "status": "partial", "evidence": "Fixture contains no credentials/vault; profile export excludes local path bindings", "remaining": "Production redaction, real encrypted vault, adversarial sensitive-field fixture corpus"},
+    {"requirement": "Profile graph restore, links, preferences, approved patterns", "status": "model_tested", "evidence": "test_clean_profile_restore_*", "remaining": "Profile engine snapshot/journal recovery and rediscovery degraded UI"},
+    {"requirement": "Vault/key loss leaves truthful receipt tombstones", "status": "model_tested", "evidence": "test_vault_key_loss_* including corruption recovery", "remaining": "Actual encrypted vault/key removal"},
+    {"requirement": "Stale selection/external changes and third-hash conflict", "status": "model_tested", "evidence": "test_stale_*, test_external_*, test_third_hash_*", "remaining": "Production apply concurrency, file identity, external rename/delete reconciliation"},
+    {"requirement": "Missing/corrupt revision blobs", "status": "model_tested", "evidence": "test_missing_*blob*, test_corrupt_blob_*, transport hash/object tampering", "remaining": "Retention/purge UI, shared object store concurrency"},
+    {"requirement": "Reject symlink, case alias, symlink-swap races", "status": "descriptor_model_host_tested_partial", "evidence": "Retained root/parent descriptors, nofollow opens, dir_fd renames; active concurrent adversary; after-validation destination swap; root/parent/sidecar/lock replacements; hardlink/FIFO rejection; orphan-stage cleanup", "remaining": "Unicode/case equivalence across target filesystem matrix and production apply integration; separate external regular-file compare-and-swap limitation"},
+    {"requirement": "Namespaced type pack migration rollback", "status": "model_tested", "evidence": "test_pack_migration_failure_*", "remaining": "Complete namespace invariant validation and actual engine migration"},
+    {"requirement": "Source revocation removes derived chunks", "status": "model_tested", "evidence": "test_revocation_* including corrupt-store recovery", "remaining": "Real search/vector indexes, cached retrieval and live in-flight retrieval"},
+    {"requirement": "Same UUID divergent lineage and Git branch/journal divergence", "status": "model_tested", "evidence": "test_folder_move_*; explicit decision results", "remaining": "UI fork/reconnect/reconcile implementation; actual Git transports"},
+    {"requirement": "External idempotency and OUTCOME_UNKNOWN without automatic retry", "status": "model_tested", "evidence": "test_unknown_external_effect_*, test_documented_idempotency_*", "remaining": "Durable attempt ledger and real remote query/ambiguity behavior"},
+    {"requirement": "Cloud-synced/network filesystems", "status": "untested", "evidence": null, "remaining": "Frozen filesystem matrix"},
+    {"requirement": "Same sidecar export/import across macOS and Linux", "status": "untested", "evidence": null, "remaining": "Linux host/CI and pinned real-engine builds"},
+    {"requirement": "Named milestones and active retention recovery guarantee", "status": "untested", "evidence": null, "remaining": "Complete multi-file snapshots, retention implementation, deletion/rename fixtures"}
+  ]
+}

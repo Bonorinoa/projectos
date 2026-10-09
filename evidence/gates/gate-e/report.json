@@ -1,0 +1,40 @@
+{
+  "gate": "E",
+  "status": "conditional",
+  "mock_contract_status": "pass",
+  "generatedAt": "2026-10-09T20:16:46.590Z",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.22.3",
+    "openssl": "3.5.6"
+  },
+  "command": "cd spikes/gate-e && node evidence.mjs",
+  "exitCode": 0,
+  "tests": {
+    "total": 31,
+    "pass": 31,
+    "fail": 0,
+    "skipped": 0
+  },
+  "evidence": [
+    "evidence/gates/gate-e/tests.tap"
+  ],
+  "sourceHashes": {
+    "spikes/gate-e/package.json": "0ff20e8f8730c91fd2c8b5a58534201278581ff3fcc798b8b87213bf8f7addf7",
+    "spikes/gate-e/broker.mjs": "4b75d1f8d007cfb39c0607df6c945d887683841440550b91229d9b5a998d5ec2",
+    "spikes/gate-e/auth.mjs": "d9e196859cfe4341de9257f85f4ac8d9acf4bb94080685b26db33f55ab8e6313",
+    "spikes/gate-e/tests/contract.test.mjs": "6c63bd8b7f3b34255223db6004937b91b7c1a25f0855f17692ce85ff5f9e2dde",
+    "spikes/gate-e/evidence.mjs": "d18841015bdc609dec48798697f96fcd181c28c269610cece43fd196dd9a31db",
+    "spikes/gate-e/README.md": "3ccada1f0b8e67faae1a4364423061abb49bcad63d93f7ef8aa5cc22151c28e2"
+  },
+  "limitations": [
+    "This is an executable contract spike in trusted Node, not the native Rust credential/egress boundary or worker confinement.",
+    "Transport is injected mock-only: real HTTP redirect prevention, DNS/IPv4/IPv6 confinement, OpenRouter OAuth exchange and live-provider streaming/cancel/billing are untested.",
+    "No UI/worker process is connected. Credential isolation checks interface and serialization behavior; OS keyring integration is untested.",
+    "Passphrase vault primitives execute on macOS via Node/OpenSSL. Linux Secret Service absence, native vault migration, crash-safe file persistence, passphrase recovery UX, secure memory zeroization and native integration remain untested.",
+    "Cost ceilings prevent further calls based on supplied estimates/reported usage; remote providers may exceed estimates or ignore max_tokens. Unknown outcomes stop further calls; reconciliation workflow not yet implemented.",
+    "Mock-confirmed pre-inference rejection is the only fallback trigger. A production adapter must establish documented safe rejection semantics before enabling fallback.",
+    "OAuth localhost test needs sandbox escalation; manual acceptance and Linux parity are outstanding."
+  ]
+}

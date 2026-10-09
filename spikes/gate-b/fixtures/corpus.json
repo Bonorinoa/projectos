@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {"stable_id": "project:alpha", "kind": "Project", "name": "Alpha", "body": "Local-first project graph"},
+    {"stable_id": "artifact:brief", "kind": "Artifact", "name": "Architecture brief", "body": "Canonical storage and recovery contract"},
+    {"stable_id": "revision:1", "kind": "ArtifactRevision", "name": "Revision one", "body": "Initial embedded graph hypothesis"},
+    {"stable_id": "revision:2", "kind": "ArtifactRevision", "name": "Revision two", "body": "Evidence-backed embedded graph decision"},
+    {"stable_id": "claim:embedded", "kind": "Claim", "name": "Embedded graph", "body": "The graph runs in process without a listening port"},
+    {"stable_id": "evidence:vendor", "kind": "Evidence", "name": "Vendor documentation", "body": "Official documentation supports embedded execution"},
+    {"stable_id": "asset:orphan", "kind": "Asset", "name": "Deletion fixture", "body": "A disposable node for delete verification"}
+  ],
+  "edges": [
+    {"stable_id": "edge:contains", "kind": "CONTAINS", "source": "project:alpha", "target": "artifact:brief", "position": 1},
+    {"stable_id": "edge:rev1", "kind": "REVISION_OF", "source": "revision:1", "target": "artifact:brief", "position": 1},
+    {"stable_id": "edge:rev2", "kind": "REVISION_OF", "source": "revision:2", "target": "artifact:brief", "position": 2},
+    {"stable_id": "edge:lineage1", "kind": "DERIVED_FROM", "source": "revision:2", "target": "revision:1", "position": 1},
+    {"stable_id": "edge:lineage2", "kind": "DERIVED_FROM", "source": "revision:1", "target": "artifact:brief", "position": 1},
+    {"stable_id": "edge:claim-source", "kind": "DERIVED_FROM", "source": "claim:embedded", "target": "revision:2", "position": 1},
+    {"stable_id": "edge:support", "kind": "SUPPORTS", "source": "evidence:vendor", "target": "claim:embedded", "position": 1}
+  ]
+}

@@ -1,0 +1,2810 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ProjectOS — Instrumented Atelier concept</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #eeece5;
+      --paper: #fbfaf5;
+      --paper-strong: #ffffff;
+      --ink: #18201e;
+      --muted: #5b6661;
+      --faint: #5b6661;
+      --rule: #ccd1c9;
+      --rule-strong: #aeb7b1;
+      --shell: #151b19;
+      --shell-2: #202825;
+      --moss: #1f5a4f;
+      --moss-dark: #123b34;
+      --moss-soft: #dfece6;
+      --coral: #a6472c;
+      --coral-soft: #f4e1da;
+      --blue: #2557d6;
+      --blue-soft: #dce6ff;
+      --gold: #8a6200;
+      --gold-soft: #f4e8c9;
+      --danger: #b42318;
+      --danger-soft: #fbe3e0;
+      --shadow: 0 14px 36px rgba(24, 32, 30, 0.11);
+      --shadow-soft: 0 6px 18px rgba(24, 32, 30, 0.08);
+      --ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --editorial: ui-serif, Charter, "Iowan Old Style", Georgia, serif;
+      --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--ui);
+      font-size: 15px;
+      line-height: 1.45;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      left: 12px;
+      top: 8px;
+      transform: translateY(-180%);
+      background: var(--paper-strong);
+      color: var(--ink);
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .skip-link:focus { transform: translateY(0); }
+
+    .app {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      grid-template-rows: 60px minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 220px minmax(260px, 1fr) auto;
+      align-items: center;
+      min-width: 0;
+      background: var(--shell);
+      color: #f8f7f1;
+      border-bottom: 1px solid #303936;
+      z-index: 30;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 100%;
+      padding: 0 18px;
+      border-right: 1px solid #303936;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 29px;
+      height: 29px;
+      border: 1px solid #8fa59c;
+      border-radius: 8px 8px 8px 2px;
+      color: #cbe8dc;
+      font-family: var(--editorial);
+      font-size: 18px;
+    }
+
+    .top-center {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      padding: 0 18px;
+    }
+
+    .project-switcher,
+    .top-action,
+    .icon-button {
+      min-height: 40px;
+      border: 1px solid #44504c;
+      border-radius: 9px;
+      background: #202825;
+      color: #f8f7f1;
+    }
+
+    .project-switcher {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex: 0 0 auto;
+      padding: 0 12px;
+    }
+
+    .project-switcher .project-dot {
+      width: 8px;
+      height: 18px;
+      border-radius: 4px;
+      background: #d77a5f;
+    }
+
+    .global-search {
+      position: relative;
+      flex: 1 1 360px;
+      min-width: 180px;
+      max-width: 680px;
+    }
+
+    .global-search input {
+      width: 100%;
+      height: 40px;
+      border: 1px solid #44504c;
+      border-radius: 9px;
+      background: #202825;
+      color: #f8f7f1;
+      padding: 0 104px 0 38px;
+    }
+
+    .global-search input::placeholder { color: #aeb9b4; opacity: 1; }
+
+    .search-icon {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #aeb9b4;
+      font-size: 17px;
+    }
+
+    .shortcut {
+      position: absolute;
+      right: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #c8cfcc;
+      border: 1px solid #53605b;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 14px;
+    }
+
+    .concept-top {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 3px 8px;
+      border: 1px solid #52615b;
+      border-radius: 999px;
+      color: #dce5e1;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .top-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 11px;
+    }
+
+    .network-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7bd5ad;
+      box-shadow: 0 0 0 3px rgba(123, 213, 173, 0.15);
+    }
+
+    .app[data-network="offline"] .network-dot {
+      background: #e7c36a;
+      box-shadow: 0 0 0 3px rgba(231, 195, 106, 0.15);
+    }
+
+    .nav-rail {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--shell);
+      color: #cdd5d1;
+      border-right: 1px solid #303936;
+      padding: 18px 12px 14px;
+    }
+
+    .nav-label {
+      margin: 8px 10px 7px;
+      color: #84918c;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      min-height: 42px;
+      margin: 2px 0;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: #ccd4d0;
+      text-align: left;
+    }
+
+    .nav-item:hover { background: #202825; }
+
+    .nav-item.is-active {
+      background: #29332f;
+      color: #ffffff;
+      box-shadow: inset 3px 0 0 #85c7ac;
+    }
+
+    .nav-icon {
+      display: grid;
+      place-items: center;
+      width: 21px;
+      height: 21px;
+      color: #a9bab3;
+      font-size: 16px;
+    }
+
+    .nav-item.is-active .nav-icon { color: #bce6d5; }
+    .nav-spacer { flex: 1; }
+
+    .local-status {
+      margin: 10px 4px 0;
+      padding: 12px;
+      border: 1px solid #34403b;
+      border-radius: 10px;
+      background: #1c2321;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .local-status strong {
+      display: block;
+      margin-bottom: 2px;
+      color: #e9efec;
+    }
+
+    .main {
+      grid-column: 2;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+
+    .view {
+      display: none;
+      height: 100%;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .view.is-active { display: block; }
+
+    .portfolio-view {
+      padding: clamp(24px, 4vw, 52px) clamp(22px, 5vw, 72px) 56px;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--moss);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 18px;
+      height: 2px;
+      background: var(--moss);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    .portfolio-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .portfolio-heading h1 {
+      margin: 7px 0 6px;
+      font-family: var(--editorial);
+      font-size: clamp(38px, 5vw, 64px);
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
+
+    .portfolio-heading p {
+      max-width: 590px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .concept-badge,
+    .status-chip,
+    .type-chip,
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .concept-badge { align-self: flex-start; }
+
+    .continue-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.75fr);
+      min-height: 245px;
+      border: 1px solid #9fac9f;
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .continue-main {
+      position: relative;
+      padding: clamp(27px, 4vw, 48px);
+      background: var(--paper-strong);
+    }
+
+    .continue-main::after {
+      content: "";
+      position: absolute;
+      inset: 22px 0 22px auto;
+      width: 1px;
+      background: var(--rule);
+    }
+
+    .continue-kicker {
+      color: var(--coral);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .continue-main h2 {
+      max-width: 760px;
+      margin: 12px 0 12px;
+      font-family: var(--editorial);
+      font-size: clamp(30px, 4vw, 49px);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.06;
+    }
+
+    .continue-main p {
+      max-width: 660px;
+      margin-bottom: 24px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 9px;
+      background: var(--paper-strong);
+      color: var(--ink);
+      font-weight: 680;
+    }
+
+    .button:hover { border-color: #7f8c85; background: #f7f6f1; }
+
+    .button.primary {
+      border-color: var(--moss);
+      background: var(--moss);
+      color: #ffffff;
+    }
+
+    .button.primary:hover { background: var(--moss-dark); }
+
+    .button.ghost {
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .button.small { min-height: 36px; padding: 0 11px; font-size: 13px; }
+    .button:disabled { opacity: 0.52; cursor: not-allowed; }
+
+    .continue-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 22px;
+      padding: 28px;
+      background: #edf1ea;
+    }
+
+    .continue-side h3 {
+      margin-bottom: 14px;
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .next-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .next-list li {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .next-list strong { color: var(--ink); font-weight: 680; }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 23px;
+      height: 23px;
+      border: 1px solid #9ead9f;
+      border-radius: 50%;
+      color: var(--moss);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .privacy-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 38px 0 14px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-family: var(--editorial);
+      font-size: 27px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .filter-row,
+    .segmented {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      background: var(--paper);
+    }
+
+    .filter-button,
+    .segment-button,
+    .tab-button,
+    .lens-tab,
+    .trace-tab {
+      min-height: 34px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .filter-button[aria-pressed="true"],
+    .segment-button[aria-pressed="true"],
+    .tab-button[aria-selected="true"],
+    .lens-tab[aria-selected="true"],
+    .trace-tab[aria-selected="true"] {
+      background: var(--ink);
+      color: #ffffff;
+    }
+
+    .runway-shell { position: relative; }
+
+    .runway-controls {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .round-button {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 50%;
+      background: var(--paper);
+      font-size: 18px;
+    }
+
+    .project-runway {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(275px, 1fr);
+      gap: 14px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: thin;
+      padding: 2px 3px 14px;
+    }
+
+    .project-card {
+      position: relative;
+      min-height: 245px;
+      scroll-snap-align: start;
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      background: var(--paper);
+      overflow: hidden;
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .project-card[aria-current="true"] {
+      border-color: #8e9d94;
+      box-shadow: var(--shadow-soft);
+      transform: translateY(-2px);
+    }
+
+    .project-card[hidden] { display: none; }
+
+    .project-spine {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 6px;
+      background: var(--accent, var(--moss));
+    }
+
+    .project-card-body {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 22px 21px 19px 25px;
+    }
+
+    .project-type {
+      color: var(--accent, var(--moss));
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .project-card h3 {
+      margin: 15px 0 8px;
+      font-family: var(--editorial);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+
+    .project-card p {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .project-stage {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stage-marker {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent, var(--moss));
+    }
+
+    .project-actions {
+      display: none;
+      gap: 6px;
+      margin-top: 13px;
+    }
+
+    .project-card[aria-current="true"] .project-actions { display: flex; }
+
+    .decision-grid,
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .decision-card,
+    .type-card {
+      min-height: 125px;
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      background: var(--paper);
+      padding: 18px;
+    }
+
+    .decision-card h3,
+    .type-card h3 { margin: 8px 0 6px; font-size: 15px; }
+    .decision-card p,
+    .type-card p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .workspace-view { overflow: hidden; }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 190px minmax(420px, 1fr) 340px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .project-rail {
+      min-height: 0;
+      overflow: auto;
+      border-right: 1px solid var(--rule);
+      background: #f3f1ea;
+      padding: 22px 12px;
+    }
+
+    .project-rail-title {
+      margin: 0 9px 18px;
+    }
+
+    .project-rail-title .type-tag {
+      display: block;
+      color: var(--coral);
+      font-size: 11px;
+      font-weight: 780;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .project-rail-title strong {
+      display: block;
+      margin-top: 5px;
+      font-family: var(--editorial);
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .project-nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 40px;
+      margin: 2px 0;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    .project-nav-item.is-active {
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: inset 3px 0 0 var(--coral);
+      font-weight: 700;
+    }
+
+    .count {
+      color: var(--faint);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rail-divider { height: 1px; margin: 16px 9px; background: var(--rule); }
+
+    .editor-shell {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      background: #e7e5de;
+    }
+
+    .artifact-bar {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 62px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--rule);
+      background: rgba(251, 250, 245, 0.96);
+      backdrop-filter: blur(12px);
+    }
+
+    .breadcrumb {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .breadcrumb strong { color: var(--ink); }
+
+    .artifact-actions { display: flex; gap: 7px; flex: 0 0 auto; }
+
+    .document-wrap {
+      width: min(780px, calc(100% - 40px));
+      margin: 28px auto 80px;
+    }
+
+    .document {
+      position: relative;
+      min-height: 760px;
+      padding: clamp(36px, 7vw, 78px) clamp(32px, 8vw, 88px);
+      border: 1px solid #cac8c0;
+      background: var(--paper-strong);
+      box-shadow: 0 9px 28px rgba(24, 32, 30, 0.09);
+    }
+
+    .doc-label {
+      color: var(--coral);
+      font-size: 11px;
+      font-weight: 780;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .document h1 {
+      max-width: 620px;
+      margin: 18px 0 13px;
+      font-family: var(--editorial);
+      font-size: clamp(38px, 5vw, 55px);
+      font-weight: 600;
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+    }
+
+    .dek {
+      max-width: 620px;
+      margin-bottom: 42px;
+      color: var(--muted);
+      font-family: var(--editorial);
+      font-size: 20px;
+      line-height: 1.45;
+    }
+
+    .document-copy {
+      max-width: 66ch;
+      font-family: var(--editorial);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .document-copy p { margin-bottom: 1.35em; }
+
+    .selected-copy {
+      display: inline;
+      padding: 2px 1px;
+      border: 0;
+      background: var(--blue-soft);
+      color: var(--ink);
+      font: inherit;
+      line-height: inherit;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      text-align: left;
+    }
+
+    .selection-cluster {
+      position: relative;
+      margin: -8px 0 25px;
+    }
+
+    .selection-menu {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      width: max-content;
+      max-width: 100%;
+      margin-top: 11px;
+      padding: 5px;
+      border: 1px solid #aeb6b2;
+      border-radius: 10px;
+      background: var(--shell);
+      color: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .selection-menu[hidden] { display: none; }
+
+    .selection-action {
+      min-height: 35px;
+      border: 0;
+      border-radius: 7px;
+      padding: 0 10px;
+      background: transparent;
+      color: #edf2ef;
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .selection-action:hover,
+    .selection-action[aria-pressed="true"] { background: #35413d; }
+
+    .uses-network {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #c8d2cd;
+      font-size: 11px;
+      padding: 0 7px;
+    }
+
+    .action-sheet,
+    .diff-preview {
+      margin-top: 12px;
+      border: 1px solid #aeb7b1;
+      border-radius: 12px;
+      background: var(--paper);
+      box-shadow: var(--shadow-soft);
+      font-family: var(--ui);
+      font-size: 13px;
+    }
+
+    .action-sheet[hidden], .diff-preview[hidden] { display: none; }
+
+    .sheet-head,
+    .diff-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .sheet-head strong,
+    .diff-head strong { font-size: 14px; }
+
+    .sheet-body { padding: 14px 15px; }
+
+    .option-label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .choice-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 13px; }
+
+    .choice {
+      min-height: 35px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: var(--paper-strong);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .choice[aria-pressed="true"] {
+      border-color: var(--moss);
+      background: var(--moss-soft);
+      color: var(--moss-dark);
+      font-weight: 700;
+    }
+
+    .constraint-list {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 15px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    .check-row input { margin-top: 3px; accent-color: var(--moss); }
+
+    .scope-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: #f1efe8;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .diff-body { padding: 14px 15px; }
+
+    .diff-line {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      line-height: 1.5;
+    }
+
+    .diff-line + .diff-line { margin-top: 6px; }
+    .diff-line.removed { background: var(--danger-soft); text-decoration: line-through; }
+    .diff-line.added { background: var(--moss-soft); }
+
+    .diff-marker {
+      font-family: var(--ui);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .diff-line.removed .diff-marker { color: var(--danger); }
+    .diff-line.added .diff-marker { color: var(--moss-dark); }
+
+    .diff-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .context-panel {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      border-left: 1px solid var(--rule);
+      background: var(--paper);
+    }
+
+    .context-head {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      padding: 18px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+
+    .context-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 13px;
+    }
+
+    .context-title-row h2 { margin: 0 0 3px; font-size: 16px; }
+    .context-title-row p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .context-close { display: none; }
+
+    .context-tabs {
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+    }
+
+    .context-body { padding: 18px; }
+
+    .context-pane[hidden] { display: none; }
+
+    .outline-list {
+      display: grid;
+      gap: 3px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .outline-list li {
+      padding: 9px 10px;
+      border-left: 2px solid var(--rule);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .outline-list li.is-current {
+      border-color: var(--coral);
+      background: var(--coral-soft);
+      color: var(--ink);
+      font-weight: 680;
+    }
+
+    .evidence-summary {
+      margin-bottom: 13px;
+      padding: 12px;
+      border: 1px solid #d1b96b;
+      border-radius: 9px;
+      background: var(--gold-soft);
+      color: #5f4706;
+      font-size: 13px;
+    }
+
+    .evidence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .evidence-table th,
+    .evidence-table td {
+      padding: 9px 7px;
+      border-bottom: 1px solid var(--rule);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .evidence-table th { color: var(--muted); font-weight: 700; }
+
+    .state-unknown {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .lens-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 13px;
+    }
+
+    .graph-map {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      background: #f5f3ed;
+    }
+
+    .graph-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 12px;
+    }
+
+    .graph-list li {
+      display: grid;
+      grid-template-columns: 10px 1fr;
+      gap: 9px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .graph-list-dot {
+      width: 8px;
+      height: 8px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: var(--moss);
+    }
+
+    .graph-list small { display: block; color: var(--muted); margin-top: 2px; }
+
+    .node-card {
+      margin-top: 14px;
+      padding: 13px;
+      border-left: 3px solid var(--moss);
+      background: #eef2ed;
+      font-size: 12px;
+    }
+
+    .node-card strong { display: block; margin-bottom: 4px; }
+
+    .recipe-view { overflow: hidden; }
+
+    .recipe-layout {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .recipe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 74px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+
+    .recipe-header h1 {
+      margin: 0 0 3px;
+      font-family: var(--editorial);
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .recipe-header p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .recipe-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      min-height: 0;
+    }
+
+    .recipe-canvas-wrap {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 24px;
+      background-color: #eceae3;
+      background-image: radial-gradient(#c4c8c1 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+    }
+
+    .recipe-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(190px, 1fr));
+      gap: 13px;
+      min-width: 880px;
+    }
+
+    .recipe-lane {
+      min-height: 530px;
+      padding: 13px;
+      border: 1px solid #c9ccc5;
+      border-radius: 12px;
+      background: rgba(251, 250, 245, 0.87);
+    }
+
+    .lane-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .recipe-node {
+      position: relative;
+      width: 100%;
+      min-height: 105px;
+      margin-bottom: 10px;
+      padding: 13px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 10px;
+      background: var(--paper-strong);
+      text-align: left;
+      box-shadow: 0 3px 8px rgba(24, 32, 30, 0.05);
+    }
+
+    .recipe-node.is-selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px var(--blue-soft);
+    }
+
+    .recipe-node.is-gate {
+      border: 2px solid var(--gold);
+      background: #fffaf0;
+    }
+
+    .node-kind {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--moss);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .recipe-node.is-gate .node-kind { color: var(--gold); }
+
+    .recipe-node strong { display: block; margin-bottom: 5px; font-size: 14px; }
+    .recipe-node small { display: block; color: var(--muted); line-height: 1.45; }
+
+    .node-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .node-flag {
+      padding: 3px 6px;
+      border-radius: 5px;
+      background: #eef0eb;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .node-flag.online { background: var(--blue-soft); color: #183d9d; }
+
+    .recipe-outline { display: none; max-width: 760px; margin: 0 auto; }
+    .recipe-canvas-wrap[data-mode="outline"] .recipe-board { display: none; }
+    .recipe-canvas-wrap[data-mode="outline"] .recipe-outline { display: block; }
+
+    .outline-step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 76px;
+      padding: 12px 14px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      background: var(--paper);
+    }
+
+    .outline-step + .outline-step { margin-top: 9px; }
+
+    .outline-index {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--moss-soft);
+      color: var(--moss-dark);
+      font-weight: 800;
+    }
+
+    .outline-step strong { display: block; }
+    .outline-step small { color: var(--muted); }
+
+    .recipe-inspector {
+      min-height: 0;
+      overflow: auto;
+      border-left: 1px solid var(--rule);
+      background: var(--paper);
+      padding: 20px;
+    }
+
+    .recipe-inspector h2 { margin-bottom: 4px; font-size: 17px; }
+    .recipe-inspector > p { color: var(--muted); font-size: 12px; }
+
+    .inspector-section { padding: 15px 0; border-top: 1px solid var(--rule); }
+
+    .inspector-section h3 {
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+
+    .field-select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 8px;
+      background: var(--paper-strong);
+      color: var(--ink);
+      padding: 0 10px;
+    }
+
+    .scope-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .scope-list li { display: flex; align-items: flex-start; gap: 8px; }
+    .scope-symbol { color: var(--moss); font-weight: 800; }
+
+    .trace-drawer {
+      position: fixed;
+      z-index: 60;
+      inset: 60px 0 0 auto;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      width: min(430px, 100vw);
+      background: var(--paper);
+      border-left: 1px solid #939e97;
+      box-shadow: -18px 0 42px rgba(24, 32, 30, 0.18);
+      transform: translateX(105%);
+      transition: transform 200ms ease;
+    }
+
+    .trace-drawer[hidden],
+    .drawer-scrim[hidden] { display: none; }
+
+    .trace-drawer.is-open { transform: translateX(0); }
+
+    .trace-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .trace-head h2 { margin: 0 0 4px; font-size: 17px; }
+    .trace-head p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .close-button {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: var(--paper-strong);
+      font-size: 18px;
+    }
+
+    .trace-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--rule);
+      background: #f4f2ec;
+    }
+
+    .trace-meta-item small { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .trace-meta-item strong { display: block; margin-top: 3px; font-size: 12px; }
+
+    .trace-main { min-height: 0; overflow: auto; }
+
+    .trace-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      gap: 3px;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+
+    .trace-pane { padding: 16px 18px 24px; }
+    .trace-pane[hidden] { display: none; }
+
+    .run-outcome {
+      padding: 13px;
+      border-left: 3px solid var(--moss);
+      background: var(--moss-soft);
+      font-size: 13px;
+    }
+
+    .trace-section-title {
+      margin: 21px 0 9px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .trace-timeline {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .trace-event {
+      position: relative;
+      padding: 0 0 18px 25px;
+      font-size: 12px;
+    }
+
+    .trace-event::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--moss);
+    }
+
+    .trace-event::after {
+      content: "";
+      position: absolute;
+      left: 10.5px;
+      top: 16px;
+      bottom: 3px;
+      width: 1px;
+      background: var(--rule);
+    }
+
+    .trace-event:last-child::after { display: none; }
+    .trace-event.tool::before { background: var(--blue); }
+    .trace-event.approval::before { background: var(--gold); }
+    .trace-event strong { display: block; margin-bottom: 2px; }
+    .trace-event span { color: var(--muted); }
+
+    .evidence-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule);
+      font-size: 12px;
+    }
+
+    .evidence-item strong { display: block; margin-bottom: 4px; }
+    .evidence-item p { margin: 0; color: var(--muted); }
+
+    .raw-note {
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 13px;
+      overflow: auto;
+      border-radius: 8px;
+      background: var(--shell);
+      color: #dce5e1;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .trace-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 15px;
+      border-top: 1px solid var(--rule);
+      background: var(--paper);
+    }
+
+    .drawer-scrim {
+      position: fixed;
+      z-index: 50;
+      inset: 60px 0 0 220px;
+      display: none;
+      background: rgba(18, 25, 23, 0.2);
+    }
+
+    .drawer-scrim.is-open { display: block; }
+
+    .toast {
+      position: fixed;
+      z-index: 90;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 18px);
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 11px 15px;
+      border: 1px solid #35413d;
+      border-radius: 9px;
+      background: var(--shell);
+      color: #ffffff;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+      font-size: 13px;
+    }
+
+    .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: 72px minmax(0, 1fr); }
+      .topbar { grid-template-columns: 72px minmax(260px, 1fr) auto; }
+      .brand { justify-content: center; padding: 0; }
+      .brand-name, .nav-text, .nav-label, .local-status { display: none; }
+      .nav-item { justify-content: center; padding: 0; }
+      .workspace-grid { grid-template-columns: 72px minmax(420px, 1fr) 320px; }
+      .project-rail { padding: 18px 9px; }
+      .project-rail-title strong, .project-rail-title .type-tag, .project-nav-item span:first-child { display: none; }
+      .project-nav-item { justify-content: center; padding: 0; }
+      .drawer-scrim { left: 72px; }
+    }
+
+    @media (max-width: 940px) {
+      .topbar { grid-template-columns: 72px minmax(200px, 1fr) auto; }
+      .project-switcher { display: none; }
+      .concept-top { display: none; }
+      .top-action .action-label { display: none; }
+      .continue-card { grid-template-columns: 1fr; }
+      .continue-main::after { display: none; }
+      .decision-grid, .type-grid { grid-template-columns: 1fr 1fr; }
+      .workspace-grid { grid-template-columns: 64px minmax(0, 1fr); }
+      .context-panel {
+        position: fixed;
+        z-index: 40;
+        inset: 60px 0 0 auto;
+        width: min(360px, calc(100vw - 72px));
+        box-shadow: -14px 0 30px rgba(24, 32, 30, 0.15);
+        transform: translateX(105%);
+        transition: transform 180ms ease;
+      }
+      .context-panel.is-open { transform: translateX(0); }
+      .context-close { display: grid; }
+      .recipe-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(430px, 1fr) auto;
+        overflow: auto;
+      }
+      .recipe-inspector {
+        display: block;
+        border-left: 0;
+        border-top: 1px solid var(--rule);
+      }
+    }
+
+    @media (max-width: 700px) {
+      body { overflow: auto; }
+      .app { display: block; min-height: 100%; height: auto; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        height: 60px;
+      }
+      .brand { width: 62px; border-right: 0; }
+      .top-center { flex: 1; padding: 0 8px; }
+      .global-search { min-width: 0; }
+      .global-search input { padding-right: 12px; }
+      .shortcut { display: none; }
+      .top-actions { padding-right: 8px; }
+      .top-action.trace-shortcut { display: none; }
+      .nav-rail {
+        position: sticky;
+        top: 60px;
+        z-index: 25;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        height: 54px;
+        padding: 5px 7px;
+        border-right: 0;
+        border-bottom: 1px solid #303936;
+      }
+      .nav-spacer, .nav-item.settings { display: none; }
+      .nav-item { min-height: 42px; }
+      .main { overflow: visible; }
+      .view { height: auto; min-height: calc(100vh - 114px); overflow: visible; }
+      .portfolio-view { padding: 28px 18px 44px; }
+      .portfolio-heading { align-items: flex-start; flex-direction: column; }
+      .portfolio-heading h1 { font-size: 42px; }
+      .continue-card { min-height: 0; }
+      .continue-main, .continue-side { padding: 24px; }
+      .section-heading { align-items: flex-start; flex-direction: column; }
+      .project-runway { display: grid; grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; }
+      .project-card { min-height: 220px; }
+      .decision-grid, .type-grid { grid-template-columns: 1fr; }
+      .workspace-grid { display: block; }
+      .project-rail { display: none; }
+      .editor-shell { overflow: visible; }
+      .artifact-bar { top: 114px; align-items: flex-start; }
+      .artifact-actions .button:first-child { display: none; }
+      .document-wrap { width: calc(100% - 20px); margin-top: 10px; }
+      .document { padding: 34px 24px; min-height: 0; }
+      .document h1 { font-size: 39px; }
+      .document-copy { font-size: 17px; }
+      .context-panel {
+        position: static;
+        width: 100%;
+        border-left: 0;
+        border-top: 1px solid var(--rule);
+        box-shadow: none;
+        transform: none;
+      }
+      .context-close { display: none; }
+      .recipe-header { align-items: flex-start; flex-direction: column; padding: 16px; }
+      .recipe-main { display: block; }
+      .recipe-canvas-wrap { padding: 16px; background-image: none; }
+      .recipe-board { display: none; }
+      .recipe-outline { display: block; }
+      .drawer-scrim { inset: 114px 0 0 0; }
+      .trace-drawer { inset: 60px 0 0 0; width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+
+    @media (forced-colors: active) {
+      .project-spine, .stage-marker, .network-dot, .graph-list-dot { forced-color-adjust: none; }
+      .selected-copy { outline: 2px solid Highlight; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to workspace</a>
+
+  <div class="app" id="projectos-app" data-network="online">
+    <header class="topbar" aria-label="Application toolbar">
+      <div class="brand" aria-label="ProjectOS">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span class="brand-name">ProjectOS</span>
+      </div>
+
+      <div class="top-center">
+        <button class="project-switcher" type="button" id="project-switcher">
+          <span class="project-dot" aria-hidden="true"></span>
+          <span>Example workspace</span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+        <label class="global-search">
+          <span class="sr-only">Search across projects</span>
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Search projects, artifacts, evidence…" id="global-search">
+          <span class="shortcut" aria-hidden="true">⌘ / Ctrl K</span>
+        </label>
+      </div>
+
+      <div class="top-actions">
+        <span class="concept-top">Simulated design</span>
+        <button class="top-action" type="button" id="network-toggle" aria-pressed="false">
+          <span class="network-dot" aria-hidden="true"></span>
+          <span class="action-label" id="network-label">Online</span>
+        </button>
+        <button class="top-action trace-shortcut" type="button" data-open-trace>
+          <span aria-hidden="true">≡</span>
+          <span class="action-label">Trace example</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="nav-rail" aria-label="Primary navigation">
+      <div class="nav-label">Workspace</div>
+      <button class="nav-item is-active" type="button" data-view-target="portfolio" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">◫</span>
+        <span class="nav-text">Portfolio</span>
+      </button>
+      <button class="nav-item" type="button" data-view-target="workspace">
+        <span class="nav-icon" aria-hidden="true">▤</span>
+        <span class="nav-text">Artifact</span>
+      </button>
+      <button class="nav-item" type="button" data-view-target="recipe">
+        <span class="nav-icon" aria-hidden="true">⌘</span>
+        <span class="nav-text">Recipes</span>
+      </button>
+
+      <div class="nav-label">System</div>
+      <button class="nav-item" type="button" data-open-trace>
+        <span class="nav-icon" aria-hidden="true">◴</span>
+        <span class="nav-text">Activity</span>
+      </button>
+
+      <div class="nav-spacer"></div>
+      <div class="local-status">
+        <strong>Local-first</strong>
+        Project files stay in their folders. AI uses the network only when shown.
+      </div>
+      <button class="nav-item settings" type="button" id="settings-button">
+        <span class="nav-icon" aria-hidden="true">⚙</span>
+        <span class="nav-text">Settings</span>
+      </button>
+    </aside>
+
+    <main class="main" id="main-content" tabindex="-1">
+      <section class="view portfolio-view is-active" data-view="portfolio" aria-labelledby="portfolio-title">
+        <div class="portfolio-heading">
+          <div>
+            <div class="eyebrow">Portfolio</div>
+            <h1 id="portfolio-title">Your work,<br>in motion.</h1>
+            <p>Resume an artifact, resolve a decision, or inspect how an AI-assisted change came to be.</p>
+          </div>
+          <span class="concept-badge">Example content · interactive concept</span>
+        </div>
+
+        <article class="continue-card" aria-labelledby="continue-title">
+          <div class="continue-main">
+            <div class="continue-kicker">Continue drafting</div>
+            <h2 id="continue-title">Why evidence beats fluency</h2>
+            <p>The argument is in place. One paragraph is selected for a voice-preserving rewrite, and the evidence pass is ready when you are.</p>
+            <div class="button-row">
+              <button class="button primary" type="button" data-view-target="workspace">Open current draft <span aria-hidden="true">→</span></button>
+              <button class="button" type="button" data-open-trace>Inspect example trace</button>
+            </div>
+          </div>
+          <div class="continue-side">
+            <div>
+              <h3>Next human decisions</h3>
+              <ol class="next-list">
+                <li><span class="step-number">1</span><span><strong>Review rewrite</strong><br>Selected paragraph · no new claims</span></li>
+                <li><span class="step-number">2</span><span><strong>Verify one claim</strong><br>Evidence state is currently unknown</span></li>
+                <li><span class="step-number">3</span><span><strong>Name milestone</strong><br>When the argument is locked</span></li>
+              </ol>
+            </div>
+            <div class="privacy-note">Local draft · network actions are always labeled</div>
+          </div>
+        </article>
+
+        <div class="section-heading">
+          <h2>Project runway</h2>
+          <div class="runway-controls">
+            <div class="filter-row" role="group" aria-label="Filter projects by type">
+              <button class="filter-button" type="button" aria-pressed="true" data-project-filter="all">All</button>
+              <button class="filter-button" type="button" aria-pressed="false" data-project-filter="substack">Substack</button>
+              <button class="filter-button" type="button" aria-pressed="false" data-project-filter="software">Software</button>
+              <button class="filter-button" type="button" aria-pressed="false" data-project-filter="academic">Academic</button>
+              <button class="filter-button" type="button" aria-pressed="false" data-project-filter="learning">Learning</button>
+            </div>
+            <button class="round-button" type="button" id="runway-prev" aria-label="Previous project">←</button>
+            <button class="round-button" type="button" id="runway-next" aria-label="Next project">→</button>
+          </div>
+        </div>
+
+        <div class="runway-shell">
+          <div class="project-runway" id="project-runway" role="list" aria-label="Example projects" aria-live="polite">
+            <article class="project-card" style="--accent:#a6472c" data-project-type="substack" tabindex="0" role="listitem" aria-current="true">
+              <span class="project-spine" aria-hidden="true"></span>
+              <div class="project-card-body">
+                <span class="project-type">Substack</span>
+                <h3>Why evidence beats fluency</h3>
+                <p>Current artifact: manuscript draft. One proposed edit is ready for review.</p>
+                <div class="project-stage"><span class="stage-marker" aria-hidden="true"></span>Editing · local revision timeline</div>
+                <div class="project-actions">
+                  <button class="button small primary" type="button" data-view-target="workspace">Resume</button>
+                  <button class="button small" type="button" data-open-map>Open map</button>
+                  <button class="button small ghost" type="button" data-open-trace>Activity</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="project-card" style="--accent:#2557d6" data-project-type="software" tabindex="-1" role="listitem" aria-current="false">
+              <span class="project-spine" aria-hidden="true"></span>
+              <div class="project-card-body">
+                <span class="project-type">Software</span>
+                <h3>ProjectOS kernel</h3>
+                <p>Current artifact: architecture decision. The graph adapter bake-off is not yet resolved.</p>
+                <div class="project-stage"><span class="stage-marker" aria-hidden="true"></span>Design · feasibility gate</div>
+                <div class="project-actions">
+                  <button class="button small primary" type="button" data-notice="The Software vertical is the second deep workflow. This design prototype exercises the Substack golden path only.">Preview scope</button>
+                  <button class="button small ghost" type="button" data-notice="Software activity is a preview only; this prototype keeps its interactive trace on the Substack golden path.">Activity preview</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="project-card" style="--accent:#6c5d8b" data-project-type="academic" tabindex="-1" role="listitem" aria-current="false">
+              <span class="project-spine" aria-hidden="true"></span>
+              <div class="project-card-body">
+                <span class="project-type">Academic</span>
+                <h3>Replication study</h3>
+                <p>Folder registered. Specialized manuscript and empirical workflows arrive after the MVP.</p>
+                <div class="project-stage"><span class="stage-marker" aria-hidden="true"></span>Registered · later type pack</div>
+                <div class="project-actions">
+                  <button class="button small" type="button" data-notice="Academic specialization is intentionally deferred beyond the two-vertical MVP.">View scope</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="project-card" style="--accent:#8a6200" data-project-type="learning" tabindex="-1" role="listitem" aria-current="false">
+              <span class="project-spine" aria-hidden="true"></span>
+              <div class="project-card-body">
+                <span class="project-type">Learning</span>
+                <h3>Graph systems notes</h3>
+                <p>Folder registered. The future output is an accessible HTML learning artifact.</p>
+                <div class="project-stage"><span class="stage-marker" aria-hidden="true"></span>Scoped · later type pack</div>
+                <div class="project-actions">
+                  <button class="button small" type="button" data-notice="Learning specialization is intentionally deferred beyond the two-vertical MVP.">View scope</button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="section-heading"><h2>Needs your decision</h2></div>
+        <div class="decision-grid">
+          <article class="decision-card">
+            <span class="mini-badge" style="color:#8a6200">Approval gate</span>
+            <h3>Publish-readiness recipe needs review</h3>
+            <p>Its bounded scope and human gate are ready to inspect. This prototype does not execute a provider call.</p>
+          </article>
+          <article class="decision-card">
+            <span class="mini-badge" style="color:#2557d6">Engineering decision</span>
+            <h3>Graph engine bake-off</h3>
+            <p>LadybugDB and HelixDB remain candidates until recovery and packaging gates pass.</p>
+          </article>
+          <article class="decision-card">
+            <span class="mini-badge" style="color:#1f5a4f">Type learning</span>
+            <h3>One workflow improvement proposed</h3>
+            <p>Review its provenance and semantic diff before a type-pack version is created.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="view workspace-view" data-view="workspace" aria-label="Substack artifact workspace">
+        <div class="workspace-grid">
+          <aside class="project-rail" aria-label="Project navigation">
+            <div class="project-rail-title">
+              <span class="type-tag">Substack</span>
+              <strong>Why evidence beats fluency</strong>
+            </div>
+            <button class="project-nav-item" type="button"><span>Scope</span><span class="count">1</span></button>
+            <button class="project-nav-item" type="button"><span>Sources</span><span class="count">6</span></button>
+            <button class="project-nav-item is-active" type="button"><span>Drafts</span><span class="count">2</span></button>
+            <button class="project-nav-item" type="button"><span>Assets</span><span class="count">3</span></button>
+            <div class="rail-divider"></div>
+            <button class="project-nav-item" type="button" data-view-target="recipe"><span>Recipes</span><span class="count">4</span></button>
+            <button class="project-nav-item" type="button" data-open-trace><span>Activity</span><span class="count">•</span></button>
+          </aside>
+
+          <div class="editor-shell">
+            <header class="artifact-bar">
+              <div class="breadcrumb">Why evidence beats fluency / Drafts / <strong>essay.md</strong> · local revision</div>
+              <div class="artifact-actions">
+                <button class="button small" type="button" data-context-tab="lineage">Open context</button>
+                <button class="button small primary" type="button" data-view-target="recipe">Run recipe</button>
+              </div>
+            </header>
+
+            <div class="document-wrap">
+              <article class="document" aria-labelledby="draft-title">
+                <div class="doc-label">Working draft · example content</div>
+                <h1 id="draft-title">Why evidence beats fluency</h1>
+                <p class="dek">The most convincing answer is not always the one we should trust.</p>
+
+                <div class="document-copy">
+                  <p>Generative systems are unusually good at the surface signals of expertise: rhythm, specificity, and a confident conclusion. Those signals are useful, but they are not evidence.</p>
+
+                  <div class="selection-cluster">
+                    <p><button class="selected-copy" id="selection-trigger" type="button" aria-expanded="true" aria-controls="selection-menu">A reliable collaboration begins when the system shows its work in forms that a person can inspect, challenge, and revise—not when it simply sounds certain.</button></p>
+
+                    <div class="selection-menu" id="selection-menu" role="toolbar" aria-label="Actions for selected paragraph">
+                      <button class="selection-action" type="button" data-ai-action="rewrite" aria-pressed="false">Rephrase</button>
+                      <button class="selection-action" type="button" data-ai-action="complete" aria-pressed="false">Complete</button>
+                      <button class="selection-action" type="button" data-ai-action="explain" aria-pressed="false">Explain</button>
+                      <button class="selection-action" type="button" data-ai-action="factcheck" aria-pressed="false">Check claim</button>
+                      <span class="uses-network"><span aria-hidden="true">↗</span><span id="action-network-label">Uses network</span></span>
+                    </div>
+
+                    <section class="action-sheet" id="action-sheet" aria-label="Rewrite configuration" hidden>
+                      <div class="sheet-head">
+                        <strong id="action-sheet-title">Rephrase selected paragraph</strong>
+                        <span class="status-chip">Draft v7 · selection only</span>
+                      </div>
+                      <div class="sheet-body">
+                        <span class="option-label">Goal</span>
+                        <div class="choice-row" role="group" aria-label="Rewrite goal">
+                          <button class="choice" type="button" aria-pressed="true">Clearer</button>
+                          <button class="choice" type="button" aria-pressed="false">Shorter</button>
+                          <button class="choice" type="button" aria-pressed="false">Preserve voice</button>
+                        </div>
+                        <span class="option-label">Constraints</span>
+                        <div class="constraint-list">
+                          <label class="check-row"><input type="checkbox" checked> Preserve links and citations</label>
+                          <label class="check-row"><input type="checkbox" checked> Introduce no new claims</label>
+                          <label class="check-row"><input type="checkbox" checked> Keep approximate length</label>
+                        </div>
+                        <div class="scope-strip">
+                          <span><strong>Example route:</strong> OpenRouter · fixed model + fallback</span>
+                          <span>Budget not configured</span>
+                        </div>
+                        <div class="button-row" style="margin-top:13px">
+                          <button class="button primary small" type="button" id="preview-action">Preview example</button>
+                          <button class="button ghost small" type="button" id="cancel-action">Cancel</button>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="diff-preview" id="diff-preview" aria-label="Proposed rewrite" hidden>
+                      <div class="diff-head">
+                        <strong>Proposed change</strong>
+                        <button class="button ghost small" type="button" data-open-trace>Open trace</button>
+                      </div>
+                      <div class="diff-body">
+                        <div class="diff-line removed"><span class="diff-marker">Removed</span><span>A reliable collaboration begins when the system shows its work in forms that a person can inspect, challenge, and revise—not when it simply sounds certain.</span></div>
+                        <div class="diff-line added"><span class="diff-marker">Added</span><span>Trust begins when a system exposes work that people can inspect, challenge, and revise—not when its prose merely sounds certain.</span></div>
+                        <div class="diff-meta"><span>Illustrative output · no provider invoked</span><span>Review required</span></div>
+                        <div class="button-row" style="margin-top:14px">
+                          <button class="button primary small" type="button" id="accept-diff">Accept change</button>
+                          <button class="button small" type="button" id="reject-diff">Reject</button>
+                          <button class="button ghost small" type="button" data-notice="Comparison would open an alternate proposal beside the current one.">Compare</button>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <p>This changes the product question. Instead of asking whether an agent can produce a polished answer, we ask whether the surrounding system makes the answer contestable. Provenance, diffs, permissions, and failure states become part of the interface.</p>
+                  <p>The best AI primitive is therefore often not a blank text box. It is a bounded action with a legible input, a reviewable result, and a durable account of what changed.</p>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <aside class="context-panel" aria-label="Contextual artifact panel">
+            <div class="context-head">
+              <div class="context-title-row">
+                <div>
+                  <h2>Lineage around selection</h2>
+                  <p>Paragraph in essay.md · one hop</p>
+                </div>
+                <div class="button-row">
+                  <span class="mini-badge">Local graph</span>
+                  <button class="close-button context-close" type="button" id="context-close" aria-label="Close context panel">×</button>
+                </div>
+              </div>
+              <div class="context-tabs" role="tablist" aria-label="Context views">
+                <button class="lens-tab" id="context-tab-outline" type="button" role="tab" aria-selected="false" aria-controls="context-pane-outline" tabindex="-1" data-context-tab="outline">Structure</button>
+                <button class="lens-tab" id="context-tab-evidence" type="button" role="tab" aria-selected="false" aria-controls="context-pane-evidence" tabindex="-1" data-context-tab="evidence">Evidence</button>
+                <button class="lens-tab" id="context-tab-lineage" type="button" role="tab" aria-selected="true" aria-controls="context-pane-lineage" tabindex="0" data-context-tab="lineage">Lineage</button>
+              </div>
+            </div>
+            <div class="context-body">
+              <section class="context-pane" id="context-pane-outline" role="tabpanel" aria-labelledby="context-tab-outline" data-context-pane="outline" hidden>
+                <ol class="outline-list">
+                  <li>Opening: fluency as a misleading signal</li>
+                  <li class="is-current">Trust requires inspectable work</li>
+                  <li>From answer quality to contestability</li>
+                  <li>Why bounded actions replace chat</li>
+                </ol>
+              </section>
+
+              <section class="context-pane" id="context-pane-evidence" role="tabpanel" aria-labelledby="context-tab-evidence" data-context-pane="evidence" hidden>
+                <div class="evidence-summary"><strong>One claim needs a source.</strong><br>The paragraph is partly normative; the empirical phrase “begins when” is currently unsupported.</div>
+                <table class="evidence-table">
+                  <thead><tr><th>Claim</th><th>State</th><th>Next action</th></tr></thead>
+                  <tbody>
+                    <tr><td>Inspectable work increases trust</td><td><span class="state-unknown">◆ Unknown</span></td><td>Find evidence</td></tr>
+                    <tr><td>Confidence is not evidence</td><td>Argument</td><td>No citation required</td></tr>
+                  </tbody>
+                </table>
+              </section>
+
+              <section class="context-pane" id="context-pane-lineage" role="tabpanel" aria-labelledby="context-tab-lineage" data-context-pane="lineage">
+                <div class="lens-controls">
+                  <div class="segmented" role="group" aria-label="Graph representation">
+                    <button class="segment-button" type="button" aria-pressed="true" data-graph-mode="map">Map</button>
+                    <button class="segment-button" type="button" aria-pressed="false" data-graph-mode="list">List</button>
+                  </div>
+                  <select class="field-select" id="hop-select" aria-label="Graph depth" style="width:auto; min-height:36px">
+                    <option>One hop</option>
+                    <option>Two hops</option>
+                  </select>
+                </div>
+
+                <svg class="graph-map" id="graph-map" viewBox="0 0 300 280" role="img" aria-labelledby="graph-title graph-desc">
+                  <title id="graph-title">Context map for the selected paragraph</title>
+                  <desc id="graph-desc">The selected paragraph contains one claim, derives from the working draft, and was touched by a rewrite action with a pending revision.</desc>
+                  <defs>
+                    <pattern id="dashes" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 3.5H4" stroke="#7c8782" stroke-width="1.5"/></pattern>
+                  </defs>
+                  <path d="M74 73 C110 75, 105 130, 137 139" fill="none" stroke="#87938c" stroke-width="1.5"/>
+                  <path d="M228 76 C197 84, 197 123, 166 139" fill="none" stroke="#87938c" stroke-width="1.5"/>
+                  <path d="M149 166 C149 191, 101 203, 90 226" fill="none" stroke="#87938c" stroke-width="1.5" stroke-dasharray="5 4"/>
+                  <path d="M155 166 C164 192, 209 199, 218 224" fill="none" stroke="#87938c" stroke-width="1.5"/>
+                  <text x="88" y="101" fill="#5b6661" font-family="system-ui" font-size="10">contains</text>
+                  <text x="184" y="103" fill="#5b6661" font-family="system-ui" font-size="10">derived from</text>
+                  <text x="91" y="192" fill="#5b6661" font-family="system-ui" font-size="10">proposed by</text>
+                  <text x="181" y="194" fill="#5b6661" font-family="system-ui" font-size="10">would create</text>
+                  <rect x="22" y="43" width="82" height="54" rx="9" fill="#ffffff" stroke="#aeb7b1"/>
+                  <text x="63" y="66" text-anchor="middle" fill="#18201e" font-family="system-ui" font-size="11" font-weight="700">Claim</text>
+                  <text x="63" y="81" text-anchor="middle" fill="#5b6661" font-family="system-ui" font-size="10">evidence unknown</text>
+                  <rect x="196" y="43" width="82" height="54" rx="9" fill="#ffffff" stroke="#aeb7b1"/>
+                  <text x="237" y="66" text-anchor="middle" fill="#18201e" font-family="system-ui" font-size="11" font-weight="700">Draft v7</text>
+                  <text x="237" y="81" text-anchor="middle" fill="#5b6661" font-family="system-ui" font-size="10">essay.md</text>
+                  <rect x="102" y="125" width="96" height="54" rx="9" fill="#1f5a4f" stroke="#123b34"/>
+                  <text x="150" y="148" text-anchor="middle" fill="#ffffff" font-family="system-ui" font-size="11" font-weight="700">Selection</text>
+                  <text x="150" y="163" text-anchor="middle" fill="#dfece6" font-family="system-ui" font-size="10">paragraph · current</text>
+                  <rect x="37" y="217" width="104" height="46" rx="9" fill="#dce6ff" stroke="#2557d6" stroke-dasharray="5 3"/>
+                  <text x="89" y="237" text-anchor="middle" fill="#183d9d" font-family="system-ui" font-size="11" font-weight="700">Rephrase</text>
+                  <text x="89" y="251" text-anchor="middle" fill="#183d9d" font-family="system-ui" font-size="10">AI proposal</text>
+                  <rect x="170" y="217" width="92" height="46" rx="9" fill="#ffffff" stroke="#aeb7b1"/>
+                  <text x="216" y="237" text-anchor="middle" fill="#18201e" font-family="system-ui" font-size="11" font-weight="700">Revision</text>
+                  <text x="216" y="251" text-anchor="middle" fill="#5b6661" font-family="system-ui" font-size="10">pending review</text>
+                </svg>
+
+                <ul class="graph-list" id="graph-list" hidden aria-label="Context relationships">
+                  <li><span class="graph-list-dot"></span><span><strong>Selection → contains → Claim</strong><small>Claim has no evidence relationship yet.</small></span></li>
+                  <li><span class="graph-list-dot" style="background:#5b6661"></span><span><strong>Selection → derived from → Draft v7</strong><small>The exact source is essay.md at the locked input hash.</small></span></li>
+                  <li><span class="graph-list-dot" style="background:#2557d6"></span><span><strong>Selection → proposed by → Rephrase action</strong><small>AI-proposed edge; not yet accepted.</small></span></li>
+                  <li><span class="graph-list-dot" style="background:#8a6200"></span><span><strong>Selection → would create → Revision</strong><small>Pending human review.</small></span></li>
+                </ul>
+
+                <div class="node-card">
+                  <strong>Why connected?</strong>
+                  The paragraph is the exact input scope for the rewrite action. The pending revision does not become part of the draft until accepted.
+                </div>
+              </section>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view recipe-view" data-view="recipe" aria-labelledby="recipe-title">
+        <div class="recipe-layout">
+          <header class="recipe-header">
+            <div>
+              <h1 id="recipe-title">Substack publish-readiness pass</h1>
+              <p>Recipe v3 · four-stage typed board · current draft remains unchanged until approval</p>
+            </div>
+            <div class="button-row">
+              <div class="segmented" role="group" aria-label="Recipe representation">
+                <button class="segment-button" type="button" aria-pressed="true" data-recipe-mode="canvas">Canvas</button>
+                <button class="segment-button" type="button" aria-pressed="false" data-recipe-mode="outline">Outline</button>
+              </div>
+              <button class="button" type="button" id="duplicate-recipe">Duplicate</button>
+              <button class="button primary" type="button" id="run-recipe">Review run scope</button>
+            </div>
+          </header>
+
+          <div class="recipe-main">
+            <div class="recipe-canvas-wrap" id="recipe-canvas" data-mode="canvas">
+              <div class="recipe-board" aria-label="Recipe canvas with four typed lanes">
+                <section class="recipe-lane" aria-labelledby="lane-inputs">
+                  <div class="lane-title"><span id="lane-inputs">Inputs</span><span>1 block</span></div>
+                  <button class="recipe-node is-selected" type="button" data-node-title="Draft snapshot" data-node-kind="Artifact input" data-node-model="Not applicable · local input" data-node-scope="Read essay.md at its current content hash; no write access.">
+                    <span class="node-kind">Artifact input</span>
+                    <strong>Draft snapshot</strong>
+                    <small>essay.md · content hash locked when the run starts</small>
+                    <span class="node-flags"><span class="node-flag">Read only</span><span class="node-flag">Local</span></span>
+                  </button>
+                </section>
+
+                <section class="recipe-lane" aria-labelledby="lane-analysis">
+                  <div class="lane-title"><span id="lane-analysis">Analysis</span><span>3 blocks</span></div>
+                  <button class="recipe-node" type="button" data-node-title="Structure review" data-node-kind="Document evaluator" data-node-model="Fixed model + ordered fallback" data-node-scope="Reads the draft snapshot and produces a structured issue table.">
+                    <span class="node-kind">Document evaluator</span>
+                    <strong>Structure review</strong>
+                    <small>Argument, coherence, transitions, and unnecessary repetition</small>
+                    <span class="node-flags"><span class="node-flag online">Online</span><span class="node-flag">Issue table</span></span>
+                  </button>
+                  <button class="recipe-node" type="button" data-node-title="Claim extraction" data-node-kind="Typed transform" data-node-model="Fixed model + ordered fallback" data-node-scope="Produces Claim nodes and selection anchors; cannot rewrite prose.">
+                    <span class="node-kind">Typed transform</span>
+                    <strong>Claim extraction</strong>
+                    <small>Creates a reviewable claim map without editing the draft</small>
+                    <span class="node-flags"><span class="node-flag online">Online</span><span class="node-flag">Graph proposal</span></span>
+                  </button>
+                  <button class="recipe-node" type="button" data-node-title="Citation verification" data-node-kind="Evidence check" data-node-model="Evidence route + approved search tools" data-node-scope="May call approved search providers; returns sources and uncertainty.">
+                    <span class="node-kind">Evidence check</span>
+                    <strong>Citation verification</strong>
+                    <small>Finds support, contradiction, or an explicit unknown state</small>
+                    <span class="node-flags"><span class="node-flag online">Network</span><span class="node-flag">Sources</span></span>
+                  </button>
+                </section>
+
+                <section class="recipe-lane" aria-labelledby="lane-review">
+                  <div class="lane-title"><span id="lane-review">Human review</span><span>2 blocks</span></div>
+                  <button class="recipe-node" type="button" data-node-title="Voice-preservation pass" data-node-kind="Proposal generator" data-node-model="Fixed model + ordered fallback" data-node-scope="May propose patches, but all file writes are withheld until approval.">
+                    <span class="node-kind">Proposal generator</span>
+                    <strong>Voice-preservation pass</strong>
+                    <small>Suggests bounded edits with per-change rationale</small>
+                    <span class="node-flags"><span class="node-flag online">Online</span><span class="node-flag">Diff set</span></span>
+                  </button>
+                  <button class="recipe-node is-gate" type="button" data-node-title="Approve proposed edits" data-node-kind="Human gate" data-node-model="Not applicable · human decision" data-node-scope="Stops the run until each proposed edit is accepted or rejected.">
+                    <span class="node-kind">Human gate</span>
+                    <strong>Approve proposed edits</strong>
+                    <small>Requires your approval · no automatic acceptance</small>
+                    <span class="node-flags"><span class="node-flag">Required</span><span class="node-flag">Per edit</span></span>
+                  </button>
+                </section>
+
+                <section class="recipe-lane" aria-labelledby="lane-outputs">
+                  <div class="lane-title"><span id="lane-outputs">Outputs</span><span>2 artifacts</span></div>
+                  <button class="recipe-node" type="button" data-node-title="Readiness report" data-node-kind="Artifact output" data-node-model="Not applicable · deterministic output" data-node-scope="Writes a new report artifact inside the project sidecar; does not alter the draft.">
+                    <span class="node-kind">Artifact output</span>
+                    <strong>Readiness report</strong>
+                    <small>Issue table, evidence state, and unresolved questions</small>
+                    <span class="node-flags"><span class="node-flag">New artifact</span><span class="node-flag">Local</span></span>
+                  </button>
+                  <button class="recipe-node" type="button" data-node-title="Approved revision" data-node-kind="Document revision" data-node-model="Not applicable · approved mutation" data-node-scope="Creates a new immutable revision only from user-approved patches.">
+                    <span class="node-kind">Document revision</span>
+                    <strong>Approved revision</strong>
+                    <small>Immutable recovery point linked to the exact run receipt</small>
+                    <span class="node-flags"><span class="node-flag">Reviewable</span><span class="node-flag">Recoverable</span></span>
+                  </button>
+                </section>
+              </div>
+
+              <div class="recipe-outline" aria-label="Recipe outline">
+                <p style="margin:0 0 12px; color:var(--muted); font-size:13px">The three analysis blocks form one bounded set and may run concurrently; the sequence resumes at the human gate.</p>
+                <div class="outline-step"><span class="outline-index">1</span><span><strong>Draft snapshot</strong><small>Lock input content hash · local</small></span><span class="mini-badge">Read only</span></div>
+                <div class="outline-step"><span class="outline-index">2</span><span><strong>Structure review</strong><small>Produce a structured issue table · online</small></span><span class="mini-badge">Analysis</span></div>
+                <div class="outline-step"><span class="outline-index">3</span><span><strong>Claim extraction</strong><small>Propose claim graph · online</small></span><span class="mini-badge">Analysis</span></div>
+                <div class="outline-step"><span class="outline-index">4</span><span><strong>Citation verification</strong><small>Return support, contradiction, or unknown · network</small></span><span class="mini-badge">Evidence</span></div>
+                <div class="outline-step"><span class="outline-index">5</span><span><strong>Voice-preservation pass</strong><small>Propose bounded patches · online</small></span><span class="mini-badge">Proposal</span></div>
+                <div class="outline-step"><span class="outline-index">6</span><span><strong>Approve proposed edits</strong><small>Run pauses for per-edit review</small></span><span class="mini-badge" style="color:#8a6200">Human gate</span></div>
+                <div class="outline-step"><span class="outline-index">7</span><span><strong>Readiness report + approved revision</strong><small>Write new artifacts and durable receipt</small></span><span class="mini-badge">Outputs</span></div>
+              </div>
+            </div>
+
+            <aside class="recipe-inspector" aria-label="Selected recipe block configuration">
+              <span class="eyebrow">Selected block</span>
+              <h2 id="node-title">Draft snapshot</h2>
+              <p id="node-kind">Artifact input</p>
+
+              <div class="inspector-section">
+                <h3>Scope</h3>
+                <p id="node-scope" style="font-size:13px; color:var(--muted); margin:0">Read essay.md at its current content hash; no write access.</p>
+              </div>
+
+              <div class="inspector-section">
+                <h3>Execution policy</h3>
+                <span class="field-label">Route</span>
+                <div class="scope-strip" id="node-model">Not applicable · local input</div>
+              </div>
+
+              <div class="inspector-section">
+                <h3>Run boundary</h3>
+                <ul class="scope-list">
+                  <li><span class="scope-symbol">✓</span><span>Reads one locked draft snapshot</span></li>
+                  <li><span class="scope-symbol">✓</span><span>Network use is labeled per block</span></li>
+                  <li><span class="scope-symbol">✓</span><span>Proposed edits stop at the human gate</span></li>
+                  <li><span class="scope-symbol">✓</span><span>Outputs save as new artifacts</span></li>
+                  <li><span class="scope-symbol">×</span><span>No publish, push, delete, or external app control</span></li>
+                </ul>
+              </div>
+
+              <div class="inspector-section">
+                <h3>Estimate</h3>
+                <p style="font-size:12px; color:var(--muted); margin:0">Cost and token estimate: unavailable until the provider route is resolved.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="trace-drawer" id="trace-drawer" role="complementary" aria-labelledby="trace-title" aria-hidden="true" tabindex="-1" hidden inert>
+      <div class="trace-head">
+        <div>
+          <h2 id="trace-title">Rephrase selected paragraph</h2>
+          <p>Simulated record · no provider or tool was invoked</p>
+        </div>
+        <button class="close-button" type="button" id="close-trace" aria-label="Close run trace">×</button>
+      </div>
+
+      <div class="trace-meta">
+        <div class="trace-meta-item"><small>Status</small><strong id="trace-status">Simulated proposal</strong></div>
+        <div class="trace-meta-item"><small>Scope</small><strong id="trace-scope">essay.md · paragraph</strong></div>
+        <div class="trace-meta-item"><small>Route</small><strong id="trace-route">No provider invoked</strong></div>
+        <div class="trace-meta-item"><small>Telemetry</small><strong>Cost unavailable</strong></div>
+      </div>
+
+      <div class="trace-main">
+        <div class="trace-tabs" role="tablist" aria-label="Trace detail">
+          <button class="trace-tab" id="trace-tab-summary" type="button" role="tab" aria-selected="true" aria-controls="trace-pane-summary" tabindex="0" data-trace-tab="summary">Summary</button>
+          <button class="trace-tab" id="trace-tab-evidence" type="button" role="tab" aria-selected="false" aria-controls="trace-pane-evidence" tabindex="-1" data-trace-tab="evidence">Evidence</button>
+          <button class="trace-tab" id="trace-tab-raw" type="button" role="tab" aria-selected="false" aria-controls="trace-pane-raw" tabindex="-1" data-trace-tab="raw">Raw record</button>
+        </div>
+
+        <section class="trace-pane" id="trace-pane-summary" role="tabpanel" aria-labelledby="trace-tab-summary" data-trace-pane="summary">
+          <div class="run-outcome" id="trace-outcome"><strong>Example outcome:</strong> one rephrase proposal is shown. No file, graph, provider, or tool action occurred.</div>
+          <div class="trace-section-title">Observable timeline</div>
+          <ol class="trace-timeline" id="trace-timeline">
+            <li class="trace-event"><strong>Example scope</strong><span>Draft v7 · selected paragraph</span></li>
+            <li class="trace-event approval"><strong>Example capabilities</strong><span>Read selection · provider request · proposal output</span></li>
+            <li class="trace-event tool"><strong>Provider step not run</strong><span>The production receipt would show requested and provider-reported model IDs</span></li>
+            <li class="trace-event tool"><strong>Illustrative validators</strong><span>No new claims · approximate length · links preserved</span></li>
+            <li class="trace-event approval"><strong>Human review simulated</strong><span>Accept or reject the illustrative proposal</span></li>
+          </ol>
+          <div class="trace-section-title">Side effects</div>
+          <ul class="scope-list" id="trace-side-effects">
+            <li><span class="scope-symbol">—</span><span>No network request occurred in this design prototype</span></li>
+            <li><span class="scope-symbol">—</span><span>No file write</span></li>
+            <li><span class="scope-symbol">—</span><span>No Git or external application action</span></li>
+          </ul>
+        </section>
+
+        <section class="trace-pane" id="trace-pane-evidence" role="tabpanel" aria-labelledby="trace-tab-evidence" data-trace-pane="evidence" hidden>
+          <div id="trace-evidence">
+            <div class="evidence-item"><strong>Example input reference</strong><p>Selected paragraph in essay.md. A production run would record its content hash in the durable receipt.</p></div>
+            <div class="evidence-item"><strong>Illustrative validator result</strong><p>The example proposal introduces no new factual claim.</p></div>
+            <div class="evidence-item"><strong>Diff artifact</strong><p>One removal and one addition, still pending review.</p></div>
+            <div class="evidence-item"><strong>Provider disclosure</strong><p>No provider was called. Production receipts distinguish requested and provider-reported model identifiers.</p></div>
+          </div>
+        </section>
+
+        <section class="trace-pane" id="trace-pane-raw" role="tabpanel" aria-labelledby="trace-tab-raw" data-trace-pane="raw" hidden>
+          <div class="raw-note">This is a sanitized event record, not hidden model chain-of-thought. Secrets and sensitive payloads are redacted.</div>
+          <pre id="trace-raw">{
+  "run_id": "run_example_01",
+  "action": "substack.rephrase@1",
+  "state": "simulated_no_execution",
+  "input_ref": "essay.md#selection",
+  "capabilities": [
+    "file.read:selected",
+    "network:provider.openrouter"
+  ],
+  "route": {
+    "policy": "fixed_with_fallback",
+    "provider_invoked": false
+  },
+  "mutation": "none_pending_approval",
+  "secrets": "redacted"
+}</pre>
+        </section>
+      </div>
+
+      <div class="trace-footer">
+        <button class="button small" type="button" data-notice="A redacted receipt would be exported without credentials or private vault payloads.">Export receipt</button>
+        <button class="button primary small" type="button" id="trace-review">Review example</button>
+      </div>
+    </aside>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (() => {
+      const app = document.getElementById('projectos-app');
+      const views = [...document.querySelectorAll('[data-view]')];
+      const navItems = [...document.querySelectorAll('.nav-item[data-view-target]')];
+      const toast = document.getElementById('toast');
+      let toastTimer;
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 3200);
+      }
+
+      function showView(name) {
+        views.forEach(view => view.classList.toggle('is-active', view.dataset.view === name));
+        navItems.forEach(item => {
+          const active = item.dataset.viewTarget === name;
+          item.classList.toggle('is-active', active);
+          if (active) item.setAttribute('aria-current', 'page');
+          else item.removeAttribute('aria-current');
+        });
+        const activeView = document.querySelector(`[data-view="${name}"]`);
+        if (activeView) activeView.scrollTop = 0;
+        document.getElementById('main-content').focus({ preventScroll: true });
+      }
+
+      document.addEventListener('click', event => {
+        const viewTarget = event.target.closest('[data-view-target]');
+        if (viewTarget) showView(viewTarget.dataset.viewTarget);
+
+        const notice = event.target.closest('[data-notice]');
+        if (notice) showToast(notice.dataset.notice);
+      });
+
+      const networkToggle = document.getElementById('network-toggle');
+      const networkLabel = document.getElementById('network-label');
+      const actionNetworkLabel = document.getElementById('action-network-label');
+      const previewAction = document.getElementById('preview-action');
+
+      networkToggle.addEventListener('click', () => {
+        const offline = app.dataset.network !== 'offline';
+        app.dataset.network = offline ? 'offline' : 'online';
+        networkToggle.setAttribute('aria-pressed', String(offline));
+        networkLabel.textContent = offline ? 'Offline' : 'Online';
+        actionNetworkLabel.textContent = offline ? 'Connect to run' : 'Uses network';
+        previewAction.disabled = offline;
+        showToast(offline
+          ? 'Offline mode: files, graph, Git, revisions, and traces remain available. AI actions will not transmit.'
+          : 'Online mode restored. Prepared actions still require an explicit run.');
+      });
+
+      const projectCards = [...document.querySelectorAll('.project-card')];
+      const runway = document.getElementById('project-runway');
+
+      function visibleCards() { return projectCards.filter(card => !card.hidden); }
+
+      function selectProject(card, focus = false) {
+        visibleCards().forEach(item => {
+          const selected = item === card;
+          item.setAttribute('aria-current', String(selected));
+          item.tabIndex = selected ? 0 : -1;
+        });
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        if (focus) card.focus();
+      }
+
+      projectCards.forEach(card => {
+        card.addEventListener('click', event => {
+          if (!event.target.closest('button')) selectProject(card);
+        });
+        card.addEventListener('keydown', event => {
+          if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+          event.preventDefault();
+          const cards = visibleCards();
+          const index = cards.indexOf(card);
+          const nextIndex = event.key === 'ArrowRight'
+            ? Math.min(cards.length - 1, index + 1)
+            : Math.max(0, index - 1);
+          selectProject(cards[nextIndex], true);
+        });
+      });
+
+      function moveRunway(direction) {
+        const cards = visibleCards();
+        const current = cards.findIndex(card => card.getAttribute('aria-current') === 'true');
+        const next = Math.max(0, Math.min(cards.length - 1, current + direction));
+        if (cards[next]) selectProject(cards[next], true);
+      }
+
+      document.getElementById('runway-prev').addEventListener('click', () => moveRunway(-1));
+      document.getElementById('runway-next').addEventListener('click', () => moveRunway(1));
+
+      document.querySelectorAll('[data-project-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+          const filter = button.dataset.projectFilter;
+          document.querySelectorAll('[data-project-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+          projectCards.forEach(card => card.hidden = filter !== 'all' && card.dataset.projectType !== filter);
+          const cards = visibleCards();
+          if (cards[0]) selectProject(cards[0]);
+          runway.setAttribute('aria-label', filter === 'all' ? 'Example projects' : `Example ${filter} projects`);
+        });
+      });
+
+      const selectionTrigger = document.getElementById('selection-trigger');
+      const selectionMenu = document.getElementById('selection-menu');
+      const actionSheet = document.getElementById('action-sheet');
+      const diffPreview = document.getElementById('diff-preview');
+      const actionSheetTitle = document.getElementById('action-sheet-title');
+
+      selectionTrigger.addEventListener('click', () => {
+        const willOpen = selectionMenu.hidden;
+        selectionMenu.hidden = !willOpen;
+        selectionTrigger.setAttribute('aria-expanded', String(willOpen));
+      });
+
+      document.querySelectorAll('[data-ai-action]').forEach(button => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('[data-ai-action]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+          if (button.dataset.aiAction === 'factcheck') {
+            switchContext('evidence');
+            actionSheet.hidden = true;
+            showToast('Claim check opened as an evidence table. It will not rewrite the paragraph.');
+            return;
+          }
+          if (button.dataset.aiAction === 'complete') {
+            actionSheet.hidden = true;
+            showToast('Complete is cursor-scoped. Place the caret where new text should begin; this paragraph selection remains unchanged.');
+            return;
+          }
+          if (button.dataset.aiAction === 'explain') {
+            switchContext('outline');
+            actionSheet.hidden = true;
+            showToast('An explanation would appear as a linked note, not overwrite the selected paragraph.');
+            return;
+          }
+          actionSheetTitle.textContent = 'Rephrase selected paragraph';
+          if (app.dataset.network === 'offline') {
+            actionSheet.hidden = false;
+            showToast('The action can be configured offline, but it will not run until you reconnect and confirm.');
+          } else {
+            actionSheet.hidden = false;
+          }
+          diffPreview.hidden = true;
+          actionSheet.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      });
+
+      document.querySelectorAll('.choice').forEach(choice => {
+        choice.addEventListener('click', () => {
+          choice.parentElement.querySelectorAll('.choice').forEach(item => item.setAttribute('aria-pressed', String(item === choice)));
+        });
+      });
+
+      previewAction.addEventListener('click', () => {
+        actionSheet.hidden = true;
+        diffPreview.hidden = false;
+        diffPreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        showToast('Illustrative preview shown. No provider was invoked, and the draft is still unchanged.');
+      });
+
+      document.getElementById('cancel-action').addEventListener('click', () => {
+        actionSheet.hidden = true;
+        document.querySelectorAll('[data-ai-action]').forEach(item => item.setAttribute('aria-pressed', 'false'));
+      });
+
+      document.getElementById('accept-diff').addEventListener('click', () => {
+        selectionTrigger.textContent = 'Trust begins when a system exposes work that people can inspect, challenge, and revise—not when its prose merely sounds certain.';
+        diffPreview.hidden = true;
+        document.getElementById('trace-status').textContent = 'Example accepted';
+        showToast('Mockup state updated. In the product, acceptance would create a recoverable revision and durable receipt.');
+      });
+
+      document.getElementById('reject-diff').addEventListener('click', () => {
+        diffPreview.hidden = true;
+        showToast('Illustrative proposal rejected. In the product, the durable receipt would record that decision.');
+      });
+
+      const contextTabs = [...document.querySelectorAll('[data-context-tab]')];
+      const contextPanes = [...document.querySelectorAll('[data-context-pane]')];
+      const contextPanel = document.querySelector('.context-panel');
+      const mediumContext = window.matchMedia('(min-width: 701px) and (max-width: 940px)');
+
+      function syncContextAccessibility() {
+        const hiddenOverlay = mediumContext.matches && !contextPanel.classList.contains('is-open');
+        contextPanel.inert = hiddenOverlay;
+        contextPanel.setAttribute('aria-hidden', String(hiddenOverlay));
+      }
+
+      function switchContext(name) {
+        contextTabs.forEach(tab => {
+          if (tab.classList.contains('lens-tab')) {
+            const selected = tab.dataset.contextTab === name;
+            tab.setAttribute('aria-selected', String(selected));
+            tab.tabIndex = selected ? 0 : -1;
+          }
+        });
+        contextPanes.forEach(pane => pane.hidden = pane.dataset.contextPane !== name);
+        contextPanel.classList.add('is-open');
+        syncContextAccessibility();
+        if (window.innerWidth <= 700) contextPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      contextTabs.forEach(tab => tab.addEventListener('click', () => switchContext(tab.dataset.contextTab)));
+      document.querySelectorAll('[data-open-map]').forEach(button => button.addEventListener('click', () => {
+        showView('workspace');
+        switchContext('lineage');
+      }));
+      document.getElementById('context-close').addEventListener('click', () => {
+        contextPanel.classList.remove('is-open');
+        syncContextAccessibility();
+        document.querySelector('[data-context-tab="lineage"]').focus();
+      });
+      mediumContext.addEventListener('change', syncContextAccessibility);
+      syncContextAccessibility();
+
+      document.querySelectorAll('[data-graph-mode]').forEach(button => {
+        button.addEventListener('click', () => {
+          const mode = button.dataset.graphMode;
+          document.querySelectorAll('[data-graph-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+          document.getElementById('graph-map').hidden = mode !== 'map';
+          document.getElementById('graph-list').hidden = mode !== 'list';
+        });
+      });
+
+      document.querySelectorAll('[data-recipe-mode]').forEach(button => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('[data-recipe-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+          document.getElementById('recipe-canvas').dataset.mode = button.dataset.recipeMode;
+        });
+      });
+
+      const nodeTitle = document.getElementById('node-title');
+      const nodeKind = document.getElementById('node-kind');
+      const nodeScope = document.getElementById('node-scope');
+      const nodeModel = document.getElementById('node-model');
+
+      document.querySelectorAll('.recipe-node').forEach(node => {
+        node.addEventListener('click', () => {
+          document.querySelectorAll('.recipe-node').forEach(item => item.classList.toggle('is-selected', item === node));
+          nodeTitle.textContent = node.dataset.nodeTitle;
+          nodeKind.textContent = node.dataset.nodeKind;
+          nodeScope.textContent = node.dataset.nodeScope;
+          nodeModel.textContent = node.dataset.nodeModel;
+        });
+      });
+
+      document.getElementById('duplicate-recipe').addEventListener('click', () => showToast('A new recipe version would be created; active runs remain attached to their original version.'));
+
+      const traceDrawer = document.getElementById('trace-drawer');
+      const drawerScrim = document.getElementById('drawer-scrim');
+      const traceTitle = document.getElementById('trace-title');
+      const traceStatus = document.getElementById('trace-status');
+      const traceScope = document.getElementById('trace-scope');
+      const traceRoute = document.getElementById('trace-route');
+      const traceOutcome = document.getElementById('trace-outcome');
+      const traceTimeline = document.getElementById('trace-timeline');
+      const traceSideEffects = document.getElementById('trace-side-effects');
+      const traceEvidence = document.getElementById('trace-evidence');
+      const traceRaw = document.getElementById('trace-raw');
+      const traceReview = document.getElementById('trace-review');
+      let currentTraceKind = 'action';
+      let lastTraceTrigger = null;
+
+      const traceFixtures = {
+        action: {
+          title: 'Rephrase selected paragraph',
+          status: 'Simulated proposal',
+          scope: 'essay.md · paragraph',
+          route: 'No provider invoked',
+          outcome: '<strong>Example outcome:</strong> one rephrase proposal is shown. No file, graph, provider, or tool action occurred.',
+          timeline: [
+            ['event', 'Example scope', 'Draft v7 · selected paragraph'],
+            ['approval', 'Example capabilities', 'Read selection · provider request · proposal output'],
+            ['tool', 'Provider step not run', 'Production would record requested and provider-reported model IDs'],
+            ['tool', 'Illustrative validators', 'No new claims · approximate length · links preserved'],
+            ['approval', 'Human review simulated', 'Accept or reject the illustrative proposal']
+          ],
+          sideEffects: ['No network request occurred', 'No file or graph write occurred', 'No Git or external application action occurred'],
+          evidence: [
+            ['Example input reference', 'Selected paragraph in essay.md. A production run would record its content hash in the durable receipt.'],
+            ['Illustrative validator result', 'The example proposal introduces no new factual claim.'],
+            ['Diff artifact', 'One removal and one addition, still pending review.'],
+            ['Provider disclosure', 'No provider was called. Production receipts distinguish requested and provider-reported model identifiers.']
+          ],
+          raw: {
+            run_id: 'run_example_action_01',
+            action: 'substack.rephrase@1',
+            state: 'simulated_no_execution',
+            input_ref: 'essay.md#selection',
+            requested_capabilities: ['file.read:selected', 'network:provider.openrouter'],
+            provider_invoked: false,
+            mutation: 'none'
+          },
+          reviewLabel: 'Review example'
+        },
+        recipe: {
+          title: 'Publish-readiness preflight',
+          status: 'Simulated preflight',
+          scope: 'essay.md · whole draft',
+          route: '3 online blocks · not invoked',
+          outcome: '<strong>Preflight only:</strong> the recipe scope, egress, outputs, and human gate are visible. No run has started.',
+          timeline: [
+            ['event', 'Input scope previewed', 'One locked draft snapshot'],
+            ['approval', 'Capabilities previewed', 'Draft read · provider egress · evidence search · staged outputs'],
+            ['tool', 'Analysis set not run', 'Structure, claims, and citations would run as a bounded set'],
+            ['approval', 'Human gate required', 'Every proposed edit stops for individual review'],
+            ['event', 'Outputs declared', 'Readiness report plus approved revision']
+          ],
+          sideEffects: ['No provider or search request occurred', 'No artifact or graph write occurred', 'No publish, Git remote, or computer-use authority requested'],
+          evidence: [
+            ['Input contract', 'One draft snapshot would be locked by content hash when execution begins.'],
+            ['Network disclosure', 'Three blocks require approved provider or search egress. No request occurred in this prototype.'],
+            ['Approval contract', 'Proposed edits cannot pass the human gate without per-edit acceptance.'],
+            ['Output contract', 'A readiness report and an approved revision would be new linked artifacts.']
+          ],
+          raw: {
+            run_id: 'run_example_recipe_preflight',
+            recipe: 'substack.publish-readiness@3',
+            state: 'simulated_preflight_no_execution',
+            input_ref: 'essay.md#whole-document',
+            online_blocks: 3,
+            human_gates: 1,
+            provider_invoked: false,
+            mutation: 'none'
+          },
+          reviewLabel: 'Return to recipe'
+        }
+      };
+
+      function setTraceFixture(kind) {
+        currentTraceKind = kind;
+        const fixture = traceFixtures[kind];
+        traceTitle.textContent = fixture.title;
+        traceStatus.textContent = fixture.status;
+        traceScope.textContent = fixture.scope;
+        traceRoute.textContent = fixture.route;
+        traceOutcome.innerHTML = fixture.outcome;
+        traceTimeline.innerHTML = fixture.timeline.map(([type, title, detail]) =>
+          `<li class="trace-event ${type}"><strong>${title}</strong><span>${detail}</span></li>`
+        ).join('');
+        traceSideEffects.innerHTML = fixture.sideEffects.map(detail =>
+          `<li><span class="scope-symbol">—</span><span>${detail}</span></li>`
+        ).join('');
+        traceEvidence.innerHTML = fixture.evidence.map(([title, detail]) =>
+          `<div class="evidence-item"><strong>${title}</strong><p>${detail}</p></div>`
+        ).join('');
+        traceRaw.textContent = JSON.stringify(fixture.raw, null, 2);
+        traceReview.textContent = fixture.reviewLabel;
+      }
+
+      function openTrace(kind = 'action', trigger = document.activeElement) {
+        setTraceFixture(kind);
+        lastTraceTrigger = trigger;
+        traceDrawer.hidden = false;
+        traceDrawer.inert = false;
+        drawerScrim.hidden = false;
+        traceDrawer.classList.add('is-open');
+        traceDrawer.setAttribute('aria-hidden', 'false');
+        drawerScrim.classList.add('is-open');
+        document.getElementById('close-trace').focus();
+      }
+
+      function closeTrace() {
+        if (traceDrawer.hidden) return;
+        traceDrawer.classList.remove('is-open');
+        traceDrawer.setAttribute('aria-hidden', 'true');
+        traceDrawer.inert = true;
+        traceDrawer.hidden = true;
+        drawerScrim.classList.remove('is-open');
+        drawerScrim.hidden = true;
+        if (lastTraceTrigger && document.contains(lastTraceTrigger)) lastTraceTrigger.focus();
+      }
+
+      document.querySelectorAll('[data-open-trace]').forEach(button => button.addEventListener('click', () => openTrace(button.dataset.traceKind || 'action', button)));
+      document.getElementById('close-trace').addEventListener('click', closeTrace);
+      drawerScrim.addEventListener('click', closeTrace);
+      document.addEventListener('keydown', event => { if (event.key === 'Escape' && !traceDrawer.hidden) closeTrace(); });
+
+      traceDrawer.addEventListener('keydown', event => {
+        if (event.key !== 'Tab') return;
+        const focusable = [...traceDrawer.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          .filter(element => !element.hidden && element.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      document.querySelectorAll('[data-trace-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const name = tab.dataset.traceTab;
+          document.querySelectorAll('[data-trace-tab]').forEach(item => {
+            const selected = item === tab;
+            item.setAttribute('aria-selected', String(selected));
+            item.tabIndex = selected ? 0 : -1;
+          });
+          document.querySelectorAll('[data-trace-pane]').forEach(pane => pane.hidden = pane.dataset.tracePane !== name);
+        });
+      });
+
+      document.getElementById('run-recipe').addEventListener('click', () => {
+        openTrace('recipe', document.getElementById('run-recipe'));
+        showToast(app.dataset.network === 'offline'
+          ? 'Offline preflight shown. A real recipe would require reconnection and explicit confirmation.'
+          : 'Simulated preflight shown. No provider or tool was invoked.');
+      });
+
+      traceReview.addEventListener('click', () => {
+        closeTrace();
+        if (currentTraceKind === 'recipe') {
+          showView('recipe');
+          return;
+        }
+        showView('workspace');
+        diffPreview.hidden = false;
+        diffPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      setTraceFixture('action');
+
+      document.getElementById('settings-button').addEventListener('click', () => showToast('Settings would expose providers, model routes, budgets, permissions, trace retention, and project defaults.'));
+      document.getElementById('project-switcher').addEventListener('click', () => showToast('The project switcher would list registered local folders without requiring an account.'));
+
+      document.getElementById('global-search').addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          showToast('Global search combines rebuildable local indexes with cited, project-scoped results.');
+        }
+      });
+
+      document.addEventListener('keydown', event => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          document.getElementById('global-search').focus();
+        }
+      });
+
+      document.querySelectorAll('[role="tablist"]').forEach(tablist => {
+        tablist.addEventListener('keydown', event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          const tabs = [...tablist.querySelectorAll('[role="tab"]:not([disabled])')];
+          if (!tabs.length) return;
+          const current = Math.max(0, tabs.indexOf(document.activeElement));
+          let next = current;
+          if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+          if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+          if (event.key === 'Home') next = 0;
+          if (event.key === 'End') next = tabs.length - 1;
+          event.preventDefault();
+          tabs[next].focus();
+          tabs[next].click();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

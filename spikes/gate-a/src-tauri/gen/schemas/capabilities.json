@@ -1,0 +1,1 @@
+{"main-window":{"identifier":"main-window","description":"Minimal local-only capability set for the Gate A probe.","local":true,"windows":["main"],"permissions":["core:default"]}}

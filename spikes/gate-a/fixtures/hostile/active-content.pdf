@@ -1,0 +1,12 @@
+%PDF-1.4
+% Gate A intentionally non-rendered hostile PDF placeholder.
+% The shell must not inject these bytes into HTML or mutate them.
+1 0 obj
+<< /Type /Catalog /OpenAction 2 0 R >>
+endobj
+2 0 obj
+<< /S /URI /URI (https://attacker.invalid/pdf-open-action) >>
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF

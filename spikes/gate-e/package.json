@@ -1,0 +1,1 @@
+{"name":"projectos-gate-e-contract","private":true,"version":"0.1.0","type":"module","engines":{"node":"22.22.3"},"scripts":{"test":"node --test tests/*.test.mjs","evidence":"node evidence.mjs"}}

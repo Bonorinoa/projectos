@@ -1,0 +1,12 @@
+{
+  "productName": "ProjectOS Graph Probe",
+  "version": "0.0.1",
+  "identifier": "dev.projectos.graph-probe",
+  "build": {"frontendDist": "ui"},
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{"label":"main","title":"ProjectOS embedded graph probe","width":800,"height":600}],
+    "security": {"capabilities":[],"csp":"default-src 'self'; connect-src ipc: http://ipc.localhost; script-src 'self'; style-src 'self'; img-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"}
+  },
+  "bundle": {"active":true,"targets":["app"],"icon":["../../gate-a/src-tauri/icons/icon.png"]}
+}

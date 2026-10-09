@@ -1,0 +1,51 @@
+{
+  "updatedAt": "2026-10-09T20:24:06.363Z",
+  "commit": "sha256:e6b0384696d943de600eee250715a09eb1942971b945484286aacf73cc63bae9",
+  "sourceSnapshot": "projectos-source-snapshot.json",
+  "sourceStats": {
+    "files": 79,
+    "source": 37,
+    "tests": 10
+  },
+  "tasks": {
+    "m0.shell": {
+      "status": "implemented",
+      "evidence": [
+        "evidence/gates/gate-a/report.json"
+      ],
+      "note": "Native macOS arm64 shell builds and launches; local UI and cancellation probes passed. Clean-machine, signing/notarization and full Linux/accessibility/IME/PDF matrix remain open."
+    },
+    "m0.graph": {
+      "status": "blocked",
+      "evidence": [
+        "evidence/gates/gate-b/report.json",
+        "evidence/gates/gate-b/rust-integration.json"
+      ],
+      "note": "Evidence is stale; rerun after source changes."
+    },
+    "m0.worker": {
+      "status": "blocked",
+      "evidence": [
+        "evidence/gates/gate-c/report.json"
+      ],
+      "note": "Native file broker and active symlink-swap tests pass. Supported production confinement, hard OS memory ceiling and signed cross-platform package remain blocked."
+    },
+    "m0.recovery": {
+      "status": "implemented",
+      "evidence": [
+        "evidence/gates/gate-d/report.json"
+      ],
+      "note": "Reproducible fault-injection contract model implemented. Real selected graph-engine, power-loss durability and cross-platform filesystem proof remain open."
+    },
+    "m0.provider": {
+      "status": "implemented",
+      "evidence": [
+        "evidence/gates/gate-e/report.json"
+      ],
+      "note": "Mock provider, PKCE callback and encrypted-vault contracts implemented. Native credential/egress boundary, OS keyring, live opt-in conformance and Linux remain open."
+    }
+  },
+  "diagnostics": [
+    "graph: evidence source mismatch: spikes/gate-b/rust-tauri/Cargo.toml, spikes/gate-b/rust-tauri/Cargo.lock, spikes/gate-b/rust-tauri/src/main.rs, spikes/gate-b/rust-tauri/evidence.mjs"
+  ]
+}

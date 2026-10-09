@@ -1,0 +1,254 @@
+{
+  "engines": [
+    {
+      "engine": "ladybug",
+      "status": "pass",
+      "tests": [
+        {
+          "detail": "node/edge insert, update, delete, one/two-hop lineage, and reverse impact matched fixture",
+          "elapsed_seconds": 0.453531,
+          "metrics": {
+            "post_delete_edges": 6,
+            "post_delete_nodes": 6,
+            "traversals": {
+              "one_hop_lineage": [
+                "revision:1"
+              ],
+              "two_hop_impact": [
+                "revision:2"
+              ],
+              "two_hop_lineage": [
+                "artifact:brief"
+              ]
+            }
+          },
+          "name": "transactional_mutation_and_traversal",
+          "status": "pass"
+        },
+        {
+          "detail": "two unchanged exports and an import round-trip produced byte-identical canonical JSONL",
+          "elapsed_seconds": 0.179735,
+          "metrics": {
+            "bytes": 2057,
+            "sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+          },
+          "name": "deterministic_export_import",
+          "status": "pass"
+        },
+        {
+          "detail": "disposable SQLite FTS5 results mapped only through durable graph stable IDs",
+          "elapsed_seconds": 0.075461,
+          "metrics": {
+            "query": "embedded",
+            "stable_ids": [
+              "revision:1",
+              "evidence:vendor",
+              "revision:2",
+              "claim:embedded"
+            ]
+          },
+          "name": "companion_full_text_mapping",
+          "status": "pass"
+        },
+        {
+          "detail": "four concurrent readers completed while one serialized writer performed 20 upserts",
+          "elapsed_seconds": 0.161782,
+          "metrics": {
+            "reader_accumulators": [
+              200,
+              200,
+              200,
+              200
+            ],
+            "writes": 20
+          },
+          "name": "concurrent_read_controlled_write",
+          "status": "pass"
+        },
+        {
+          "detail": "abrupt process exit after committed writes reopened cleanly; replaying the fsynced operation journal twice was idempotent",
+          "elapsed_seconds": 0.561147,
+          "metrics": {
+            "child_exit": 79,
+            "journal_records": 3,
+            "sha256": "b78d14a72bd66c1b58a10761a9731621399d319babd0bf07b10850227562940b"
+          },
+          "name": "crash_reopen_and_journal_replay",
+          "status": "pass"
+        },
+        {
+          "detail": "snapshot was migrated in a separate store, validated byte-for-byte, atomically swapped, and reopened",
+          "elapsed_seconds": 0.320304,
+          "metrics": {
+            "backup_preserved": true,
+            "migrated_sha256": "55f33a2a769c00d2b2f793e5764e6c10bdca5a2764f583931887c52034ac224f",
+            "source_sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+          },
+          "name": "copy_on_write_migration",
+          "status": "pass"
+        },
+        {
+          "detail": "3-project synthetic corpus remained below the spike-only 768 MiB peak RSS ceiling; production scale is not established",
+          "elapsed_seconds": 1.460611,
+          "metrics": {
+            "edges": 600,
+            "elapsed_seconds": 1.055815,
+            "engine": "ladybug",
+            "nodes": 603,
+            "peak_delta_bytes": 52559872,
+            "peak_rss_bytes": 93863936,
+            "rss_after_open_bytes": 54067200,
+            "rss_before_bytes": 41304064,
+            "store_bytes": 3162112,
+            "threshold_bytes": 805306368
+          },
+          "name": "bounded_memory_spike_corpus",
+          "status": "pass"
+        },
+        {
+          "detail": "live embedded process had no listening TCP sockets according to lsof",
+          "elapsed_seconds": 0.233521,
+          "metrics": {
+            "lsof_exit": 1,
+            "pid": 39429
+          },
+          "name": "no_listening_port",
+          "status": "pass"
+        }
+      ],
+      "versions": {
+        "python_binding": "0.21.1"
+      }
+    },
+    {
+      "engine": "helix",
+      "status": "pass",
+      "tests": [
+        {
+          "detail": "node/edge insert, update, delete, one/two-hop lineage, and reverse impact matched fixture",
+          "elapsed_seconds": 1.50831,
+          "metrics": {
+            "post_delete_edges": 6,
+            "post_delete_nodes": 6,
+            "traversals": {
+              "one_hop_lineage": [
+                "revision:1"
+              ],
+              "two_hop_impact": [
+                "revision:2"
+              ],
+              "two_hop_lineage": [
+                "artifact:brief"
+              ]
+            }
+          },
+          "name": "transactional_mutation_and_traversal",
+          "status": "pass"
+        },
+        {
+          "detail": "two unchanged exports and an import round-trip produced byte-identical canonical JSONL",
+          "elapsed_seconds": 0.301465,
+          "metrics": {
+            "bytes": 2057,
+            "sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+          },
+          "name": "deterministic_export_import",
+          "status": "pass"
+        },
+        {
+          "detail": "disposable SQLite FTS5 results mapped only through durable graph stable IDs",
+          "elapsed_seconds": 0.16156,
+          "metrics": {
+            "query": "embedded",
+            "stable_ids": [
+              "revision:1",
+              "evidence:vendor",
+              "revision:2",
+              "claim:embedded"
+            ]
+          },
+          "name": "companion_full_text_mapping",
+          "status": "pass"
+        },
+        {
+          "detail": "four concurrent readers completed while one serialized writer performed 20 upserts",
+          "elapsed_seconds": 0.278215,
+          "metrics": {
+            "reader_accumulators": [
+              25,
+              25,
+              25,
+              25
+            ],
+            "writes": 20
+          },
+          "name": "concurrent_read_controlled_write",
+          "status": "pass"
+        },
+        {
+          "detail": "abrupt process exit after committed writes reopened cleanly; replaying the fsynced operation journal twice was idempotent",
+          "elapsed_seconds": 0.540066,
+          "metrics": {
+            "child_exit": 79,
+            "journal_records": 3,
+            "sha256": "b78d14a72bd66c1b58a10761a9731621399d319babd0bf07b10850227562940b"
+          },
+          "name": "crash_reopen_and_journal_replay",
+          "status": "pass"
+        },
+        {
+          "detail": "snapshot was migrated in a separate store, validated byte-for-byte, atomically swapped, and reopened",
+          "elapsed_seconds": 0.238427,
+          "metrics": {
+            "backup_preserved": true,
+            "migrated_sha256": "55f33a2a769c00d2b2f793e5764e6c10bdca5a2764f583931887c52034ac224f",
+            "source_sha256": "881b5e537b044c94fbb7b40357c84949bec6f65de8fded685f075a1fd2a60ff2"
+          },
+          "name": "copy_on_write_migration",
+          "status": "pass"
+        },
+        {
+          "detail": "3-project synthetic corpus remained below the spike-only 768 MiB peak RSS ceiling; production scale is not established",
+          "elapsed_seconds": 0.50708,
+          "metrics": {
+            "edges": 600,
+            "elapsed_seconds": 0.206657,
+            "engine": "helix",
+            "nodes": 603,
+            "peak_delta_bytes": 49233920,
+            "peak_rss_bytes": 90243072,
+            "rss_after_open_bytes": 55590912,
+            "rss_before_bytes": 41009152,
+            "store_bytes": 849928,
+            "threshold_bytes": 805306368
+          },
+          "name": "bounded_memory_spike_corpus",
+          "status": "pass"
+        },
+        {
+          "detail": "live embedded process had no listening TCP sockets according to lsof",
+          "elapsed_seconds": 0.296964,
+          "metrics": {
+            "lsof_exit": 1,
+            "pid": 39463
+          },
+          "name": "no_listening_port",
+          "status": "pass"
+        }
+      ],
+      "versions": {
+        "embedded_runtime": "0.3.3",
+        "python_sdk": "0.3.4"
+      }
+    }
+  ],
+  "fixture": "spikes/gate-b/fixtures/corpus.json",
+  "gate": "M0 Gate B",
+  "generated_at": "2026-10-09T01:28:55Z",
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.4",
+    "rust_toolchain_present": false
+  }
+}

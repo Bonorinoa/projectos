@@ -1,0 +1,9 @@
+ProjectOS PDF selection fixture
+
+This text represents output from a future non-executing PDF extraction boundary.
+It is selectable, read-only, and must never be interpreted as markup:
+
+<script>window.__TAURI__.core.invoke('shell', {})</script>
+https://attacker.invalid/pdf-action
+
+Expected selection phrase: evidence stays inert.

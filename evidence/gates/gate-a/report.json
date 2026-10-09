@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "gate": "A",
+  "title": "macOS and Linux desktop shell",
+  "updated_at": "2026-10-09T01:26:59.912Z",
+  "gate_decision": "partial_unverified",
+  "gate_status": "implemented",
+  "roadmap_task": "m0.shell",
+  "roadmap_recommendation": {
+    "status": "implemented",
+    "note": "macOS arm64 native build and observed UI probes pass; clean-machine installation, signing/notarization, full accessibility/IME/PDF/GPU and Linux matrix remain unverified."
+  },
+  "scope": {
+    "architecture_source": "docs/projectos-architecture-brief.md#gate-a--linux-desktop-shell",
+    "spike": "spikes/gate-a/",
+    "matrix": "spikes/gate-a/platform-matrix.json",
+    "protocol": "spikes/gate-a/manual-test-protocol.md"
+  },
+  "host_observed": {
+    "observed_at": "2026-10-09T01:26:59.954Z",
+    "os": "macOS 26.6.2 (25G83)",
+    "kernel": "Darwin 25.6.0",
+    "architecture": "arm64",
+    "node": "v22.22.3",
+    "npm": "10.9.8",
+    "cargo": "cargo 1.90.0 (840b83a10 2025-07-30)",
+    "rustc": "rustc 1.90.0 (1159e78c4 2025-09-14)",
+    "rustup": "isolated temporary toolchain",
+    "pkg_config": null,
+    "clean_machine": false
+  },
+  "toolchain": {
+    "tauri": "2.12.0",
+    "tauri_build": "2.7.0",
+    "tauri_cli": "2.12.0",
+    "rust_minimum": "1.90",
+    "dependency_lock_state": "Both Cargo.lock and package-lock.json exist; cargo test --locked --offline executed.",
+    "rust": "rustc 1.90.0 (1159e78c4 2025-09-14)"
+  },
+  "checks": [
+    {
+      "id": "npm-test",
+      "command": "/Users/bonorinoa/.hermes/node/bin/node --test tests/document-safety.test.mjs",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-a/logs/npm-test.txt"
+    },
+    {
+      "id": "npm-run-verify",
+      "command": "/Users/bonorinoa/.hermes/node/bin/node tests/verify-gate-a.mjs",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-a/logs/npm-run-verify.txt"
+    },
+    {
+      "id": "cargo-test",
+      "command": "cargo test --locked --offline --manifest-path src-tauri/Cargo.toml",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-a/logs/cargo-test.txt"
+    },
+    {
+      "id": "native-build",
+      "command": "/Users/bonorinoa/.hermes/node/bin/node node_modules/@tauri-apps/cli/tauri.js build --debug --bundles app",
+      "status": "pass",
+      "exitCode": 0,
+      "evidence": "evidence/gates/gate-a/logs/native-build.txt"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "installation",
+      "status": "untested",
+      "evidence": [],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "signing_notarization",
+      "status": "untested",
+      "evidence": [],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "file_dialogs",
+      "status": "untested",
+      "evidence": [
+        "evidence/gates/gate-a/host-ui-observations.json"
+      ],
+      "reason": "Observed on development macOS arm64 host; full frozen cross-platform matrix remains untested."
+    },
+    {
+      "id": "drag_drop",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/main.mjs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "clipboard",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/main.mjs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "ime",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/main.mjs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "native_menus",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src-tauri/src/main.rs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "markdown_latex_editing",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/index.html"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "pdf_text_selection",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/fixtures/hostile/extracted-pdf-text.txt"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "large_virtualized_lists",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/main.mjs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "webview_accessibility_tree",
+      "status": "untested",
+      "evidence": [
+        "evidence/gates/gate-a/host-ui-observations.json"
+      ],
+      "reason": "Observed on development macOS arm64 host; full frozen cross-platform matrix remains untested."
+    },
+    {
+      "id": "zoom_200_percent",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src/styles.css"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "ipc_cancellation",
+      "status": "untested",
+      "evidence": [
+        "evidence/gates/gate-a/host-ui-observations.json"
+      ],
+      "reason": "Observed on development macOS arm64 host; full frozen cross-platform matrix remains untested."
+    },
+    {
+      "id": "gpu_launch",
+      "status": "untested",
+      "evidence": [
+        "evidence/gates/gate-a/host-ui-observations.json"
+      ],
+      "reason": "Observed on development macOS arm64 host; full frozen cross-platform matrix remains untested."
+    },
+    {
+      "id": "no_gpu_launch",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/platform-matrix.json"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "untrusted_markdown_sanitized",
+      "status": "pass",
+      "evidence": [
+        "spikes/gate-a/tests/document-safety.test.mjs",
+        "spikes/gate-a/fixtures/hostile/active-content.md"
+      ],
+      "reason": "Automated source-level test proves the fixture is emitted as one text node; native WebView confirmation remains part of the platform run."
+    },
+    {
+      "id": "untrusted_html_sanitized",
+      "status": "pass",
+      "evidence": [
+        "spikes/gate-a/tests/document-safety.test.mjs",
+        "spikes/gate-a/fixtures/hostile/active-content.html"
+      ],
+      "reason": "Automated source-level test proves the fixture is emitted as one text node; native WebView confirmation remains part of the platform run."
+    },
+    {
+      "id": "untrusted_pdf_sanitized",
+      "status": "pass",
+      "evidence": [
+        "spikes/gate-a/tests/document-safety.test.mjs",
+        "spikes/gate-a/fixtures/hostile/active-content.pdf"
+      ],
+      "reason": "Policy withholds PDF bytes from HTML and tests inert text handling; native PDF/WebView confirmation remains part of the platform run."
+    },
+    {
+      "id": "strict_csp_no_remote_assets",
+      "status": "pass",
+      "evidence": [
+        "spikes/gate-a/src-tauri/tauri.conf.json",
+        "spikes/gate-a/tests/verify-gate-a.mjs"
+      ],
+      "reason": "Static validation confirms a self-only CSP, explicit IPC endpoint, no remote asset sources, no unsafe-inline/eval, disabled asset protocol, and frozen prototypes."
+    },
+    {
+      "id": "unexpected_navigation_blocked",
+      "status": "untested",
+      "evidence": [
+        "spikes/gate-a/src-tauri/src/main.rs",
+        "spikes/gate-a/src/lib/document-safety.mjs"
+      ],
+      "reason": "Native development bundle now exists; this criterion has not been verified across the frozen platform matrix."
+    },
+    {
+      "id": "privileged_ipc_unavailable",
+      "status": "pass",
+      "evidence": [
+        "spikes/gate-a/src-tauri/src/main.rs",
+        "spikes/gate-a/src-tauri/capabilities/main-window.json",
+        "spikes/gate-a/tests/verify-gate-a.mjs"
+      ],
+      "reason": "Source inventory and capability validation expose only metadata and bounded cancellation commands; no filesystem, network, shell, process, Git, credential, provider, or asset capability is configured."
+    }
+  ],
+  "platform_results": [
+    {
+      "target": "macos-26.6.2-arm64",
+      "status": "untested",
+      "reason": "Observed host matches OS/architecture but lacks Rust and is not a clean machine."
+    },
+    {
+      "target": "ubuntu-22.04.5-x86_64-x11",
+      "status": "untested",
+      "reason": "Target not provisioned."
+    },
+    {
+      "target": "ubuntu-24.04.3-x86_64-wayland",
+      "status": "untested",
+      "reason": "Target not provisioned."
+    },
+    {
+      "target": "fedora-42-x86_64-wayland",
+      "status": "untested",
+      "reason": "Target not provisioned."
+    }
+  ],
+  "blockers": [
+    "Full frozen macOS/Linux matrix has not run.",
+    "Release signing/notarization and clean-machine installation remain untested.",
+    "Real IME, PDF extraction/selection, full screen-reader, 200% zoom and no-GPU probes remain untested."
+  ],
+  "summary_counts": {
+    "pass": 5,
+    "fail": 0,
+    "untested": 16,
+    "total": 21
+  },
+  "sources": [
+    "https://v2.tauri.app/security/csp/",
+    "https://v2.tauri.app/security/runtime-authority/",
+    "https://v2.tauri.app/learn/window-menu/",
+    "https://v2.tauri.app/release/tauri/v2.12.0/"
+  ],
+  "sourceHashes": {
+    "spikes/gate-a/src-tauri/src/main.rs": "c768f9fa057207ef46fcf90912ba27ce065e2a4b5936f3ab5b4607993de1d4ea",
+    "spikes/gate-a/src-tauri/Cargo.toml": "627b62d56b8d25ec664d24310d9d768b1195d347992bc1d28c0751f780eba06a",
+    "spikes/gate-a/src-tauri/Cargo.lock": "e9a00673ca1cff3ad2c153cf6a79f0b6f21bf6041cb6046891bbde949176a338",
+    "spikes/gate-a/src-tauri/build.rs": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f",
+    "spikes/gate-a/src-tauri/tauri.conf.json": "ccfd10eed20f2e798dc2cc0721db48d13e960840a2eca08fa3162d47ccb043c5",
+    "spikes/gate-a/src-tauri/capabilities/main-window.json": "a11f3d9b6b4d19a3c4053fbb0df444e865d12d35724db51f831eb0b5e8eac69e",
+    "spikes/gate-a/package.json": "a62cc0a29338d6c39cc546472a5189f86e17573d2f8e487d6bf2eebbd64ea3e4",
+    "spikes/gate-a/package-lock.json": "d3fca990113e873010db963bc93e6409cd508bfc3e89ca7a4e3f2160a9175caf",
+    "spikes/gate-a/src/main.mjs": "2a897f23002713c011199598dfffe44538ae33c49ff59e6ee327f0175f2c409a",
+    "spikes/gate-a/src/index.html": "1da73e8de3eaa353b60ad4157b0d4e5d19dd1db1a94a6553fe89ecd727dd9924",
+    "spikes/gate-a/src/styles.css": "25a70e7cd44ffd6482bf7b7f01936d54dd5c57c31a1364ab9975ee55b465466e",
+    "spikes/gate-a/src/lib/document-safety.mjs": "d50b859d21cb682be0b1000b819fc97c925dcf75e762c9050204cae769deaabd",
+    "spikes/gate-a/tests/native-evidence.mjs": "6797a506a7b66b3ebf43a26ee7362506970232ad487e21a4ec816b4f2837dd57",
+    "spikes/gate-a/tests/document-safety.test.mjs": "5d2405d9fb4f2516f21dc6e09c4f3dc18e2c40f5fc068c95a2adc8ac38f12ed2",
+    "spikes/gate-a/tests/verify-gate-a.mjs": "1848bf3fa47aa60f7e501b55eedc83b0a359ca8ebd353a574460d834e91b8145"
+  },
+  "nativeArtifact": {
+    "path": "spikes/gate-a/src-tauri/target/debug/bundle/macos/ProjectOS Gate A.app/Contents/MacOS/projectos-gate-a-shell",
+    "sha256": "7e9ceb662e65dea6fc8163e7d2f3987a0c12c5fde95e5bacc773f3d94d477169",
+    "mode": "debug unsigned development bundle; not distribution proof"
+  },
+  "host_runtime_observations": [
+    "evidence/gates/gate-a/host-ui-observations.json"
+  ]
+}

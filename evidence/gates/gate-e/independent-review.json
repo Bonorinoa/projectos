@@ -1,0 +1,55 @@
+{
+  "gate": "E",
+  "reviewer": "independent Gate C implementer; did not implement Gate E",
+  "generatedAt": "2026-10-09T01:27:11.412Z",
+  "sourceHashes": {
+    "spikes/gate-e/broker.mjs": "4b75d1f8d007cfb39c0607df6c945d887683841440550b91229d9b5a998d5ec2",
+    "spikes/gate-e/auth.mjs": "d9e196859cfe4341de9257f85f4ac8d9acf4bb94080685b26db33f55ab8e6313",
+    "spikes/gate-e/tests/contract.test.mjs": "6c63bd8b7f3b34255223db6004937b91b7c1a25f0855f17692ce85ff5f9e2dde"
+  },
+  "status": "three-reported-bugs-rechecked-fixed",
+  "checks": [
+    {
+      "id": "revoked-credential-redaction",
+      "reproduction": "Start broker.run with pending transport.open; revoke used handle; resolve model and stream containing synthetic secret.",
+      "before": {
+        "receiptLeaks": true,
+        "streamLeaks": true
+      },
+      "after": {
+        "receiptLeaks": false,
+        "streamLeaks": false
+      },
+      "passed": true
+    },
+    {
+      "id": "oauth-revocation-retry",
+      "reproduction": "Synthetic callback obtains token; revoke adapter always throws. Call logout twice and catch both failures.",
+      "before": {
+        "revocations": 1
+      },
+      "after": {
+        "revocations": 2
+      },
+      "passed": true
+    },
+    {
+      "id": "vault-backup-capacity",
+      "reproduction": "Attempt put of 3MiB synthetic secret; confirm atomic VAULT_CAPACITY refusal, then put 'safe', export, lock, unlock, read.",
+      "before": {
+        "exportBytes": 4194481,
+        "restoreError": "VAULT_UNLOCK_FAILED"
+      },
+      "after": {
+        "oversizedWriteError": "VAULT_CAPACITY",
+        "restoredValue": "safe"
+      },
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Independent targeted regression checks, not full native/live provider certification.",
+    "OAuth test bound ephemeral localhost with synthetic credentials only.",
+    "Read-only review except this parent-authorized evidence record; no Gate E implementation changes by reviewer."
+  ]
+}

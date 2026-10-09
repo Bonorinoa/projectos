@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectOS — Atelier Carousel</title>
+<style>
+  :root {
+    --canvas:#eeece5; --paper:#fbfaf5; --paper-2:#f4f1e7; --ink:#18201e; --muted:#5b6661;
+    --rule:#ccd1c9; --shell:#151b19; --moss:#1f5a4f; --coral:#a6472c; --gold:#8a6200;
+    --editorial: ui-serif, Charter, "Iowan Old Style", Georgia, serif;
+    --ui: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { height:100%; overflow:hidden; background:var(--canvas); color:var(--ink); font-family:var(--ui); font-size:15px; }
+  .top { position:fixed; top:0; left:0; right:0; height:52px; background:var(--shell); color:#f4f1e7; display:flex; align-items:center; gap:14px; padding:0 20px; z-index:20; }
+  .brand { font-family:var(--editorial); font-size:17px; letter-spacing:-.01em; }
+  .brand b { color:#cbe8dc; }
+  .crumb { color:#8fa59c; font-size:12.5px; }
+  .mode { margin-left:auto; display:flex; gap:8px; }
+  .mode button { font:inherit; font-size:12.5px; background:transparent; border:1px solid #3a4640; color:#cfd8d2; padding:5px 12px; border-radius:99px; cursor:pointer; }
+  .mode button.on { background:var(--moss); color:#f0f7f2; border-color:#3f7c6d; }
+  .stage { position:absolute; top:52px; bottom:0; left:0; right:0; padding:18px 34px 0 34px; display:flex; flex-direction:column; }
+  .h { display:flex; align-items:baseline; gap:10px; padding-bottom:10px; }
+  .h h1 { font-family:var(--editorial); font-size:24px; letter-spacing:-.01em; }
+  .h .sub { color:var(--muted); font-size:13px; }
+  .count { background:var(--paper-2); border:1px solid var(--rule); border-radius:99px; padding:1px 9px; font-size:12px; color:var(--muted); }
+  .rail { position:relative; overflow:hidden; }
+  .cards { display:flex; gap:20px; padding:6px 0 20px; transform:translateX(0); transition:transform .45s cubic-bezier(.2,.7,.2,1); }
+  .card { width:300px; min-width:300px; height:196px; background:var(--paper); border:1px solid var(--rule); border-radius:14px; box-shadow:0 14px 36px rgba(24,32,30,.11); cursor:pointer; transition:transform .18s, box-shadow .18s; }
+  .card:hover { transform:translateY(-4px); box-shadow:0 22px 44px rgba(24,32,30,.15); }
+  .card.hot { outline:3px solid var(--moss); outline-offset:2px; background:var(--paper-2); }
+  .c-head { display:flex; align-items:center; gap:9px; padding:14px 14px 0; }
+  .badge { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .b-substack { background:#f4e8c9; color:var(--gold); } .b-software { background:#dfece6; color:var(--moss); }
+  .b-academic { background:#dce6ff; color:#2557d6; } .b-learning { background:#f4e1da; color:var(--coral); }
+  .status { width:9px; height:9px; border-radius:50%; background:var(--moss); }
+  .status.warn { background:var(--coral); } .status.idle { background:#b9c0b9; }
+  .c-title { font-family:var(--editorial); font-size:18.5px; line-height:1.22; margin:13px 14px 0; }
+  .c-desc { color:var(--muted); font-size:12.5px; margin:8px 14px 0; line-height:1.4; }
+  .c-foot { display:flex; gap:6px; margin-top:auto; padding:0 14px 10px; }
+  .chip { font-size:11px; color:var(--muted); border:1px solid var(--rule); border-radius:99px; padding:2px 8px; }
+  .chip.live { background:var(--moss-soft,#dfece6); color:var(--moss); border-color:#8fbaa9; }
+  .arrow { position:absolute; top:96px; width:34px; height:34px; border-radius:50%; border:1px solid var(--rule); background:var(--paper); cursor:pointer; font-size:16px; color:var(--ink); }
+  .left { left:-16px; } .right { right:-16px; }
+  .focus { position:absolute; right:34px; top:0; bottom:0; width:370px; background:var(--paper-2); border:1px solid var(--rule); border-radius:14px; padding:16px; display:none; box-shadow:0 20px 44px rgba(24,32,30,.16); }
+  .focus h2 { font-family:var(--editorial); font-size:18px; }
+  .focus .row { font-size:12.5px; color:var(--muted); margin:8px 0; }
+  .lens { display:inline-block; padding:4px 10px; border-radius:99px; font-size:12px; border:1px solid var(--rule); cursor:pointer; }
+  .lens.on { background:var(--moss); color:#eef5ee; border-color:#3f7c6d; }
+  .receipt { font-family:ui-monospace,Consolas,monospace; font-size:11.5px; background:var(--paper); border:1px solid var(--rule); padding:10px 12px; border-radius:8px; margin-top:12px; color:#2a332f; white-space:pre-wrap; }
+  .note { color:var(--muted); font-size:12px; margin-top:10px; }
+  @media (max-width:900px){ .focus{display:none} .cards{overflow-x:auto} }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">Project<b>OS</b> <span class="crumb">/ atelier</span></div>
+  <div class="mode">
+    <button class="on" id="m-browse">Browse</button>
+    <button id="m-focus">Focus lens</button>
+  </div>
+</div>
+<div class="stage">
+  <div class="h"><h1>Projects</h1><span class="count">7 open</span><span class="sub">— a carousel of current work. Hover to lift, click to focus.</span></div>
+  <div class="rail">
+    <div class="cards" id="cards">
+      <div class="card" data-i="0"><div class="c-head"><span class="badge b-substack">SUBSTACK</span><span class="status"></span><span style="font-size:11px;color:var(--muted)">argue · draft · publish</span></div>
+        <div class="c-title">“The economics of attention is a lie we tell in twelfths”</div>
+        <div class="c-desc">Argument locked; editor pass open. Three revisions since milestone.</div>
+        <div class="c-foot"><span class="chip live">editing</span><span class="chip">rev 3</span></div></div>
+      <div class="card" data-i="1"><div class="c-head"><span class="badge b-software">SOFTWARE</span><span class="status warn"></span><span style="font-size:11px;color:var(--muted)">repo · worktree · tests</span></div>
+        <div class="c-title">helix-broker — capability broker skeleton</div>
+        <div class="c-desc">Gate C bakeoff branch. 2 of 6 probes red; memory ceiling unresolved.</div>
+        <div class="c-foot"><span class="chip live">gate C</span><span class="chip">failing</span></div></div>
+      <div class="card" data-i="2"><div class="c-head"><span class="badge b-academic">ACADEMIC</span><span class="status"></span><span style="font-size:11px;color:var(--muted)">dataset · estimand · paper</span></div>
+        <div class="c-title">Culture–hierarchy measurement in empirical social science</div>
+        <div class="c-desc">Q1 notebook reproduced; literature matrix 41/52 sources linked.</div>
+        <div class="c-foot"><span class="chip">measuring</span><span class="chip">52 refs</span></div></div>
+      <div class="card" data-i="3"><div class="c-head"><span class="badge b-learning">LEARNING</span><span class="status idle"></span><span style="font-size:11px;color:var(--muted)">topic · notes · artifact</span></div>
+        <div class="c-title">Rust for economists — lecture notes</div>
+        <div class="c-desc">Chapter 4 (sum-types & lifetimes) half-written; HTML book target.</div>
+        <div class="c-foot"><span class="chip">draft</span></div></div>
+      <div class="card" data-i="4"><div class="c-head"><span class="badge b-substack">SUBSTACK</span><span class="status idle"></span><span style="font-size:11px;color:var(--muted)">premise · series</span></div>
+        <div class="c-title">Letters on measurement without empire</div>
+        <div class="c-desc">Premise and audience captured; no draft yet. Series of three.</div>
+        <div class="c-foot"><span class="chip">premise</span></div></div>
+    </div>
+    <button class="arrow left" id="prev">‹</button>
+    <button class="arrow right" id="next">›</button>
+  </div>
+  <div class="focus" id="focus">
+    <h2 id="f-title">—</h2>
+    <div class="row" id="f-kind"></div>
+    <div><span class="lens on">Current work</span><span class="lens">Lineage</span><span class="lens">Evidence</span><span class="lens">Workflow</span></div>
+    <div class="receipt" id="f-receipt"></div>
+    <div class="note">One or two hops around the active artifact; every lens has an equivalent table.</div>
+  </div>
+</div>
+<script>
+const R=[["“The economics of attention…”","SUBSTACK · draft revision 3","a9f2c1… · probe: rephrase · model route openrouter/deepseek-v4.1-flash · $0.0023 · accepted → revision 0017 created","action rephrase accepted · before 1a3f · after 9c02 · milestone “argument locked” intact"],
+["helix-broker","SOFTWARE · wm: gate-c2/bakeoff","broker.c rebuilt 6 min ago · probes: file ✓ net ✓ child ✗ memory ✗ · denial recorded as trace, not error","capability grant 0x1f · openat(O_NOFOLLOW) · 50k swap race clean · APP SANDBOX forks /bin/sh → FAIL, kept open"],
+["Culture–hierarchy","ACADEMIC · measuring","Q1 estimated γ=0.41 [0.33,0.50] · 5 datasets → evidence map · next: robustness table","claim “shared-value hierarchy” · evidence: 3/5 direct, 2/5 partial · 1 contradiction flagged"],
+["Rust for economists","LEARNING · notes ch.4","sum-types sketched · lifetimes missing · pending artifact: html book build","todo: “what is a lifetime” selected-text action → proposal stored, not applied"]];
+const cards=[...document.querySelectorAll('.card')];let on=0,pos=0;
+function layout(){const w=320;document.getElementById('cards').style.transform=`translateX(${-pos*w}px)`;}
+document.getElementById('next').onclick=()=>{pos=Math.min(pos+1,cards.length-3);layout()};
+document.getElementById('prev').onclick=()=>{pos=Math.max(pos-1,0);layout()};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')document.getElementById('next').onclick();if(e.key==='ArrowLeft')document.getElementById('prev').onclick();});
+cards.forEach(c=>c.onclick=()=>{on=+c.dataset.i;cards.forEach(x=>x.classList.remove('hot'));c.classList.add('hot');
+document.getElementById('focus').style.display='block';
+document.getElementById('f-title').textContent=R[on][0];document.getElementById('f-kind').textContent=R[on][1];
+document.getElementById('f-receipt').textContent=R[on][2]+'\n'+R[on][3];});
+document.getElementById('m-focus').onclick=()=>{document.getElementById('focus').style.display='block';document.getElementById('m-focus').classList.add('on');document.getElementById('m-browse').classList.remove('on');};
+document.getElementById('m-browse').onclick=()=>{document.getElementById('focus').style.display='none';document.getElementById('m-browse').classList.add('on');document.getElementById('m-focus').classList.remove('on');};
+</script>
+</body>
+</html>

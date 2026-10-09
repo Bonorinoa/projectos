@@ -1,0 +1,29 @@
+{
+  "as_of": "2026-10-06",
+  "host": "macOS 26.6.2 arm64",
+  "ladybug": {
+    "artifact": "ladybug/_lbug.cpython-314-darwin.so",
+    "version": "0.21.1",
+    "sha256": "dfb715b5e34341209395776e5bd1308a74e08d149e69f7624646f2b28ae55cdb",
+    "size_bytes": 19467384,
+    "architectures": ["arm64"],
+    "signature": "adhoc linker-signed; no TeamIdentifier",
+    "non_system_dynamic_dependencies": [
+      "/opt/homebrew/opt/openssl@3/lib/libssl.3.dylib",
+      "/opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib"
+    ],
+    "package_index": {"macos": ["arm64", "x86_64"], "linux": ["aarch64", "x86_64"], "universal2": false}
+  },
+  "helix": {
+    "artifact": "helixdb_uniffi/libhelixdb_uniffi.dylib",
+    "sdk_version": "0.3.4",
+    "runtime_version": "0.3.3",
+    "sha256": "e0a9af135eeb5761c9f9a581a51de1c7c9ee72b65c430039dca8a4c463cd2da2",
+    "size_bytes": 133111472,
+    "architectures": ["x86_64", "arm64"],
+    "signature": "adhoc linker-signed; no TeamIdentifier",
+    "non_system_dynamic_dependencies": [],
+    "package_index": {"macos": ["universal2"], "linux": ["aarch64", "x86_64"]}
+  },
+  "commands": ["file", "lipo -info", "codesign -dvvv", "otool -L", "shasum -a 256", "du -h"]
+}

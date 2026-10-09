@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "version": "v22.22.3",
+  "os": "darwin",
+  "arch": "arm64",
+  "sha256": "5d9d3872911e2340a43b707962e68143de8a4e8d54628845c0c4f2de1fb7cd5c",
+  "provenance": "Existing local Hermes-managed Node runtime, locally copied after version/platform/hash verification. Upstream release checksum, distribution license bundle, signing, notarization and universal/Linux binaries still require verification. No runtime download at application launch."
+}

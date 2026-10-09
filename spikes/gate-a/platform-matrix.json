@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "frozen": true,
+  "frozen_at": "2026-10-06T00:00:00-07:00",
+  "change_control": "Any target, version, package format, desktop, or session change requires a new matrix revision before execution; never silently replace a failed target.",
+  "oldest_linux_build_target": "ubuntu-22.04.5-x86_64-x11",
+  "targets": [
+    {
+      "id": "macos-26.6.2-arm64",
+      "os_release": "macOS 26.6.2 (25G83)",
+      "webview": "WKWebView supplied by macOS 26.6.2",
+      "architecture": "arm64",
+      "package_formats": ["app", "dmg"],
+      "desktop_environment": "Aqua",
+      "display_server": "Quartz",
+      "gpu_modes": ["default", "software-rendering launch profile"],
+      "clean_machine_required": true,
+      "availability": "current host is this OS, but is not a clean machine"
+    },
+    {
+      "id": "ubuntu-22.04.5-x86_64-x11",
+      "os_release": "Ubuntu 22.04.5 LTS",
+      "webkitgtk": "libwebkit2gtk-4.1-0 2.48.1-0ubuntu0.22.04.1",
+      "architecture": "x86_64",
+      "package_formats": ["deb", "AppImage"],
+      "desktop_environment": "GNOME 42",
+      "display_server": "X11",
+      "gpu_modes": ["default", "WEBKIT_DISABLE_COMPOSITING_MODE=1"],
+      "clean_machine_required": true,
+      "availability": "not provisioned; package version must be proven available before test, without changing this matrix"
+    },
+    {
+      "id": "ubuntu-24.04.3-x86_64-wayland",
+      "os_release": "Ubuntu 24.04.3 LTS",
+      "webkitgtk": "libwebkit2gtk-4.1-0 2.48.1-0ubuntu0.24.04.1",
+      "architecture": "x86_64",
+      "package_formats": ["deb", "AppImage"],
+      "desktop_environment": "GNOME 46",
+      "display_server": "Wayland",
+      "gpu_modes": ["default", "WEBKIT_DISABLE_COMPOSITING_MODE=1"],
+      "clean_machine_required": true,
+      "availability": "not provisioned; package version must be proven available before test, without changing this matrix"
+    },
+    {
+      "id": "fedora-42-x86_64-wayland",
+      "os_release": "Fedora Linux 42",
+      "webkitgtk": "webkit2gtk4.1 2.48.1-1.fc42",
+      "architecture": "x86_64",
+      "package_formats": ["rpm", "AppImage"],
+      "desktop_environment": "GNOME 48",
+      "display_server": "Wayland",
+      "gpu_modes": ["default", "WEBKIT_DISABLE_COMPOSITING_MODE=1"],
+      "clean_machine_required": true,
+      "availability": "not provisioned; package version must be proven available before test, without changing this matrix"
+    }
+  ]
+}
