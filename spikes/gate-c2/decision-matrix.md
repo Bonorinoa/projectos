@@ -44,9 +44,36 @@ backed by a probe we ran. No candidate passes from documentation alone.
 - Probe 3 (optional, if user wants belt-and-braces): minimal XPC service shell proving the
   fork behavior at service level — expected to confirm C4 elimination empirically.
 
+## Gate C2 probe results (2026-10-09, macOS arm64)
+
+Executed `probe-wasm` per its README. Guest = javy 9.1.0 quickjs-provider module under wasmtime 49.0.2.
+Raw evidence: `spikes/gate-c2/probe-wasm/evidence/*` (worker-hello.json, worker-broker-request.json,
+worker-broker-denied.json, worker-unknown-type.json, worker-version-mismatch.json, env-probe.json,
+imports-clean.txt, oom-trap.txt, fuel-exhausted.txt, work-wasm-sha256.txt, strip-types-delta.txt).
+
+| # | Criterion | WASM host verdict | Evidence |
+|---|---|---|---|
+| C1 | Language-neutral brokered workers, TS first | **PASS** — NDJSON protocol core runs in guest; hello/ack, broker.request grant+deny, unknown-type, version-mismatch all correct | worker-*.json |
+| C2 | No ambient file authority | **PASS by construction** — guest imports only stdio/env/clock (9 wasi_snapshot_preview1 fns); no fs above fd_*; host broker (gate-c) composes; fd handoff integration open (M1) | imports-clean.txt |
+| C3 | No ambient network | **PASS by construction** — zero socket/DNS imports; env-probe: process/spawn/fetch/require all undefined | env-probe.json |
+| C4 | No child-process spawn | **PASS by construction** — no process/spawn imports; guest cannot fork or exec (no such wasm imports) | env-probe.json + imports-clean.txt |
+| C5 | Hard memory ceiling | **PASS** — `-W max-memory-size=8MiB` → guest traps ("Error: out of memory"); 128MiB also traps | oom-trap.txt |
+| C6 | Parent-crash orphan cleanup | host-side supervisor (gate-c kqueue+pgkill composes); not re-proven here | open at M1 |
+| C7 | Full process-tree cancellation | **PASS (fuel)** — `-W fuel=10000` traps; 1M fuel control passes hello | fuel-exhausted.txt |
+| C8 | Output backpressure | host-side concern; not probed | open at M1 |
+| C9 | Signed universal distribution + clean install | **OPEN** — single macOS arm64 host run; no Linux, no signing, no universal | — |
+| C10 | Runtime provenance & licensing | **FAVORABLE** — javy 9.1.0 (Apache-2.0, sha-pinned), wasmtime 49.0.2 (Apache-2.0), QuickJS MIT-style (inside provider); vendor provider for product provenance | runtime-pin.json |
+| C11 | TS/JS language support | **PASS (with delta)** — protocol core ported and executes; delta = gate-c worker.ts Node builtins (fs/child_process/net/dns/readline) do not exist in guest and are intentionally not portable; denial-probe code is obsolete in this topology | strip-types-delta.txt |
+| C12 | Receipts/observability of denials | guest-side denials are normal replies (worker-broker-denied.json); host receipts open at M1 | — |
+
+**Decision (evidence-backed, ADR input):** WASM-hosted JS runtime is the only candidate satisfying
+C4+C5 on macOS. XPC+App Sandbox and Node SEA controls fail on documented+probed grounds (see above).
+m0.worker remains `blocked` until C9 packaging/signing + Linux reruns exist — this closes the
+*topology* question only.
+
 ## Evidence slots (fill on completion)
 
-- [ ] spikes/gate-c2/probe-wasm/run.md + raw logs → spikes/gate-c2/evidence/wasm-*.json
-- [ ] probe control rerun → spikes/gate-c2/evidence/control-*.json
-- [ ] ADR update: docs/adr-worker-isolation.md §Production confinement decision
+- [x] spikes/gate-c2/probe-wasm/run.md + raw logs → spikes/gate-c2/probe-wasm/evidence/*.json
+- [ ] probe control rerun → spikes/gate-c2/evidence/control-*.json (deferred: Node control already fails C4/C5 in existing gate-c evidence)
+- [x] ADR update: docs/adr-worker-isolation.md §Production confinement decision
 - [ ] roadmap manifest: m0.worker → decision + next step

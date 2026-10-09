@@ -1,0 +1,50 @@
+{
+  "module": "work/worker-protocol.wasm",
+  "imports": [
+    {
+      "module": "wasi_snapshot_preview1",
+      "name": "environ_get",
+      "kind": 0
+    },
+    {
+      "module": "\u0016w",
+      "name": "si_snapshot_preview1\u0011environ_sizes_get\u0000\u0002\u0016wasi_snapshot_preview1\u000eclock_time_get\u0000\u0011\u0016wasi_snapshot_pr",
+      "kind": 101
+    },
+    {
+      "module": "iew1\bfd_close\u0000\u0001\u0016wasi_snapshot_preview1\rfd_fdstat_get\u0000\u0002\u0016wasi_snapshot_preview1\u0007fd_read\u0000\u000e\u0016wasi_snapshot_preview1\u0007fd_seek",
+      "name": "",
+      "kind": 42
+    },
+    {
+      "module": "wasi_snapshot_preview1",
+      "name": "fd_write",
+      "kind": 0
+    },
+    {
+      "module": "\u0016wasi_snapshot",
+      "name": "preview1\tproc_exit\u0000\u0006\u0003\ufffd\u000b\ufffd\u000bI\u000f\u0006\"\u0002\u0005\u0002\u0002\u0001\u000f\u0016+\u0002\u001d23\u001d\u0016\u000e\u0004\u0001\u000e\u0002\u0000\u0004J\t4\u00005\u0001#+\u0003\u0002\u0002\u0002\u0002\u0002\u0002\u000e\u0002\u0003'K\u0010\u0010\u0001\r\u0004\u0019\u0007\u00076\u0007,\u000e\u0005\u0002\u0006\u00137\u0005\u0002\t\r\u0004\u0003\u0007\u0003",
+      "kind": 19
+    },
+    {
+      "module": "\u001f\u001a\u0018\u0001\u000f\u0004\u0002\u0004\u0004(\u0004\u0007L\u000e",
+      "name": "\u0019\u000f8\u0001\t",
+      "kind": 52
+    },
+    {
+      "module": "\u0000\u0017\u0007\u0007",
+      "name": "",
+      "kind": 3
+    },
+    {
+      "module": "",
+      "name": "\u0000\u0000\u0007\u0016\u0007M\u0007",
+      "kind": 4
+    },
+    {
+      "module": "\u0002\u00028\u001b",
+      "name": "\u001e \u000e\u0007\u001e\u0007",
+      "kind": 27
+    }
+  ]
+}

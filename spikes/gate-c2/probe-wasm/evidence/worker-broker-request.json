@@ -1,0 +1,1 @@
+{"protocol":"projectos.worker","version":1,"type":"broker.result","id":"2","payload":{"op":"read","capability":"fd:3-projectos","result":"ok","len":14}}

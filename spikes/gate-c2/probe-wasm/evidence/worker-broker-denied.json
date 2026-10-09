@@ -1,0 +1,1 @@
+{"protocol":"projectos.worker","version":1,"type":"broker.result","id":"3","payload":{"op":"write","capability":"fd:3-projectos","result":"denied","reason":"capability not granted"}}

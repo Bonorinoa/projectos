@@ -1,0 +1,29 @@
+Error: out of memory
+    at <anonymous> (function.mjs:5:39)
+
+Error: failed to run main module `work/oom.wasm`
+
+Caused by:
+    0: failed to invoke command default
+    1: error while executing at wasm backtrace:
+    0:  0xf585d - <unknown>!<wasm function 1281>
+    2: wasm trap: wasm `unreachable` instruction executed
+
+        0.28 real         1.01 user         0.02 sys
+           104923136  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                6911  page reclaims
+                  85  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                   1  voluntary context switches
+                 728  involuntary context switches
+          7838254955  instructions retired
+          2710573463  cycles elapsed
+            96715280  peak memory footprint

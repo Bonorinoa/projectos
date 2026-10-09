@@ -1,0 +1,1 @@
+{"protocol":"projectos.worker","version":1,"type":"hello.ack","id":"1","payload":{"protocol":"projectos.worker","version":1,"capabilities":["broker.request"],"confinement":"wasm-guest: no fs/net/process APIs by construction"}}

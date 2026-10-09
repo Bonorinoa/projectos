@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "hostRuntime": {
+    "wasmtime": "49.0.2",
+    "wasmtimeSource": "homebrew",
+    "wasmtimeChecksum": "brew bottle; recorded in probe evidence"
+  },
+  "toolchain": {
+    "javy": "9.1.0",
+    "javySha256": "99e9ec6a8e8c98e119d137c08a921d2443d3b873c675a5571e1800f4451e6294",
+    "asset": "javy-arm-macos-v9.1.0.gz",
+    "provenance": "Bytecode Alliance GitHub release v9.1.0 (2026-07-30)"
+  },
+  "provider": {
+    "note": "javy build auto-fetches the quickjs-provider Wasm at build time; record its local cache SHA in evidence after first build. Vendoring the provider becomes a product-provenance requirement.",
+    "cachePath": "$HOME/.cache/javy/ (verify and pin in evidence)"
+  },
+  "licenses": {
+    "javy": "Apache-2.0",
+    "wasmtime": "Apache-2.0",
+    "quickjs": "MIT-style (inside provider; verify exact headers in vendored artifact)"
+  },
+  "machines": {
+    "macOS": "arm64 (this probe host)",
+    "linux": "untested — probe must rerun on linux x86_64/aarch64 before claim"
+  }
+}

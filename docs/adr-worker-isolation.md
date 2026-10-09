@@ -34,3 +34,28 @@ The app-bundle helper actually ran: ambient fixture-file access and IPv4 localho
 - Separate computer-use target identity, consent/emergency stop, scoped/redacted capture, permission revocation, credential exclusion, X11/Wayland matrix.
 
 Until these pass, `m0.worker` remains blocked. The native broker improvement is usable evidence for the next topology prototype, not authorization to build product features on an unproven worker boundary.
+
+## Gate C2 probe result — WASM-hosted JS runtime (2026-10-09)
+
+Executed `spikes/gate-c2/probe-wasm` (matrix: `spikes/gate-c2/decision-matrix.md`, evidence:
+`spikes/gate-c2/probe-wasm/evidence/`). A javy 9.1.0 QuickJS guest running under wasmtime 49.0.2
+satisfies the hard Gate C criteria that eliminated every other candidate:
+
+- C4 (no child process): the guest imports only 9 wasi_snapshot_preview1 stdio/env/clock functions;
+  there is no process/spawn import and no ability to fork/exec — by construction.
+- C5 (hard memory ceiling): `-W max-memory-size` traps the guest cleanly ("Error: out of memory") at
+  both 8 MiB and 128 MiB; a fuel budget (`-W fuel`) traps as a second cancellation mechanism.
+- C3 (no ambient network): zero socket/DNS imports; env probe confirms process/spawn/fetch/require
+  are all undefined inside the guest.
+- C1/C11 (protocol + TS/JS): the NDJSON broker protocol core from `worker.ts` was ported without Node
+  builtins and passes hello/negotiation, broker.request grant + deny, unknown-type, and
+  version-mismatch cases. Delta recorded: Node builtins (fs/child_process/net/dns/readline) do not
+  exist in the guest — the old topology's ambient-denial probe code is obsolete, not portable.
+
+**Topology decision (ADR input, not a claim):** WASM-hosted JS is the only candidate meeting the
+locked C4/C5 boundaries on macOS. XPC + App Sandbox cannot express child-process denial or a memory
+limit (no such entitlements; probe forked `/bin/sh`); `sandbox-exec` is deprecated; the Node SEA
+control fails C4/C5 (existing gate-c evidence). Remaining, recorded, and NOT waived: C9 (signed
+universal distribution + clean install, Linux matrix), vendor the QuickJS provider for provenance,
+fd-handoff integration with the descriptor broker, host receipts, and a Linux rerun of this probe.
+`m0.worker` stays blocked until those have evidence.
