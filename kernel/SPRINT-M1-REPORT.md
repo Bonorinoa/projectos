@@ -19,7 +19,9 @@ cycle-safe lineage, byte-stable TOML snapshots), `profile.rs` (installation
 registry, export/restore, sidecar-UUID authority), `journal.rs` (append-only
 records, quiesced checkpoints, replay, explicit stale-lock takeover),
 `receipts.rs` (durable redacted facts, broker-denial ingestion),
-`app/` (Synodos Field canvas + a11y list-equivalent + standalone Tauri v2 crate).
+`app/` (Synodos Field canvas + a11y list-equivalent + the Trace viewer of
+redacted receipt facts with Denied / Outcome-unknown filters + standalone Tauri
+v2 crate).
 
 ## Verification (lead reruns, pinned Rust 1.97.1)
 
@@ -46,9 +48,14 @@ records, quiesced checkpoints, replay, explicit stale-lock takeover),
   kernel depends only on `serde`, `thiserror`, `toml`, `uuid` (dev: `tempfile`).
 - **App shell**: `cargo build` in `app/src-tauri` → `Finished dev profile`, and
   the standalone crate links the real kernel by path.
-- **UI**: rendered headlessly by the lead to `app/ui/preview/canvas.png`; DOM audit
-  confirms the a11y list table with its rows, the canvas nodes, the inspector,
-  the list toggle, and **zero remote/CDN references** (fonts local).
+- **UI**: rendered headlessly by the lead — `app/ui/preview/canvas.png` (canvas)
+  and `app/ui/preview/trace.png` (trace) — and DOM-audited with occurrence
+  counts: 18 `<tr` (7 list + 9 trace rows), 9 `<th scope="col">`, 3 trace filter
+  buttons, 1 `aria-live` result count, 6 detail-dialog references, 7 canvas
+  nodes (unchanged by the trace work), 4 keydown handlers, and **zero remote/CDN
+  references** (fonts local). The mock `receipts()` mirrors the kernel's
+  `RedactedReceipt` field-for-field and names the call it will replace, so the
+  mock → native swap is mechanical.
 
 ## Findings (found by review, not by the implementers)
 
@@ -75,7 +82,8 @@ records, quiesced checkpoints, replay, explicit stale-lock takeover),
 ## Explicit non-goals for this pass (stated, not hidden)
 
 Helix vendored-fork engine integration (M2), encrypted trace vault, provider
-transport, `tauri build` bundling/signing/notarization, Linux matrix, canvas
+transport, wiring the UI's mock bridge to the real Tauri commands,
+`tauri build` bundling/signing/notarization, Linux matrix, canvas
 layout persistence, and reconciliation *policy* for `OUTCOME_UNKNOWN` (only the
 no-silent-retry invariant is locked in).
 

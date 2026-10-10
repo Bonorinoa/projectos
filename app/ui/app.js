@@ -114,6 +114,7 @@ function build() {
   });
 
   buildList();
+  buildTrace();
   paint();
 }
 
@@ -304,23 +305,147 @@ function focusListRow(i) {
 }
 function openFromList(id) { sel = id; showInsp(); }
 
-/* toggle list <-> canvas (button AND keyboard shortcut "A") */
-function setListMode(on) {
-  listMode = on;
-  listpanel.hidden = !on;
-  document.getElementById("cv").hidden = on;
-  document.getElementById("listtoggle").classList.toggle("on", on);
-  document.getElementById("listtoggle").setAttribute("aria-pressed", String(on));
-  if (on) focusListRow(0);
-  else world.querySelectorAll(".node")[0] && world.querySelectorAll(".node")[0].focus();
+/* toggle views: exactly one of canvas | list | trace is visible at a time */
+let view = "canvas";
+function setView(v) {
+  view = v;
+  document.getElementById("cv").hidden = v !== "canvas";
+  document.getElementById("listpanel").hidden = v !== "list";
+  document.getElementById("tracepanel").hidden = v !== "trace";
+  const listOn = v === "list";
+  document.getElementById("listtoggle").classList.toggle("on", listOn);
+  document.getElementById("listtoggle").setAttribute("aria-pressed", String(listOn));
+  const traceOn = v === "trace";
+  document.getElementById("tracetoggle").classList.toggle("on", traceOn);
+  document.getElementById("tracetoggle").setAttribute("aria-pressed", String(traceOn));
+  if (v === "list") focusListRow(0);
+  else if (v === "trace") { closeTraceDetail(); focusTraceRow(0); }
+  else { closeInsp(); closeTraceDetail(); world.querySelectorAll(".node")[0] && world.querySelectorAll(".node")[0].focus(); }
 }
-document.getElementById("listtoggle").addEventListener("click", () => setListMode(!listMode));
+document.getElementById("listtoggle").addEventListener("click", () => setView(view === "list" ? "canvas" : "list"));
+document.getElementById("tracetoggle").addEventListener("click", () => setView(view === "trace" ? "canvas" : "trace"));
 document.getElementById("inspclose").addEventListener("click", closeInsp);
+
+/* ---- TRACE VIEWER (redacted receipt facts) ------------------------------ */
+const tracebody = document.getElementById("tracebody");
+const tracecount = document.getElementById("tracecount");
+const tracedetail = document.getElementById("tracedetail");
+let RECEIPTS = [];
+let traceFilter = "all";
+let traceRows = [];
+let traceFocus = 0;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function fmtAt(secs) {
+  const d = new Date(secs * 1000);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
+// Denial outcomes (kernel words them 'read not granted' / 'write not granted').
+function isDenied(r) { return /not granted/.test(r.outcome); }
+function traceShown(r) {
+  if (traceFilter === "all") return true;
+  if (traceFilter === "unknown") return r.outcome === "outcome-unknown";
+  return isDenied(r); // "denied"
+}
+function outcomeClass(r) {
+  if (isDenied(r)) return "denied";
+  if (r.outcome === "outcome-unknown") return "unknown";
+  return "ok";
+}
+function buildTrace() {
+  // Same facts + exact field names as the kernel's RedactedReceipt, via bridge.
+  RECEIPTS = bridge.receipts();
+  renderTrace();
+}
+function renderTrace() {
+  tracebody.innerHTML = "";
+  traceRows = [];
+  const shown = RECEIPTS.filter(traceShown);
+  shown.forEach((r) => {
+    const tr = document.createElement("tr");
+    tr.tabIndex = 0;
+    tr.dataset.id = r.id;
+    tr.setAttribute("aria-label", `${r.op} on ${r.rel_path}: ${r.outcome}`);
+    const cr = [r.cost, r.route].filter(Boolean).join(" · ");
+    const path = `<span class="td-path">${escapeHtml(r.rel_path)}</span>` +
+      (r.content_hash ? `<span class="td-hash"> · #${escapeHtml(r.content_hash)}</span>` : "");
+    tr.innerHTML =
+      `<td>${fmtAt(r.at)}</td>` +
+      `<td class="td-op">${escapeHtml(r.op)}</td>` +
+      `<td>${path}</td>` +
+      `<td><span class="td-outcome ${outcomeClass(r)}">${escapeHtml(r.outcome)}</span></td>` +
+      `<td class="td-cr">${cr ? escapeHtml(cr) : "—"}</td>`;
+    tr.addEventListener("focus", () => { traceFocus = traceRows.indexOf(tr); });
+    tr.addEventListener("keydown", traceKey);
+    tr.addEventListener("dblclick", () => openTraceDetail(r, tr));
+    tracebody.appendChild(tr);
+    traceRows.push(tr);
+  });
+  tracecount.textContent = `${shown.length} of ${RECEIPTS.length} receipts shown`;
+}
+function traceKey(ev) {
+  switch (ev.key) {
+    case "ArrowDown": case "ArrowRight":
+      ev.preventDefault(); focusTraceRow((traceFocus + 1) % traceRows.length); break;
+    case "ArrowUp": case "ArrowLeft":
+      ev.preventDefault(); focusTraceRow((traceFocus - 1 + traceRows.length) % traceRows.length); break;
+    case "Enter":
+      ev.preventDefault(); openTraceDetail(RECEIPTS.find((r) => r.id === traceRows[traceFocus].dataset.id), traceRows[traceFocus]); break;
+    case "Escape":
+      ev.preventDefault(); closeTraceDetail(); break;
+  }
+}
+function focusTraceRow(i) {
+  if (!traceRows.length) return;
+  traceFocus = i;
+  traceRows[i].focus();
+}
+function openTraceDetail(r, tr) {
+  if (!r) return;
+  document.getElementById("td-op").textContent = `${r.op} · ${r.rel_path}`;
+  const fields = [
+    ["id", r.id],
+    ["at", `${r.at} (${fmtAt(r.at)})`],
+    ["op", r.op],
+    ["rel_path", r.rel_path],
+    ["outcome", r.outcome],
+    ["content_hash", r.content_hash || "(none)"],
+    ["route", r.route || "(none)"],
+    ["cost", r.cost || "(none)"]
+  ];
+  const t = document.querySelector(".td-fields");
+  t.innerHTML = fields.map(([k, v]) => `<tr><td class="k">${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join("");
+  tracedetail.classList.add("open");
+  tracedetail.setAttribute("aria-hidden", "false");
+  document.getElementById("tracedetailclose").focus();
+}
+function closeTraceDetail() {
+  tracedetail.classList.remove("open");
+  tracedetail.setAttribute("aria-hidden", "true");
+}
+document.querySelectorAll(".tradefilter button").forEach((b) => {
+  b.addEventListener("click", () => {
+    traceFilter = b.dataset.traceFilter;
+    document.querySelectorAll(".tradefilter button").forEach((x) => {
+      const on = x === b;
+      x.classList.toggle("on", on);
+      x.setAttribute("aria-pressed", String(on));
+    });
+    renderTrace();
+    closeTraceDetail();
+  });
+});
+document.getElementById("tracedetailclose").addEventListener("click", closeTraceDetail);
 
 /* global keyboard shortcuts (no text inputs run, so bare keys are safe) */
 document.addEventListener("keydown", (ev) => {
-  if (ev.key === "a" || ev.key === "A") { ev.preventDefault(); setListMode(!listMode); }
-  if (ev.key === "Escape") closeInsp();
+  if (ev.key === "a" || ev.key === "A") { ev.preventDefault(); setView(view === "list" ? "canvas" : "list"); }
+  if (ev.key === "t" || ev.key === "T") { ev.preventDefault(); setView(view === "trace" ? "canvas" : "trace"); }
+  if (ev.key === "Escape") { closeInsp(); closeTraceDetail(); }
 });
 
 build();

@@ -51,9 +51,26 @@ window.projectos = (() => {
     { from: "r2", to: "v1", rel: "APPLIED_TO" }
   ];
 
+  // Redacted receipt facts. Field names mirror the real kernel's
+  // `RedactedReceipt` exactly (kernel/src/receipts.rs) so the mock → native
+  // swap is mechanical: this mirrors `projectos_kernel::receipts::ReceiptWriter::receipts()`,
+  // surfaced to the UI by the bridge as `receipts()` on `window.projectos`.
+  //   id, at (u64 unix secs), op, rel_path (never absolute), outcome,
+  //   content_hash (Option), route (Option), cost (Option).
+  // Exercise every column and all three trace filters: >=2 denials
+  // ('read not granted' / 'write not granted'), one 'outcome-unknown',
+  // one absolute-looking path already redacted to relative ('etc/passwd'),
+  // and one with route + cost set.
   const receipts = [
-    { id: "rec-0017", at: 1728420000, op: "rephrase", rel_path: "draft.md", outcome: "accepted", cost: "$0.0023" },
-    { id: "rec-0018", at: 1728420060, op: "append",   rel_path: "draft.md", outcome: "revision created", cost: "$0.0012" }
+    { id: "a4f17c9e2b1d0033", at: 1728420000, op: "rephrase",  rel_path: "draft.md",                   outcome: "accepted",            content_hash: "a3f9c21bd0", route: "openrouter/deepseek-v4.1-flash", cost: "$0.0023" },
+    { id: "7f2a1b8c40e9d5b1", at: 1728420060, op: "append",    rel_path: "draft.md",                   outcome: "revision created",    content_hash: "9c02aa7f",   route: "openrouter/deepseek-v4.1-flash", cost: "$0.0012" },
+    { id: "c81e55f2a9b07c6d", at: 1728420120, op: "read",      rel_path: "notes/research/private.md", outcome: "read not granted",    content_hash: null,         route: null, cost: null },
+    { id: "3d0a9b7e51f2c8d4", at: 1728420180, op: "write",     rel_path: "etc/passwd",                 outcome: "write not granted",   content_hash: null,         route: null, cost: null },
+    { id: "b6e2fa91c3d4057a", at: 1728420240, op: "stat",      rel_path: "var/log/system.log",         outcome: "outcome-unknown",     content_hash: null,         route: null, cost: null },
+    { id: "91c4d8a35b60e2f7", at: 1728420300, op: "summarize", rel_path: "draft.md",                   outcome: "accepted",            content_hash: "f9d20c4b",   route: "local/llama3", cost: "$0.0000" },
+    { id: "05f3e7b24a81d6c9", at: 1728420360, op: "delete",    rel_path: "tmp/scratch.txt",            outcome: "read not granted",    content_hash: null,         route: null, cost: null },
+    { id: "d7a1c6b03f92e45d", at: 1728420420, op: "index",     rel_path: "notes/reading-list.md",      outcome: "indexed 12 entries",  content_hash: "8b1e07a2",   route: "local", cost: "$0.0000" },
+    { id: "2e8b5c1f60a47d9b", at: 1728420480, op: "transcribe",rel_path: "interviews/session-04.wav",  outcome: "read not granted",    content_hash: null,         route: null, cost: null }
   ];
 
   const projects = [

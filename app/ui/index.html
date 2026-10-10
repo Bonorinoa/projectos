@@ -86,6 +86,37 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
 .zoom button:active{transform:translate(2px,2px);box-shadow:none}
 .hint{position:fixed;left:16px;bottom:16px;font-family:var(--pos-font-mono);font-size:9px;color:var(--pos-muted);letter-spacing:.06em;z-index:30;padding-right:80px}
 
+/* trace viewer (redacted receipt facts) */
+#tracepanel{position:fixed;top:46px;left:0;right:0;bottom:0;overflow:auto;background:var(--pos-field);background-image:var(--pos-dither);background-size:8px 8px;padding:18px 22px 40px}
+.trace-head{display:flex;align-items:center;gap:14px;max-width:1180px;margin:0 auto 10px}
+.trace-count{font-family:var(--pos-font-mono);font-size:9.5px;letter-spacing:.1em;color:var(--pos-muted);text-transform:uppercase}
+.trace-table{width:100%;max-width:1180px;margin:0 auto;border-collapse:collapse;font-family:var(--pos-font-mono);font-size:11.5px;background:var(--pos-surface);border:1px solid var(--pos-ink);box-shadow:var(--pos-shadow)}
+.trace-table caption{text-align:left;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--pos-muted);padding:0 2px 8px;font-family:var(--pos-font-mono)}
+.trace-table th{font-family:var(--pos-font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;text-align:left;color:var(--pos-field);background:var(--pos-chrome);padding:8px 10px;border-bottom:2px solid var(--pos-chrome-2);white-space:nowrap}
+.trace-table td{border-bottom:1px dashed var(--pos-line);padding:8px 10px;vertical-align:top;white-space:nowrap}
+.trace-table tbody tr{cursor:pointer}
+.trace-table tbody tr:hover{background:rgba(199,154,82,.12)}
+.trace-table tbody tr:focus{outline:none;background:rgba(199,154,82,.22);box-shadow:inset 0 0 0 2px var(--pos-gold)}
+.trace-table tbody tr:focus-visible{outline:none;background:rgba(199,154,82,.22);box-shadow:inset 0 0 0 2px var(--pos-gold)}
+.td-op{font-weight:700;color:var(--pos-ink);text-transform:uppercase;font-size:9.5px;letter-spacing:.08em}
+.td-path{font-size:10.5px;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.td-path b{color:var(--pos-rust);font-weight:700}
+.td-outcome{margin-right:6px;padding:2px 6px;border:1px solid var(--pos-ink);border-radius:2px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;background:var(--pos-field);white-space:nowrap}
+.td-outcome.denied{border-color:var(--pos-rust);color:var(--pos-rust)}
+.td-outcome.unknown{border-color:var(--pos-gold);color:var(--pos-muted)}
+.td-outcome.ok{border-color:var(--pos-moss);color:var(--pos-moss)}
+.td-cr{font-size:10px;color:var(--pos-muted)}
+.td-hash{color:var(--pos-muted);font-size:9px}
+
+/* trace detail panel */
+#tracedetail{position:fixed;top:46px;right:0;bottom:0;width:318px;background:var(--pos-surface);border-left:3px solid var(--pos-ink);padding:14px;transform:translateX(340px);transition:transform .2s;z-index:20;overflow:auto}
+#tracedetail.open{transform:translateX(0)}
+#tracedetail h3{font-size:14px;line-height:1.3;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+#tracedetail .typ{font-family:var(--pos-font-mono);font-size:9px;letter-spacing:.14em;color:var(--pos-rust);margin-bottom:8px;text-transform:uppercase}
+.td-fields{border-collapse:collapse;width:100%;margin:8px 0 12px;font-family:var(--pos-font-mono);font-size:10px}
+.td-fields td{border-bottom:1px dashed var(--pos-line);padding:5px 3px;vertical-align:top;word-break:break-word;white-space:normal}
+.td-fields td.k{color:var(--pos-muted);width:42%}
+
 /* reduced motion respected */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
@@ -119,6 +150,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   <div class="sep"></div>
   <div class="ctl">
     <button id="listtoggle" class="a11y" aria-pressed="false">List (A)</button>
+    <button id="tracetoggle" class="a11y" aria-pressed="false">Trace (T)</button>
   </div>
 </div>
 
@@ -138,6 +170,33 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   </table>
 </section>
 
+<!-- TRACE VIEWER: redacted receipt facts (same facts as bridge.receipts()) -->
+<section id="tracepanel" hidden aria-label="Redacted receipt trace">
+  <div class="trace-head">
+    <div class="ctl tradefilter" aria-label="Filter receipts">
+      <button class="on" data-trace-filter="all" aria-pressed="true">All</button>
+      <button data-trace-filter="denied" aria-pressed="false">Denied</button>
+      <button data-trace-filter="unknown" aria-pressed="false">Outcome-unknown</button>
+    </div>
+    <span class="trace-count" id="tracecount" role="status" aria-live="polite"></span>
+  </div>
+  <table class="trace-table">
+    <caption>Redacted receipt facts — same facts as bridge.receipts()</caption>
+    <thead>
+      <tr><th scope="col">When</th><th scope="col">Op</th><th scope="col">Path</th><th scope="col">Outcome</th><th scope="col">Cost / Route</th></tr>
+    </thead>
+    <tbody id="tracebody"></tbody>
+  </table>
+</section>
+
+<!-- TRACE DETAIL: full fact for the focused row (Enter opens, Esc closes) -->
+<div id="tracedetail" role="dialog" aria-label="Receipt detail" aria-hidden="true">
+  <button class="close" id="tracedetailclose" aria-label="Close receipt detail">✕</button>
+  <h3 id="td-op">—</h3>
+  <div class="typ" id="td-typ">REDACTED RECEIPT FACT</div>
+  <table class="td-fields"></table>
+</div>
+
 <div id="insp" role="dialog" aria-label="Artifact inspector" aria-hidden="true">
   <button class="close" id="inspclose" aria-label="Close inspector">✕</button>
   <div class="ihead"><span id="i-sprite"></span><div><h3 id="i-title">—</h3><div class="typ" id="i-type"></div></div></div>
@@ -150,7 +209,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   <button id="zout" aria-label="Zoom out">−</button>
   <button id="zin" aria-label="Zoom in">+</button>
 </div>
-<div class="hint">DRAG NODE · DRAG ■ OUT-PORT → IN-PORT TO LINK · 2×CLICK INSPECTOR · TAB+ARROWS NAV · ENTER INSPECT · ESC CLOSE · A = LIST</div>
+<div class="hint">DRAG NODE · DRAG ■ OUT-PORT → IN-PORT TO LINK · 2×CLICK INSPECTOR · TAB+ARROWS NAV · ENTER INSPECT · ESC CLOSE · A = LIST · T = TRACE</div>
 
 <script src="bridge.js"></script>
 <script src="app.js"></script>
