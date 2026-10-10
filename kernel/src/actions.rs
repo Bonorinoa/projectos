@@ -95,7 +95,7 @@ fn read_selection(folder: &Path, a: &DocAnchor) -> Result<String> {
 
 /// Run `action` over the anchored selection, via `provider`.
 ///
-/// First resolves the anchor: a `Stale` selection is refused,never acted
+/// First resolves the anchor: a `Stale` selection is refused, never acted
 /// on. Otherwise reads the selected bytes, asks the provider with the
 /// prompt `"{id}::{selected}"`, and builds a [`Proposal`] whose `original` is
 /// the selected text, `proposed` is the provider's text, and `before_hash` is
