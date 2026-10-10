@@ -19,3 +19,12 @@ pub mod receipts;
 pub mod registration;
 pub mod sidecar;
 pub mod worker;
+
+// M2 — Substack golden-path kernel mechanisms (contract: `INTERFACES-M2.md`).
+pub mod actions;
+pub mod lens;
+pub mod milestone;
+pub mod proposals;
+pub mod provider;
+pub mod recipe;
+pub mod selection;
