@@ -78,6 +78,55 @@ fn is_symlink(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Metadata recorded in `.projectos/lock` when a writer session starts.
+///
+/// Stored as TOML so the crate needs no extra dependency. The values are
+/// advisory: `open()` only checks whether the lock file exists, and taking over
+/// a stale lock is an explicit, recorded action (`journal::recover`), never an
+/// automatic decision by `open()`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LockOwner {
+    pub pid: u32,
+    pub started_at: u64,
+}
+
+fn lock_body() -> String {
+    format!(
+        "pid = {}\nstarted_at = {}\n",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    )
+}
+
+/// Read the recorded lock owner, if a lock file is present.
+pub fn lock_owner(folder: &Path) -> Result<Option<LockOwner>> {
+    let path = lock_path(folder);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let body = std::fs::read_to_string(&path)?;
+    let owner = toml::from_str::<LockOwner>(&body)
+        .map_err(|e| KernelError::InvalidSidecar(format!("malformed lock file: {e}")))?;
+    Ok(Some(owner))
+}
+
+/// Release a writer lock that this process does not hold.
+///
+/// Exposed only to the recovery path (`journal::recover`, same crate) so a lock
+/// left behind by a crashed writer can be taken over as an explicit, recorded
+/// action. Ordinary callers must not use this: a live session's lock is released
+/// by dropping its [`RegisteredProject`] handle.
+pub(crate) fn release_lock(folder: &Path) -> Result<()> {
+    match std::fs::remove_file(lock_path(folder)) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// Register an existing project folder.
 ///
 /// * Already registered under the **same** path → idempotent: the existing
@@ -187,7 +236,13 @@ pub fn open(folder: &Path) -> Result<RegisteredProject> {
         .write(true)
         .open(lock_path(folder))
     {
-        Ok(_) => {}
+        Ok(mut file) => {
+            use std::io::Write;
+            // Record the owner for diagnostics and explicit stale-lock takeover.
+            // Failing to write the body is not fatal: the lock's existence is
+            // what blocks a second writer.
+            let _ = file.write_all(lock_body().as_bytes());
+        }
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
             return Err(KernelError::ProjectLocked(
                 folder.to_string_lossy().to_string(),

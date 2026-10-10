@@ -11,6 +11,11 @@
 
 pub mod broker;
 pub mod error;
+pub mod graph;
+pub mod graph_memory;
+pub mod journal;
+pub mod profile;
+pub mod receipts;
 pub mod registration;
 pub mod sidecar;
 pub mod worker;
