@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectOS — Canvas · Synodos Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Visual language drawn from the Synodos app (synodos01.lovable.app):
+     sand field, deep-teal ink, gold + rust signals, Geist/Space Mono,
+     6px radii, chunky offset shadows, 1px keylines, pixel sprites. */
+  :root{
+    --sand:#ece5d8; --sand2:#f4efe4; --ink:#2a3a38; --ink2:#1d2927; --muted:#8f8b80;
+    --gold:#c79a52; --rust:#b45c3c; --moss:#5f7d6a; --line:#c5c1b9; --shadow:rgba(42,58,56,.22);
+    --ui:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"Space Mono",ui-monospace,Consolas,monospace;
+    --t-Draft:var(--gold); --t-Receipt:#7f8b86; --t-Evidence:var(--moss); --t-Scope:#5f6f92; --t-Recipe:var(--rust); --t-Revision:#8a6a3a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{height:100%;overflow:hidden;background:var(--sand);color:var(--ink);font-family:var(--ui);font-size:13px}
+  .tokens{position:fixed;top:0;left:0;right:0;height:46px;background:var(--ink);color:var(--sand);display:flex;align-items:center;gap:14px;padding:0 16px;z-index:30;border-bottom:3px solid var(--ink2)}
+  .tokens .brand{font-family:var(--mono);font-weight:700;letter-spacing:.16em;font-size:12px}
+  .tokens .brand i{color:var(--gold);font-style:normal}
+  .chip{width:13px;height:13px;display:inline-block;margin-right:5px;vertical-align:-2px;border:1px solid rgba(0,0,0,.45);border-radius:2px}
+  .kicker{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:#b9b3a4}
+  .lens{margin-left:auto;display:flex;gap:8px}
+  .lens button,.zoom button{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--sand);color:var(--ink);border:1px solid var(--ink);border-radius:3px;padding:4px 10px;cursor:pointer;
+    box-shadow:2px 2px 0 var(--ink2)}
+  .lens button.on{background:var(--gold);color:var(--ink2);box-shadow:2px 2px 0 var(--ink2)}
+  .lens button:active,.zoom button:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink2)}
+  #cv{position:fixed;top:46px;left:0;right:0;bottom:0;overflow:hidden;background-color:var(--sand);
+    background-image:conic-gradient(rgba(42,58,56,.055) 25%,transparent 0 50%,rgba(42,58,56,.055) 0 75%,transparent 0);background-size:8px 8px}
+  #svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #svg line{stroke:var(--ink);stroke-width:1.6;stroke-dasharray:2 3;stroke-linecap:butt;opacity:.55}
+  #svg text.rel{fill:var(--ink);font-family:var(--mono);font-size:8px;letter-spacing:.06em;opacity:.75}
+  #world{position:absolute;top:0;left:0;transform-origin:0 0}
+  .node{position:absolute;width:238px;background:var(--sand2);border:1px solid var(--ink);border-radius:6px;
+    box-shadow:4px 4px 0 var(--shadow);cursor:grab;transform:translate(-50%,-50%);transition:box-shadow .12s,transform .12s}
+  .node:hover{box-shadow:6px 6px 0 var(--shadow),0 0 0 2px rgba(199,154,82,.55)}
+  .node .hd{display:flex;align-items:center;gap:8px;padding:7px 10px 6px;border-bottom:1px dashed var(--line)}
+  .node .hd .sp{flex:0 0 auto;image-rendering:pixelated}
+  .node .badge{font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--sand2);background:var(--ink);padding:2px 6px;border-radius:2px}
+  .node .sub{margin-left:auto;font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.02em}
+  .node .tt{font-size:13px;font-weight:600;padding:8px 10px 3px;line-height:1.25;letter-spacing:-.01em}
+  .node .meta{font-family:var(--mono);font-size:8.5px;color:var(--muted);padding:2px 10px 8px}
+  .node .ports{display:flex;justify-content:space-between;padding:0 6px 5px}
+  .port{width:11px;height:11px;border:1px solid var(--ink);background:var(--sand2);border-radius:2px;cursor:crosshair;image-rendering:pixelated}
+  .port:hover{background:var(--gold)}
+  #insp{position:fixed;top:46px;right:0;bottom:0;width:318px;background:var(--sand2);border-left:3px solid var(--ink);padding:14px;transform:translateX(340px);transition:transform .2s;z-index:20;overflow:auto}
+  #insp .ihead{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+  #insp h3{font-size:14px;line-height:1.3}
+  #insp .typ{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--rust);margin-bottom:8px;text-transform:uppercase}
+  table{border-collapse:collapse;width:100%;margin:8px 0 12px;font-family:var(--mono);font-size:10px}
+  td{border-bottom:1px dashed var(--line);padding:5px 3px;vertical-align:top}
+  td.k{color:var(--muted);width:40%}
+  .rels{font-family:var(--mono);font-size:10px;line-height:1.8}
+  .rels .arrow{color:var(--rust);font-weight:700}
+  .zoom{position:fixed;bottom:16px;right:16px;display:flex;gap:8px;z-index:30}
+  .zoom button{width:30px;height:30px;padding:0;font-size:14px}
+  .hint{position:fixed;left:16px;bottom:16px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;z-index:30}
+</style>
+</head>
+<body>
+<div class="tokens">
+  <span class="brand">PROJECT<i>OS</i> · SYNODOS FIELD</span>
+  <span><span class="chip" style="background:#ece5d8"></span>sand</span>
+  <span><span class="chip" style="background:#2a3a38"></span>ink</span>
+  <span><span class="chip" style="background:#c79a52"></span>gold</span>
+  <span><span class="chip" style="background:#b45c3c"></span>rust</span>
+  <span class="kicker">GRID 8 · SPRITES 12×12 · RADIUS 6</span>
+  <div class="lens"><button class="on" data-l="all">All</button><button data-l="lineage">Lineage</button><button data-l="evidence">Evidence</button><button data-l="workflow">Workflow</button></div>
+</div>
+<div id="cv"><svg id="svg"></svg><div id="world"></div></div>
+<div id="insp"><div class="ihead"><span id="i-sprite"></span><div><h3 id="i-title">—</h3><div class="typ" id="i-type"></div></div></div><table id="i-fields"></table><div class="rels" id="i-rels"></div></div>
+<div class="zoom"><button id="zout">−</button><button id="zin">+</button></div>
+<div class="hint">DRAG NODE · DRAG ■ OUT-PORT → IN-PORT TO LINK · 2×CLICK INSPECTOR · LENS FILTERS</div>
+<script>
+// ---- 12x12 pixel sprites (rects on an integer grid, crispEdges) -------------
+const SPRITES = {
+  Draft:[["#c79a52",3,1,6,9],["#2a3a38",3,1,1,9],["#2a3a38",8,1,1,9],["#2a3a38",3,1,6,1],["#2a3a38",3,9,6,1],["#2a3a38",5,3,3,1],["#2a3a38",5,5,2,1],["#2a3a38",5,7,3,1]],
+  Receipt:[["#7f8b86",3,1,6,8],["#2a3a38",3,1,6,1],["#2a3a38",3,1,1,10],["#2a3a38",8,1,1,10],["#2a3a38",4,10,1,1],["#2a3a38",6,10,1,1],["#2a3a38",5,9,1,2],["#2a3a38",7,9,1,2],["#2a3a38",5,4,2,1],["#2a3a38",5,6,2,1]],
+  Evidence:[["#2a3a38",2,11,8,1],["#5f7d6a",3,6,2,5],["#5f7d6a",6,3,2,8],["#5f7d6a",9,8,2,3],["#2a3a38",3,6,2,1],["#2a3a38",6,3,2,1],["#2a3a38",9,8,2,1]],
+  Scope:[["#2a3a38",2,2,8,1],["#2a3a38",2,9,8,1],["#2a3a38",2,2,1,8],["#2a3a38",9,2,1,8],["#5f6f92",5,5,2,2],["#2a3a38",5,1,2,1],["#2a3a38",5,10,2,1],["#2a3a38",1,5,1,2],["#2a3a38",10,5,1,2]],
+  Recipe:[["#b45c3c",3,3,2,2],["#b45c3c",7,3,2,2],["#b45c3c",3,7,2,2],["#b45c3c",7,7,2,2],["#2a3a38",6,1,1,10],["#2a3a38",1,6,10,1],["#2a3a38",5,5,3,3]],
+  Revision:[["#2a3a38",2,4,2,2],["#2a3a38",5,4,2,2],["#2a3a38",8,4,1,2],["#2a3a38",3,8,2,2],["#2a3a38",6,8,2,2],["#8a6a3a",4,6,4,1],["#8a6a3a",7,5,1,3]]
+};
+function sprite(type,size){
+  const parts=(SPRITES[type]||[]).map(([c,x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${parts}</svg>`;
+}
+const NODES=[
+ {id:"d1",type:"Draft",title:"The economics of attention, in twelfths",sub:"rev 3",x:330,y:210,fields:{anchor:"argument locked",milestone:"09c1",state:"accepted rev 0017",stale:"false"}},
+ {id:"r1",type:"Receipt",title:"Receipt · Rephrase 0017",sub:"$0.0023",x:730,y:150,fields:{route:"openrouter/deepseek-v4.1-flash",cost:"$0.0023",verdict:"accepted",outcome:"revision created"}},
+ {id:"g1",type:"Evidence",title:"Lineage — 3 revisions, 1 anchor",sub:"rev 0015→0017",x:1130,y:130,fields:{direct:"3",partial:"1",contra:"0"}},
+ {id:"s1",type:"Scope",title:"Premise & promise",sub:"audience",x:1180,y:450,fields:{promise:"measurable units mislead",audience:"applied economists"}},
+ {id:"r2",type:"Recipe",title:"Structural review — block D",sub:"approved",x:510,y:480,fields:{blocks:"argument|evidence|flow",status:"approved",budget:"$0.05"}},
+ {id:"e1",type:"Evidence",title:"γ = 0.41 [0.33, 0.50]",sub:"n=58",x:910,y:580,fields:{dataset:"SCHWARTZ-2019",contra:"false"}},
+ {id:"v1",type:"Revision",title:"rev 0017 · 9c02",sub:"committed",x:150,y:540,fields:{before:"1a3f",after:"9c02",status:"committed"}}
+];
+const RELS=[{f:"d1",t:"r1",l:"PRODUCED_BY"},{f:"r1",t:"g1",l:"SUPPORTS"},{f:"d1",t:"g1",l:"CITES"},{f:"d1",t:"s1",l:"GOVERNED_BY"},{f:"d1",t:"r2",l:"EXECUTED"},{f:"r2",t:"e1",l:"PRODUCED"},{f:"v1",t:"d1",l:"REVISION_OF"},{f:"r2",t:"v1",l:"APPLIED_TO"}];
+const world=document.getElementById('world'),svg=document.getElementById('svg'),insp=document.getElementById('insp');
+let z=1,sel=null,drag=null,linkC=null,lens="all";
+const byId={};
+NODES.forEach(n=>{byId[n.id]=n;const el=document.createElement('div');el.className='node';el.style.left=n.x+'px';el.style.top=n.y+'px';
+ el.innerHTML=`<div class="hd"><span class="sp">${sprite(n.type,16)}</span><span class="badge">${n.type.toUpperCase()}</span><span class="sub">${n.sub}</span></div>
+ <div class="tt">${n.title}</div><div class="meta">${Object.entries(n.fields)[0][0]} = ${Object.entries(n.fields)[0][1]}</div>
+ <div class="ports"><span class="port p-in"></span><span class="port p-out"></span></div>`;
+ el.addEventListener('mousedown',ev=>{if(ev.target.classList.contains('port'))return;sel=n.id;const r=el.getBoundingClientRect();drag={el,dx:ev.clientX-r.left,dy:ev.clientY-r.top,w:r.width/2,h:r.height/2};showInsp();});
+ el.addEventListener('mouseup',()=>drag=null);
+ el.querySelector('.p-out').addEventListener('mousedown',ev=>{ev.stopPropagation();const r=el.getBoundingClientRect();linkC={f:n.id,ex:r.right-6,ey:r.top+16};window.addEventListener('mousemove',mv);window.addEventListener('mouseup',mu);});
+ el.querySelector('.p-in').addEventListener('mouseup',ev=>{ev.stopPropagation();if(linkC&&linkC.f!==n.id){RELS.push({f:linkC.f,t:n.id,l:"LINKS_TO"});}linkC=null;window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',mu);paint();});
+ el.addEventListener('dblclick',()=>{sel=n.id;showInsp();});
+ world.appendChild(el);el._el=el;});
+function mv(ev){const r=world.getBoundingClientRect();svg.innerHTML=`<line x1="${linkC.ex}" y1="${linkC.ey}" x2="${ev.clientX-r.left}" y2="${ev.clientY-r.top}" stroke-dasharray="2 3" stroke="#2a3a38"></line>`;}
+function mu(){linkC=null;svg.innerHTML="";paint();}
+document.addEventListener('mouseup',()=>{drag=null;});
+document.getElementById('cv').addEventListener('mousemove',ev=>{if(drag){drag.el.style.left=(ev.clientX-drag.dx+drag.w)+'px';drag.el.style.top=(ev.clientY-drag.dy+drag.h)+'px';}if(linkC){const r=world.getBoundingClientRect();svg.innerHTML=`<line x1="${linkC.ex}" y1="${linkC.ey}" x2="${ev.clientX-r.left}" y2="${ev.clientY-r.top}" stroke-dasharray="2 3" stroke="#2a3a38"></line>`;}paintLines();});
+function relFor(id){return RELS.filter(r=>r.f===id||r.t===id);}
+function visible(id){if(lens==="all")return true;const n=byId[id];if(lens==="evidence")return n.type==="Evidence";if(lens==="workflow")return ["Recipe","Receipt","Revision"].includes(n.type);const hl=relFor(id).length>0;return hl&&n.type!=="Receipt"||n.type==="Draft";}
+function paint(){NODES.forEach(n=>{const v=visible(n.id);n._el.style.display=v?"":"none";n._el.classList.toggle('hood',!v);});paintLines();}
+function paintLines(){svg.innerHTML="";const r=world.getBoundingClientRect();RELS.forEach(rel=>{const a=byId[rel.f]._el,b=byId[rel.t]._el;if(!a||!b||a.style.display==="none"||b.style.display==="none")return;
+ const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+ const ax=ar.right-r.left,ay=ar.top-r.top+16,bx=br.left-r.left,by=br.top-r.top+16;
+ svg.innerHTML+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"></line><text class="rel" x="${(ax+bx)/2}" y="${(ay+by)/2}">${rel.l}</text>`;});}
+function showInsp(){const n=byId[sel];if(!n)return;insp.style.transform='translateX(0)';document.getElementById('i-sprite').innerHTML=sprite(n.type,34);
+ document.getElementById('i-title').textContent=n.title;document.getElementById('i-type').textContent=n.type+' · typed artifact';
+ const f=document.getElementById('i-fields');f.innerHTML='';Object.entries(n.fields).forEach(([k,v])=>{f.insertAdjacentHTML('beforeend',`<tr><td class="k">${k}</td><td>${v}</td></tr>`);});
+ document.getElementById('i-rels').innerHTML=relFor(sel).map(r=>r.f===sel?`<span class="arrow">→</span> ${r.l} · ${byId[r.t].title}`:`<span class="arrow">←</span> ${r.l} · ${byId[r.f].title}`).join('<br>')||'(no relations)';}
+document.querySelectorAll('.lens button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.lens button').forEach(x=>x.classList.remove('on'));b.classList.add('on');lens=b.dataset.l;paint();});
+document.getElementById('zin').onclick=()=>{z=Math.min(z*1.15,2);world.style.transform=`scale(${z})`;paintLines();};
+document.getElementById('zout').onclick=()=>{z=Math.max(z/1.15,.5);world.style.transform=`scale(${z})`;paintLines();};
+paint();
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+/* ProjectOS — Synodos Field design tokens
+ * Extracted from synodos01.lovable.app and locked by
+ * design/DECISION-canvas-visual-language.md (2026-10-09).
+ * Single source of truth for the M1 UI. Fonts must be vendored before ship.
+ */
+:root{
+  /* -- field & surfaces ------------------------------------------------- */
+  --pos-field:#ece5d8;        /* sand canvas */
+  --pos-surface:#f4efe4;      /* card / panel */
+  --pos-chrome:#2a3a38;       /* top bar, keylines on dark */
+  --pos-chrome-2:#1d2927;     /* pressed / deepest */
+  --pos-panel:#1a2422;        /* night panel (008 only) */
+  --pos-line:#c5c1b9;         /* dashed rules, borders */
+  --pos-muted:#8f8b80;        /* secondary metadata */
+
+  /* -- ink & signals ---------------------------------------------------- */
+  --pos-ink:#2a3a38;          /* primary text/linework */
+  --pos-gold:#c79a52;         /* primary signal (active, badges) */
+  --pos-rust:#b45c3c;         /* alert / revision signal */
+  --pos-moss:#5f7d6a;         /* evidence signal */
+  --pos-slate:#5f6f92;        /* scope signal */
+
+  /* -- artifact type colours ------------------------------------------- */
+  --pos-t-draft:var(--pos-gold);
+  --pos-t-receipt:#7f8b86;
+  --pos-t-evidence:var(--pos-moss);
+  --pos-t-scope:var(--pos-slate);
+  --pos-t-recipe:var(--pos-rust);
+  --pos-t-revision:#8a6a3a;
+
+  /* -- type ------------------------------------------------------------- */
+  --pos-font-ui:"Geist","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pos-font-mono:"Space Mono",ui-monospace,Consolas,monospace;
+  --pos-fs-title:13px;    /* card title, weight 600 */
+  --pos-fs-meta:8.5px;    /* mono metadata */
+  --pos-fs-badge:8px;     /* mono badge, .14em tracking */
+  --pos-fs-rel:8px;       /* relation labels */
+
+  /* -- geometry --------------------------------------------------------- */
+  --pos-radius:6px;
+  --pos-radius-chip:2px;
+  --pos-grid:8px;                 /* pixel-dither cell */
+  --pos-node-w:238px;
+  --pos-sprite:16px;              /* header sprite */
+  --pos-sprite-lg:34px;           /* inspector sprite */
+  --pos-port:11px;                /* square ports */
+
+  /* -- depth: hard offset shadows only (no blur) ------------------------ */
+  --pos-shadow:4px 4px 0 rgba(42,58,56,.22);
+  --pos-shadow-hover:6px 6px 0 rgba(42,58,56,.22),0 0 0 2px rgba(199,154,82,.55);
+  --pos-shadow-press:2px 2px 0 #1d2927;
+
+  /* -- field texture ---------------------------------------------------- */
+  --pos-dither:conic-gradient(rgba(42,58,56,.055) 25%,transparent 0 50%,rgba(42,58,56,.055) 0 75%,transparent 0);
+}

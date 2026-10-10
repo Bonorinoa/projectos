@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProjectOS — Canvas · Oxblood Study</title>
+<style>
+:root{
+  --canvas:#171112; --grid:#251a1e; --chrome:#211820; --chrome2:#2b2027; --ink:#e9dfce; --muted:#a3919b;
+  --paper:#e9dfce; --paper2:#f2e9da; --serif:ui-serif,Charter,"Iowan Old Style",Georgia,serif;
+  --ui:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --mono:ui-monospace,Consolas,monospace;
+  --t-Draft:#b0652f; --t-Receipt:#9a8f86; --t-Evidence:#55714f; --t-Scope:#6b5f9e; --t-Recipe:#8a5a72; --t-Revision:#7a6a2e;
+  --accent:#c96b4b; --edge:#7c5a52;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{height:100%;overflow:hidden;background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:13.5px}
+.tokens{position:fixed;top:0;left:0;right:0;height:44px;background:var(--chrome);border-bottom:1px solid #35262c;display:flex;align-items:center;gap:12px;padding:0 16px;z-index:30}
+.tokens .brand{font-family:var(--serif);font-size:15.5px;color:#f0e6d3}
+.tokens .brand i{color:var(--accent);font-style:normal}
+.chip{width:14px;height:14px;border-radius:4px;display:inline-block;margin-right:5px;vertical-align:-2px}
+.lens{margin-left:auto;display:flex;gap:6px}
+.lens button{font:inherit;font-size:11.5px;background:transparent;color:var(--muted);border:1px solid #3c2d33;padding:3px 10px;border-radius:99px;cursor:pointer}
+.lens button.on{background:#3a2b31;color:var(--ink);border-color:var(--accent)}
+#cv{position:fixed;top:44px;left:0;right:0;bottom:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#1b1418 0%,#141012 55%,#100c0e 100%)}
+#grid{position:absolute;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:34px 34px;opacity:.55}
+#svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#svg line{stroke:var(--edge);stroke-width:1.4;stroke-dasharray:3 4;opacity:.6}
+#svg text.rel{fill:var(--muted);font-family:var(--mono);font-size:9px}
+#world{position:absolute;top:0;left:0;transform-origin:0 0}
+.node{position:absolute;width:236px;background:var(--paper);color:#241a1c;border-radius:8px 8px 8px 2px;box-shadow:0 14px 0 rgba(0,0,0,.42),0 2px 0 rgba(0,0,0,.55);cursor:grab;transform:translate(-50%,-50%);border:1px solid #cfc3ab}
+.node:hover{box-shadow:0 20px 0 rgba(0,0,0,.5),0 0 0 1px var(--accent)}
+.node.dim{opacity:.18}
+.node.dimmed{opacity:.3}
+.node .hd{display:flex;align-items:center;gap:7px;padding:7px 10px 5px;border-bottom:1px solid rgba(36,26,28,.14)}
+.node .badge{font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:1px 6px;border-radius:4px;color:#fff}
+.t-Draft .badge{background:var(--t-Draft)} .t-Receipt .badge{background:var(--t-Receipt)} .t-Evidence .badge{background:var(--t-Evidence)}
+.t-Scope .badge{background:var(--t-Scope)} .t-Recipe .badge{background:var(--t-Recipe)} .t-Revision .badge{background:var(--t-Revision)}
+.node .tt{font-family:var(--serif);font-size:14.5px;padding:7px 10px 2px;line-height:1.22}
+.node .sub{font-size:10.5px;color:#5d5148;padding:2px 10px 7px;font-family:var(--mono)}
+.node .ports{display:flex;justify-content:space-between;padding:0 6px 4px;font-size:16px;color:#8a7a70}
+.port{cursor:crosshair;padding:0 4px;border-radius:4px}
+.port:hover{background:#d8cdb8}
+#insp{position:fixed;top:44px;right:0;bottom:0;width:320px;background:var(--chrome);border-left:1px solid #35262c;padding:14px;transform:translateX(340px);transition:transform .25s;z-index:20;overflow:auto}
+#insp h3{font-family:var(--serif);font-size:16px;color:var(--paper2);margin-bottom:4px}
+#insp .typ{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.1em}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:11.5px}
+td{border-bottom:1px solid #35262c;padding:5px 4px;vertical-align:top}
+td.k{color:var(--muted);width:38%;font-family:var(--mono);font-size:10px}
+#insp .rels{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.zoom{position:fixed;bottom:16px;right:16px;display:flex;gap:6px;z-index:30}
+.zoom button{font:inherit;width:26px;height:26px;border-radius:7px;border:1px solid #3c2d33;background:var(--chrome);color:var(--muted);cursor:pointer}
+.tokens .fontA{font-family:var(--serif);font-size:13px} .tokens .fontB{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="tokens"><span class="brand">Project<i>OS</i> · Oxblood Study</span>
+  <span><span class="chip" style="background:#e9dfce"></span>paper</span><span><span class="chip" style="background:#5a1f23"></span>oxblood</span><span><span class="chip" style="background:#c96b4b"></span>ember</span><span><span class="chip" style="background:#55714f"></span>moss</span>
+  <span class="fontA">Aa</span><span class="fontB">Charter · SF</span>
+  <div class="lens"><button class="on" data-l="all">All</button><button data-l="lineage">Lineage</button><button data-l="evidence">Evidence</button><button data-l="workflow">Workflow</button></div>
+</div>
+<div id="cv"><div id="grid"></div><svg id="svg"></svg><div id="world"></div></div>
+<div id="insp"><h3 id="i-title">—</h3><div class="typ" id="i-type"></div><table id="i-fields"></table><div class="rels" id="i-rels"></div></div>
+<div class="zoom"><button id="zin">+</button><button id="zout">−</button></div>
+<script>
+const NODES=[
+ {id:"d1",type:"Draft",title:"“The economics of attention is a lie we tell in twelfths”",sub:"Substack · rev 3",x:330,y:200,fields:{anchor:"argument locked",milestone:"09c1",state:"accepted rev 0017",stale:false}},
+ {id:"r1",type:"Receipt",title:"receipt 0017 · Rephrase",sub:"deepseek-v4.1-flash · $0.0023",x:720,y:150,fields:{route:"openrouter/deepseek-v4.1-flash",cost:"$0.0023",verdict:"accepted",outcome:"revision created"}},
+ {id:"g1",type:"Evidence",title:"Lineage: 3 revisions from anchor",sub:"rev 0015→0017",x:1110,y:120,fields:{direct:3,partial:1,contra:0}},
+ {id:"s1",type:"Scope",title:"Premise: attention as a measured unit",sub:"argument · audience",x:1180,y:430,fields:{promise:"measurable units mislead",audience:"applied economists"}},
+ {id:"r2",type:"Recipe",title:"Structural review · block D",sub:"whole-draft critique",x:500,y:470,fields:{blocks:["argument","evidence","flow"],status:"approved"}},
+ {id:"e1",type:"Evidence",title:"Q1: γ=0.41 [0.33,0.50]",sub:"cultural-estimates",x:900,y:560,fields:{dataset:"SCHWARTZ-2019",n:58,contradiction:false}},
+ {id:"v1",type:"Revision",title:"rev 0017 · diff 9c02",sub:"accepted edit",x:150,y:520,fields:{before:"1a3f",after:"9c02",status:"committed"}},
+];
+const RELS=[{f:"d1",t:"r1",l:"PRODUCED_BY"},{f:"r1",t:"g1",l:"SUPPORTS"},{f:"d1",t:"g1",l:"CITES"},{f:"d1",t:"s1",l:"GOVERNED_BY"},{f:"d1",t:"r2",l:"EXECUTED"},{f:"r2",t:"e1",l:"PRODUCED"},{f:"v1",t:"d1",l:"REVISION_OF"},{f:"r2",t:"v1",l:"APPLIED_TO"}];
+const world=document.getElementById('world'),svg=document.getElementById('svg'),insp=document.getElementById('insp');
+let z=1,sel=null,drag=null,linkC=null,lens="all";
+const byId={};NODES.forEach(n=>{byId[n.id]=n;const el=document.createElement('div');el.className='node t-'+n.type;el.style.left=n.x+'px';el.style.top=n.y+'px';
+ el.innerHTML=`<div class="hd"><span class="badge">${n.type.toUpperCase()}</span><span class="sub" style="margin-left:auto">${n.sub}</span></div><div class="tt">${n.title}</div><div class="ports"><span class="port p-in">◉</span><span class="port p-out">◉</span></div>`;
+ el.dataset.id=n.id;
+ el.addEventListener('mousedown',ev=>{if(ev.target.classList.contains('port'))return;sel=n.id;drag={el,dx:ev.offsetX,dy:ev.offsetY};paint();});
+ el.addEventListener('mouseup',()=>drag=null);
+ el.querySelector('.p-out').addEventListener('mousedown',ev=>{ev.stopPropagation();linkC={f:n.id,ex:el.offsetLeft+236,ey:el.offsetTop+20};window.addEventListener('mousemove',mv);window.addEventListener('mouseup',mu);});
+ window.mu2&&0;
+ el.querySelector('.p-in').addEventListener('mouseup',ev=>{ev.stopPropagation();if(linkC&&linkC.f!==n.id){RELS.push({f:linkC.f,t:n.id,l:"LINKS_TO"});}linkC=null;});
+ el.addEventListener('dblclick',()=>{sel=n.id;showInsp();});
+ world.appendChild(el);el._el=el;});
+function mv(ev){const r=world.getBoundingClientRect();const nx=ev.clientX-r.left,ny=ev.clientY-r.top;svg.innerHTML=`<line x1="${linkC.ex}" y1="${linkC.ey}" x2="${nx}" y2="${ny}"></line>`;}
+function mu(){linkC=null;svg.innerHTML="";window.removeEventListener('mousemove',mv);window.removeEventListener('mu',mu);paint();}
+document.addEventListener('mouseup',()=>{drag=null;});
+document.getElementById('cv').addEventListener('mousemove',ev=>{if(!drag)return;drag.el.style.left=(ev.clientX-drag.dx)+'px';drag.el.style.top=(ev.clientY-drag.dy)+'px';if(linkC){const r=world.getBoundingClientRect();svg.innerHTML=`<line x1="${linkC.ex}" y1="${linkC.ey}" x2="${ev.clientX-r.left}" y2="${ev.clientY-r.top}"></line>`;}paintLines();});
+function relFor(id){return RELS.filter(r=>r.f===id||r.t===id);}
+function visible(id){if(lens==="all")return true;const n=byId[id];if(lens==="evidence")return n.type==="Evidence";if(lens==="workflow")return ["Recipe","Receipt","Revision"].includes(n.type);if(lens==="lineage"){return n.type==="Draft"||relFor(id).some(r=>{const o=byId[r.f===id?r.t:r.f];return o&&o.type!=="Receipt";});}return true;}
+function paint(){NODES.forEach(n=>{const el=n._el;el.style.display=visible(n.id)?"":"none";el.classList.toggle('dim',!visible(n.id)||(lens!=="all"&&!visible(n.id)));el.querySelectorAll('*');});
+ if(lens!=="all"){NODES.forEach(n=>{n._el.classList.toggle('dim',!visible(n.id));});}
+ paintLines();}
+function paintLines(){svg.innerHTML="";const r=world.getBoundingClientRect();RELS.forEach(rel=>{const a=byId[rel.f]._el,b=byId[rel.t]._el;if(!a||!b||a.style.display==="none"||b.style.display==="none")return;
+ const ax=a.offsetLeft+a.offsetWidth,ay=a.offsetTop+18,bx=b.offsetLeft,by=b.offsetTop+18;
+ const mx=(ax+bx)/2- r.left,my=(ay+by)/2- r.top;
+ svg.innerHTML+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"></line><text class="rel" x="${mx}" y="${my}">${rel.l}</text>`;});}
+function showInsp(){const n=byId[sel];if(!n)return;insp.style.transform='translateX(0)';document.getElementById('i-title').textContent=n.title;document.getElementById('i-type').textContent=n.type.toUpperCase()+' · '+n.sub;const f=document.getElementById('i-fields');f.innerHTML='';Object.entries(n.fields).forEach(([k,v])=>{f.insertAdjacentHTML('beforeend',`<tr><td class="k">${k}</td><td>${typeof v==='object'?v.join(', '):v}</td></tr>`);});const rs=relFor(sel).map(r=>r.f===sel?`${r.l} → ${byId[r.t].title.slice(0,24)}…`:`← ${r.l} from ${byId[r.f].title.slice(0,24)}…`).join('<br>');document.getElementById('i-rels').innerHTML=rs||'(no relations)';}
+document.querySelectorAll('.lens button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.lens button').forEach(x=>x.classList.remove('on'));b.classList.add('on');lens=b.dataset.l;paint();});
+document.getElementById('zin').onclick=()=>{z=Math.min(z*1.15,2);world.style.transform=`scale(${z})`;paintLines();};
+document.getElementById('zout').onclick=()=>{z=Math.max(z/1.15,.5);world.style.transform=`scale(${z})`;paintLines();};
+paint();
+</script>
+</body>
+</html>
