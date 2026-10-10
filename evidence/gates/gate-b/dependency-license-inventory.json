@@ -539,8 +539,8 @@
     {
       "name": "db",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "defmt",
@@ -587,12 +587,6 @@
     {
       "name": "digest",
       "version": "0.11.3",
-      "license": "MIT OR Apache-2.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "dirs",
-      "version": "6.0.0",
       "license": "MIT OR Apache-2.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     },
@@ -798,12 +792,6 @@
       "name": "float-cmp",
       "version": "0.10.0",
       "license": "MIT",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "flume",
-      "version": "0.12.0",
-      "license": "Apache-2.0/MIT",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     },
     {
@@ -1031,56 +1019,50 @@
     {
       "name": "helix-ast",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "helix-ast-arena-derive",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "helix-cypher",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "helix-db",
       "version": "3.0.0",
       "license": "Apache-2.0",
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "source": null
     },
     {
       "name": "helix-dsl-macros",
       "version": "0.3.0",
       "license": "Apache-2.0",
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "source": null
     },
     {
       "name": "helix-graph-algorithms",
       "version": "0.1.0",
       "license": "Apache-2.0",
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
-    },
-    {
-      "name": "helix-metrics",
-      "version": "0.1.1",
-      "license": "AGPL-3.0",
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "source": null
     },
     {
       "name": "helix-planner",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "helix-value-semantics",
       "version": "0.1.0",
-      "license": null,
-      "source": "git+https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0c7e480f3d125f071659d5e3ad7b8da15"
+      "license": "Apache-2.0",
+      "source": null
     },
     {
       "name": "hex",
@@ -2350,12 +2332,6 @@
     },
     {
       "name": "spin",
-      "version": "0.9.9",
-      "license": "MIT",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "spin",
       "version": "0.10.1",
       "license": "MIT",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
@@ -2662,12 +2638,6 @@
     },
     {
       "name": "toml",
-      "version": "0.9.12+spec-1.1.0",
-      "license": "MIT OR Apache-2.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "toml",
       "version": "1.1.7+spec-1.1.0",
       "license": "MIT OR Apache-2.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
@@ -2675,12 +2645,6 @@
     {
       "name": "toml_datetime",
       "version": "0.6.3",
-      "license": "MIT OR Apache-2.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "toml_datetime",
-      "version": "0.7.5+spec-1.1.0",
       "license": "MIT OR Apache-2.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     },
@@ -2889,12 +2853,6 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     },
     {
-      "name": "webpki-roots",
-      "version": "1.0.9",
-      "license": "CDLA-Permissive-2.0",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
       "name": "window-vibrancy",
       "version": "0.8.1",
       "license": "Apache-2.0 OR MIT",
@@ -2909,12 +2867,6 @@
     {
       "name": "winnow",
       "version": "0.6.26",
-      "license": "MIT",
-      "source": "registry+https://github.com/rust-lang/crates.io-index"
-    },
-    {
-      "name": "winnow",
-      "version": "0.7.15",
       "license": "MIT",
       "source": "registry+https://github.com/rust-lang/crates.io-index"
     },

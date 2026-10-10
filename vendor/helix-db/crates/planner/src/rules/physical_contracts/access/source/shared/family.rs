@@ -1,0 +1,67 @@
+//! Shared access-source family contracts.
+
+use crate::{catalog, context, exec, ir, properties};
+
+pub(in crate::rules) enum AccessSourceParts<'a, Plan> {
+    Empty,
+    PointIds(&'a ir::ElementIds),
+    RuntimeInput,
+    AllScan,
+    LabelScan {
+        label: &'a ir::NonEmptyString,
+    },
+    EqualityIndex {
+        access: crate::physical::PhysicalAccess,
+        index_id: &'a ir::NonEmptyString,
+        key: &'a catalog::ScopedPropertyKey,
+        kind: EqualityIndexKind,
+        semantics: ir::EqualityIndexValueSemantics,
+        /// Indexed values the lookup reads: those of a literal set, and one
+        /// for any single value or runtime parameter.
+        indexed_values: usize,
+    },
+    RangeIndex {
+        iteration: ir::RangeScanIteration,
+        key: &'a catalog::ScopedPropertyDirectionKey,
+    },
+    VectorSearch {
+        k: &'a ir::SearchLimitPlan,
+    },
+    TextSearch {
+        k: &'a ir::SearchLimitPlan,
+    },
+    Intersect(Vec<&'a Plan>),
+    Union(Vec<&'a Plan>),
+    ScanThenFilter {
+        source: &'a Plan,
+        residual: &'a ir::PredicatePlan,
+    },
+    /// Index-only branch sets, each with the residual its own rows must
+    /// satisfy.
+    BranchResidualUnion(Vec<(&'a Plan, Option<&'a ir::PredicatePlan>)>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::rules) enum EqualityIndexKind {
+    Unique,
+    NonUnique,
+}
+
+pub(in crate::rules) trait AccessSourceFamily {
+    type Plan;
+
+    fn element() -> properties::ElementKind;
+    fn point_keyspace() -> exec::ElementKeyspace;
+    fn all_scan_keyspace() -> exec::ElementKeyspace;
+    fn source_parts(plan: &Self::Plan) -> AccessSourceParts<'_, Self::Plan>;
+    fn label_cardinality(stats: &context::StatsSnapshot, label: &ir::NonEmptyString)
+        -> Option<u64>;
+    fn equality_cardinality(
+        stats: &context::StatsSnapshot,
+        key: &catalog::ScopedPropertyKey,
+    ) -> Option<u64>;
+    fn range_cardinality(
+        stats: &context::StatsSnapshot,
+        key: &catalog::ScopedPropertyDirectionKey,
+    ) -> Option<u64>;
+}

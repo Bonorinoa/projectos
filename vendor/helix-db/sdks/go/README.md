@@ -1,0 +1,335 @@
+# HelixDB Go SDK
+
+Go SDK for building and executing HelixDB server queries. Version `v0.3.1`
+ships the operation-tree query builder and HTTP client.
+
+## Install
+
+```sh
+go get github.com/helixdb/helix-db/sdks/go@v0.3.1
+```
+
+```go
+import helix "github.com/helixdb/helix-db/sdks/go"
+```
+
+## Query Functions
+
+Write normal Go functions that return `helix.Request`. Set the query name with `ReadQuery` or `WriteQuery`, declare runtime parameters inline, then pass the request to `Client.Exec`.
+
+```go
+type UserRow struct {
+	ID       int64  `json:"$id"`
+	Name     string `json:"name"`
+	TenantID string `json:"tenantId"`
+}
+
+type FindUsersResponse struct {
+	Users []UserRow `json:"users"`
+}
+
+func FindUsers(tenantID string, limit int64) helix.Request {
+	q := helix.ReadQuery("find_users")
+
+	tenant := q.ParamString("tenant_id", tenantID)
+	maxRows := q.ParamI64("limit", limit)
+
+	return q.
+		VarAs("users",
+			helix.G().
+				NWithLabel("User").
+				Where(helix.PredEq("tenantId", tenant)).
+				Limit(maxRows).
+				ValueMap("$id", "name", "tenantId"),
+		).
+		Returning("users")
+}
+```
+
+## Execute
+
+```go
+client, err := helix.NewClient("http://localhost:6969")
+if err != nil {
+	return err
+}
+
+var out FindUsersResponse
+err = client.Exec(ctx, FindUsers("acme", 25), &out)
+```
+
+Pass `helix.WarmOnly()` to mark a read for cache warming. Helix Cloud fans the
+request out to every eligible backend and returns `204 No Content` after at
+least one succeeds, so do not expect a query payload. Combine it with
+`helix.WriterOnly()` to warm only the authoritative writer. Warm writes return
+`400 Bad Request` before backend execution. A standalone local warm read can
+return its normal query payload instead.
+
+```go
+err = client.Exec(ctx, FindUsers("acme", 25), nil, helix.WarmOnly())
+```
+
+## Writes
+
+```go
+type CreateUserResponse struct {
+	User []UserRow `json:"user"`
+}
+
+func CreateUser(name string, tenantID string) helix.Request {
+	q := helix.WriteQuery("create_user")
+
+	nameParam := q.ParamString("name", name)
+	tenant := q.ParamString("tenant_id", tenantID)
+
+	return q.
+		VarAs("user",
+			helix.G().AddN("User", helix.Props{
+				helix.Prop("name", nameParam),
+				helix.Prop("tenantId", tenant),
+			}),
+		).
+		Returning("user")
+}
+
+err = client.Exec(ctx, CreateUser("Alice", "acme"), &created,
+	helix.WriterOnly(),
+	helix.AwaitDurability(true),
+)
+```
+
+## Parameters
+
+Parameter helpers insert both runtime values and `parameter_types` metadata:
+
+```go
+q := helix.ReadQuery("recent_users")
+tenant := q.ParamString("tenant_id", "acme")
+createdAfter := q.ParamDateTime("created_after", "2026-01-01T00:00:00.000Z")
+limit := q.ParamI64("limit", int64(10))
+```
+
+Parameter refs can be used in predicates, property inputs, and bounds.
+
+For low-level request construction, wrap a typed batch with
+`NewReadQueryRequest` or `NewWriteQueryRequest`. Typed parameter metadata and
+its value are inserted atomically; explicitly untyped requests use
+`WithUntypedParameter` instead:
+
+```go
+request := helix.NewReadQueryRequest(
+	helix.Read().VarAs("users", helix.G().N(helix.AllNodes()).Count()).Returning("users"),
+).
+	WithQueryName("count_users").
+	WithTypedParameter("tenant_id", helix.ParamTypeString(), helix.QueryString("acme"))
+```
+
+Direct Go values are serialized as literals in the inline AST. For example,
+`helix.SourceEq("id", "foo")` inlines the string `"foo"`; it does not create a
+runtime parameter. For request-specific values, declare a `q.Param*` value and
+pass the returned ref so stable query shapes can reuse server caches:
+
+```go
+id := q.ParamString("id", userID)
+helix.G().NWhere(helix.SourceEq("id", id))
+```
+
+Always pass explicit names to `Returning(...)` for values you want back. A
+zero-arg `Returning()` is supported for intentional empty responses and
+serializes as `"returns":[]`.
+
+## Traversal-scoped text search
+
+Use `TextSearchNodesWithin` or `TextSearchEdgesWithin` after building a
+candidate traversal. These methods perform exact BM25 ranking over only the
+current IDs. Results equal an exhaustive search of the selected tenant
+partition, intersected with the unique input IDs, followed by deterministic
+top-`k` selection.
+
+BM25 statistics still come from the full tenant partition.
+
+```go
+func SearchVisibleDocuments(tenantID, queryText string, limit int64) helix.Request {
+	q := helix.ReadQuery("search_visible_documents")
+	tenant := q.ParamString("tenant_id", tenantID)
+	query := q.ParamString("query", queryText)
+	k := q.ParamI64("limit", limit)
+
+	return q.
+		VarAs("documents",
+			helix.G().
+				NWithLabel("Document").
+				Where(helix.PredEq("tenantId", tenant)).
+				TextSearchNodesWithin("Document", "body", query, k, tenant).
+				Project(
+					helix.ProjectPropAs("$id", "id"),
+					helix.ProjectPropAs("$score", "score"),
+					helix.ProjectProp("title"),
+				),
+		).
+		Returning("documents")
+}
+```
+
+The typed runtime-input forms are `TextSearchNodesWithinWith` and
+`TextSearchEdgesWithinWith`. Source-level `TextSearchNodes[With]` and
+`TextSearchEdges[With]` remain whole-partition searches.
+
+Restricted results contain unique input IDs, return at most `k`, and order by
+`$score` descending then entity ID ascending. The selected input row keeps its
+bindings, path, and sack. An empty input returns without opening the text
+index. A wrong-kind input or more than 1,000,000 unique candidates is a query
+error. For a tenant-scoped index, pass the same tenant partition used to build
+the candidate stream.
+
+## Row Bindings
+
+Use `Bind(...)` when a multi-hop traversal needs to keep earlier elements
+correlated with later results. Row bindings are row-local: each path keeps its
+own named bindings, and `ProjectDistinctBindings(...)` can emit one output row
+per projected tuple.
+
+```go
+func ServiceWorkloads(tenantID string) helix.Request {
+	q := helix.ReadQuery("service_workloads")
+	tenant := q.ParamString("tenant_id", tenantID)
+
+	return q.
+		VarAs("dependencies",
+			helix.G().
+				NWithLabel("Service").
+				Where(helix.PredEq("tenantId", tenant)).
+				Bind("service").
+				Out("ROUTES_TO").
+				Where(helix.PredEq("tenantId", tenant)).
+				Bind("pod").
+				In("MANAGES").
+				Where(helix.PredEq("tenantId", tenant)).
+				Bind("owner").
+				Union(
+					helix.Sub().
+						Where(helix.PredEq("type", "ReplicaSet")).
+						In("CREATES").
+						Where(helix.PredEq("type", "Deployment")).
+						Where(helix.PredEq("tenantId", tenant)).
+						Bind("workload"),
+					helix.Sub().
+						Where(helix.PredIsIn("type", []string{"Deployment", "StatefulSet", "DaemonSet"})).
+						Bind("workload"),
+				).
+				ProjectDistinctBindings(
+					helix.ProjectNamedBinding("service", "$id", "service_id"),
+					helix.ProjectNamedBinding("workload", "$id", "workload_id"),
+				),
+		).
+		Returning("dependencies")
+}
+```
+
+Binding projections can read virtual fields such as `$id`, `$label`, `$from`,
+`$to`, `$distance`, and `$score` from either the current element or a named
+binding. Use `ProjectBindingCoalesce(...)` when optional branches may or may not
+create a binding.
+
+## Conflicts And Retries
+
+`Client.Exec` does not retry HTTP 409 conflicts automatically. Callers should
+retry only when the operation is safe to replay. Remote errors are returned as
+`*helix.HelixError` with `StatusCode` and the static `Code` populated. Use
+`helix.IsConflict(err)` or `errors.Is(err, helix.ErrConflict)` to detect HTTP
+409:
+
+The canonical [query error-code reference](../../docs/database/helix-db/query-guides/error-handling.mdx)
+documents the complete catalog and migration contract.
+
+```go
+func ExecWithConflictRetry(ctx context.Context, client *helix.Client, build func() helix.Request, out any) error {
+	for attempt := 0; attempt < 3; attempt++ {
+		err := client.Exec(ctx, build(), out)
+		if err == nil || !helix.IsConflict(err) || attempt == 2 {
+			return err
+		}
+		time.Sleep(time.Duration(attempt+1) * 50 * time.Millisecond)
+	}
+	return nil
+}
+```
+
+## Release scope
+
+Version `v0.3.1` does not distribute the generated native bindings required by
+the embedded database or native graph algorithms. A standard module install
+returns `ErrNativeBindingsUnavailable` from embedded constructors and
+`ErrNativeGraphUnavailable` from `Client.Graph`. Do not enable the
+`helixdb_uniffi` build tag unless you separately generate and link compatible
+bindings and native libraries.
+
+## Notes
+
+- Go queries post to `/v2/query` through `client.Exec`.
+- Stored-query registration and bundle generation are not supported.
+- Use `MarshalRequest(req)` only for tests, parity fixtures, or debugging.
+- `int64` values serialize as JSON numbers; response decoding uses `json.Decoder.UseNumber()`.
+- Datetime parameters serialize as RFC3339 UTC strings with millisecond precision.
+- Query JSON cannot represent bytes parameters; bytes remain valid node and edge property values.
+- Non-success responses return `*HelixError` with `Kind: ErrorRemote`, `Details`, and `StatusCode`; Cloud warm success is `204 No Content` with no payload.
+
+## Cypher
+
+Clients built from this checkout expose additive Cypher methods for HTTP and
+embedded connections. See the [Cypher reference](../../docs/cypher.md) for the
+language profile, parameters, lossless values, and transaction behavior. Native
+DSL query methods keep their existing contract.
+
+`Client.Cypher` posts one statement to `/v2/cypher` and returns its columns and
+rows. It sends the statement once and never retries it, so an uncertain
+modifying statement is not replayed.
+
+```go
+result, err := client.Cypher(ctx, helix.CypherRequest{
+	Query:      "MATCH (u:User {tenantId: $tenant}) RETURN u.name AS name",
+	Parameters: map[string]any{"tenant": "acme"},
+	QueryName:  "user_names",
+})
+```
+
+`Client.ExplainCypher` posts the same request to `/v2/cypher/explain` and
+returns the plan as a `map[string]any` with `effect`, `bindings`, `returns`,
+`operators`, `planner`, and `notices`. It does not execute the statement, so
+explaining a modifying statement writes nothing.
+
+```go
+plan, err := client.ExplainCypher(ctx, helix.CypherRequest{
+	Query:      "CREATE (:User {name: $name})",
+	Parameters: map[string]any{"name": "Ada"},
+})
+```
+
+Both methods accept the same options as `Exec`: `helix.WarmOnly()` for reads,
+`helix.WriterOnly()`, and `helix.AwaitDurability(bool)` for writes. The server
+rejects `AwaitDurability(true)` on explain because explaining never commits.
+Both send the API key and the database ID set with `WithDatabaseID`. Helix
+Cloud gateways require the database ID on every query route, including both
+Cypher routes, and otherwise return `400 tenant_id_required`.
+
+```go
+client, err := helix.NewClient(cloudURL,
+	helix.WithAPIKey(apiKey),
+	helix.WithDatabaseID(databaseID),
+)
+created, err := client.Cypher(ctx, helix.CypherRequest{Query: "CREATE (:User {name: 'Ada'})"},
+	helix.WriterOnly(),
+	helix.AwaitDurability(true),
+)
+```
+
+Responses decode with `json.Decoder.UseNumber()`, so large integers stay exact.
+If a warm read returns `204 No Content`, `Cypher` returns an empty
+`CypherResponse` and `ExplainCypher` a nil map. A Cypher diagnostic is a
+`*HelixError` with `Code` set to its category, `Details` to its message, and
+`ServerDetails` to the raw `{"detail","phase","span"}` JSON. HTTP 409 matches
+`ErrConflict`, as it does for `Exec`.
+
+Embedded clients reject options with `ErrorInvalidRequest`, as `Exec` does.
+`ExplainCypher` returns `ErrorEmbeddedUnavailable` when the linked native
+bindings predate Cypher explain support.

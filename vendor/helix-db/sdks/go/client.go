@@ -1,0 +1,450 @@
+package helix
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+)
+
+type ErrorKind string
+type QueryErrorCode string
+
+const (
+	ErrorNetwork             ErrorKind = "Network"
+	ErrorRemote              ErrorKind = "Remote"
+	ErrorSerialization       ErrorKind = "Serialization"
+	ErrorInvalidURL          ErrorKind = "InvalidUrl"
+	ErrorInvalidRequest      ErrorKind = "InvalidRequest"
+	ErrorEmbedded            ErrorKind = "Embedded"
+	ErrorEmbeddedUnavailable ErrorKind = "EmbeddedUnavailable"
+)
+
+var ErrConflict = errors.New("helix: conflict")
+var ErrNativeBindingsUnavailable = errors.New("helix embedded native bindings are not linked")
+
+type HelixError struct {
+	Kind       ErrorKind
+	Code       QueryErrorCode
+	Details    string
+	StatusCode int
+	Retryable  *bool
+	Err        error
+	// ServerDetails holds the raw JSON of the server's structured error
+	// details, or is empty when the server sent none. A string keeps
+	// HelixError comparable.
+	ServerDetails string
+}
+
+func (e *HelixError) Error() string {
+	if e.Details != "" {
+		return fmt.Sprintf("helix %s error: %s", e.Kind, e.Details)
+	}
+	if e.Err != nil {
+		return fmt.Sprintf("helix %s error: %v", e.Kind, e.Err)
+	}
+	return "helix " + string(e.Kind) + " error"
+}
+
+func (e *HelixError) Unwrap() error { return e.Err }
+
+func IsConflict(err error) bool {
+	var helixErr *HelixError
+	return errors.Is(err, ErrConflict) || errors.As(err, &helixErr) && helixErr.Kind == ErrorRemote && helixErr.StatusCode == http.StatusConflict
+}
+
+// IsRetryable reports whether a failure is explicitly retryable. Remote
+// failures are retryable only when the server says so; embedded
+// index_backpressure failures are retryable because the whole request was
+// rejected without effect: a write before commit, or a strong search.
+func IsRetryable(err error) bool {
+	var helixErr *HelixError
+	if !errors.As(err, &helixErr) {
+		return false
+	}
+	if helixErr.Kind == ErrorEmbedded {
+		return helixErr.Code == QueryErrorCodeIndexBackpressure
+	}
+	return helixErr.Kind == ErrorRemote && helixErr.Retryable != nil && *helixErr.Retryable
+}
+
+// QueryErrorCodeIndexBackpressure marks requests rejected because asynchronous
+// vector/text index work reached a limit (HTTP 429, gRPC resource-exhausted):
+// a write before commit because the index backlog is full, or a strong search
+// whose answer lies behind more than 800 unpublished changes. Eventual
+// searches are never rejected this way. Retry the unchanged request after a
+// backoff.
+const QueryErrorCodeIndexBackpressure QueryErrorCode = "index_backpressure"
+
+// IsIndexBackpressure reports whether asynchronous index work rejected the
+// request: a write before commit, or a strong search.
+func IsIndexBackpressure(err error) bool {
+	var helixErr *HelixError
+	return errors.As(err, &helixErr) && (helixErr.Kind == ErrorRemote || helixErr.Kind == ErrorEmbedded) && helixErr.Code == QueryErrorCodeIndexBackpressure
+}
+
+type Client struct {
+	baseURL      *url.URL
+	httpClient   *http.Client
+	embedded     nativeDB
+	apiKeyMu     sync.RWMutex
+	apiKey       string
+	databaseIDMu sync.RWMutex
+	databaseID   string
+}
+
+type nativeDB interface {
+	QueryJson([]byte) ([]byte, error)
+	Close() error
+}
+
+type nativeQueryError interface {
+	error
+	QueryError() (QueryErrorCode, string)
+}
+
+func embeddedError(err error) *HelixError {
+	result := &HelixError{Kind: ErrorEmbedded, Err: err, Details: err.Error()}
+	var queryErr nativeQueryError
+	if errors.As(err, &queryErr) {
+		result.Code, result.Details = queryErr.QueryError()
+	}
+	return result
+}
+
+type HelixDbSource interface {
+	helixDbSource()
+}
+
+type InMemorySource struct {
+	Database string
+}
+
+func (InMemorySource) helixDbSource() {}
+
+type DiskSource struct {
+	Root     string
+	Database string
+}
+
+func (DiskSource) helixDbSource() {}
+
+type ObjectStorageSource struct {
+	Database  string
+	Bucket    string
+	Region    string
+	Endpoint  string
+	AllowHTTP bool
+}
+
+func (ObjectStorageSource) helixDbSource() {}
+
+type EmbeddedCacheMode interface {
+	embeddedCacheMode()
+}
+
+type VectorMemoryOnlyCache struct{}
+
+func (VectorMemoryOnlyCache) embeddedCacheMode() {}
+
+type MemoryCache struct{}
+
+func (MemoryCache) embeddedCacheMode() {}
+
+type HybridCache struct {
+	SlateMemoryBytes     uint64
+	SlateDiskPath        string
+	SlateDiskBytes       uint64
+	ObjectStoreDiskPath  string
+	ObjectStoreDiskBytes uint64
+}
+
+func (HybridCache) embeddedCacheMode() {}
+
+type EmbeddedCacheConfig struct {
+	VectorMemoryBytes uint64
+	Mode              EmbeddedCacheMode
+}
+
+type ClientOption func(*Client)
+
+func WithHTTPClient(httpClient *http.Client) ClientOption {
+	return func(c *Client) {
+		if httpClient != nil {
+			c.httpClient = httpClient
+		}
+	}
+}
+
+func WithAPIKey(apiKey string) ClientOption {
+	return func(c *Client) { c.setAPIKey(apiKey) }
+}
+
+func WithDatabaseID(databaseID string) ClientOption {
+	return func(c *Client) { c.setDatabaseID(databaseID) }
+}
+
+func NewClient(baseURL string, opts ...ClientOption) (*Client, error) {
+	if baseURL == "" {
+		baseURL = "http://localhost:6969"
+	}
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		if err == nil {
+			err = fmt.Errorf("missing scheme or host")
+		}
+		return nil, &HelixError{Kind: ErrorInvalidURL, Err: err, Details: err.Error()}
+	}
+	client := &Client{baseURL: parsed, httpClient: http.DefaultClient}
+	for _, opt := range opts {
+		opt(client)
+	}
+	return client, nil
+}
+
+func NewEmbeddedClient(source HelixDbSource, opts ...ClientOption) (*Client, error) {
+	return newEmbeddedClient(source, nil, false, opts...)
+}
+
+func NewEmbeddedClientWithConfig(source HelixDbSource, cache EmbeddedCacheConfig, opts ...ClientOption) (*Client, error) {
+	return newEmbeddedClient(source, &cache, false, opts...)
+}
+
+func newEmbeddedClient(source HelixDbSource, cache *EmbeddedCacheConfig, reader bool, opts ...ClientOption) (*Client, error) {
+	db, err := openEmbedded(source, reader, cache)
+	if err != nil {
+		kind := ErrorEmbedded
+		if errors.Is(err, ErrNativeBindingsUnavailable) {
+			kind = ErrorEmbeddedUnavailable
+		}
+		if kind == ErrorEmbedded {
+			return nil, embeddedError(err)
+		}
+		return nil, &HelixError{Kind: kind, Err: err, Details: err.Error()}
+	}
+	client := &Client{embedded: db, httpClient: http.DefaultClient}
+	for _, opt := range opts {
+		opt(client)
+	}
+	return client, nil
+}
+
+func NewEmbeddedReaderClient(source HelixDbSource, opts ...ClientOption) (*Client, error) {
+	return newEmbeddedClient(source, nil, true, opts...)
+}
+
+func NewEmbeddedReaderClientWithConfig(source HelixDbSource, cache EmbeddedCacheConfig, opts ...ClientOption) (*Client, error) {
+	return newEmbeddedClient(source, &cache, true, opts...)
+}
+
+func (c *Client) WithAPIKey(apiKey string) *Client         { c.setAPIKey(apiKey); return c }
+func (c *Client) ClearAPIKey() *Client                     { c.setAPIKey(""); return c }
+func (c *Client) WithDatabaseID(databaseID string) *Client { c.setDatabaseID(databaseID); return c }
+func (c *Client) ClearDatabaseID() *Client                 { c.setDatabaseID(""); return c }
+func (c *Client) BaseURL() string {
+	if c == nil || c.baseURL == nil {
+		return ""
+	}
+	return c.baseURL.String()
+}
+
+func (c *Client) setAPIKey(apiKey string) {
+	if c == nil {
+		return
+	}
+	c.apiKeyMu.Lock()
+	c.apiKey = apiKey
+	c.apiKeyMu.Unlock()
+}
+
+func (c *Client) getAPIKey() string {
+	c.apiKeyMu.RLock()
+	apiKey := c.apiKey
+	c.apiKeyMu.RUnlock()
+	return apiKey
+}
+
+func (c *Client) setDatabaseID(databaseID string) {
+	if c == nil {
+		return
+	}
+	c.databaseIDMu.Lock()
+	c.databaseID = databaseID
+	c.databaseIDMu.Unlock()
+}
+
+func (c *Client) getDatabaseID() string {
+	c.databaseIDMu.RLock()
+	databaseID := c.databaseID
+	c.databaseIDMu.RUnlock()
+	return databaseID
+}
+
+type execOptions struct {
+	writerOnly      bool
+	warmOnly        bool
+	awaitDurability *bool
+}
+
+type ExecOption func(*execOptions)
+
+func WriterOnly() ExecOption { return func(o *execOptions) { o.writerOnly = true } }
+func WarmOnly() ExecOption   { return func(o *execOptions) { o.warmOnly = true } }
+func AwaitDurability(should bool) ExecOption {
+	return func(o *execOptions) { o.awaitDurability = &should }
+}
+
+// rejectEmbedded fails when any option is set, because exec options are
+// server request headers with no embedded equivalent.
+func (o execOptions) rejectEmbedded() error {
+	if !o.writerOnly && !o.warmOnly && o.awaitDurability == nil {
+		return nil
+	}
+	return &HelixError{
+		Kind:    ErrorInvalidRequest,
+		Code:    QueryErrorCode("invalid_request"),
+		Details: "exec options require server mode",
+	}
+}
+
+// setHeaders applies the headers every HTTP query route shares: JSON content,
+// the API key and database ID when set, and the request's exec options.
+func (c *Client) setHeaders(request *http.Request, options execOptions) {
+	request.Header.Set("Content-Type", "application/json")
+	if apiKey := c.getAPIKey(); apiKey != "" {
+		request.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	if dbID := c.getDatabaseID(); dbID != "" {
+		request.Header.Set("x-helix-database-id", dbID)
+	}
+	if options.writerOnly {
+		request.Header.Set("x-helix-require-writer", "true")
+	}
+	if options.warmOnly {
+		request.Header.Set("x-helix-warm", "true")
+	}
+	if options.awaitDurability != nil {
+		request.Header.Set("x-helix-await-durable", strconv.FormatBool(*options.awaitDurability))
+	}
+}
+
+func (c *Client) Exec(ctx context.Context, req Request, out any, opts ...ExecOption) error {
+	if c == nil {
+		return &HelixError{Kind: ErrorInvalidURL, Details: "nil client"}
+	}
+	body, err := MarshalRequest(req)
+	if err != nil {
+		return &HelixError{Kind: ErrorSerialization, Err: err, Details: err.Error()}
+	}
+	options := execOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	if c.embedded != nil {
+		if err := options.rejectEmbedded(); err != nil {
+			return err
+		}
+		response, err := c.embedded.QueryJson(body)
+		if err != nil {
+			return embeddedError(err)
+		}
+		if out == nil || len(response) == 0 {
+			return nil
+		}
+		decoder := json.NewDecoder(bytes.NewReader(response))
+		decoder.UseNumber()
+		if err := decoder.Decode(out); err != nil {
+			return &HelixError{Kind: ErrorSerialization, Err: err, Details: err.Error()}
+		}
+		return nil
+	}
+	if c.baseURL == nil {
+		return &HelixError{Kind: ErrorInvalidURL, Details: "nil server client"}
+	}
+	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/v2/query"})
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(body))
+	if err != nil {
+		return &HelixError{Kind: ErrorInvalidURL, Err: err, Details: err.Error()}
+	}
+	c.setHeaders(httpReq, options)
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return &HelixError{Kind: ErrorNetwork, Err: err, Details: err.Error()}
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &HelixError{Kind: ErrorNetwork, Err: err, Details: err.Error()}
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		remoteErr := decodeRemoteError(respBody, resp.Status, resp.StatusCode)
+		if resp.StatusCode == http.StatusConflict {
+			remoteErr.Err = ErrConflict
+		}
+		return remoteErr
+	}
+	if out == nil || len(respBody) == 0 {
+		return nil
+	}
+	decoder := json.NewDecoder(bytes.NewReader(respBody))
+	decoder.UseNumber()
+	if err := decoder.Decode(out); err != nil {
+		return &HelixError{Kind: ErrorSerialization, Err: err, Details: err.Error()}
+	}
+	return nil
+}
+
+func (c *Client) Close() error {
+	if c == nil || c.embedded == nil {
+		return nil
+	}
+	if err := c.embedded.Close(); err != nil {
+		return embeddedError(err)
+	}
+	return nil
+}
+
+func decodeRemoteError(body []byte, fallback string, statusCode int) *HelixError {
+	var envelope struct {
+		Details   json.RawMessage `json:"details"`
+		Error     string          `json:"error"`
+		Msg       *string         `json:"msg"`
+		Code      *string         `json:"code"`
+		Retryable *bool           `json:"retryable"`
+	}
+	if json.Unmarshal(body, &envelope) == nil && envelope.Error != "" {
+		if envelope.Msg != nil {
+			return &HelixError{
+				Kind:          ErrorRemote,
+				Code:          QueryErrorCode(envelope.Error),
+				Details:       *envelope.Msg,
+				StatusCode:    statusCode,
+				Retryable:     envelope.Retryable,
+				ServerDetails: string(envelope.Details),
+			}
+		}
+		code := QueryErrorCode("")
+		if envelope.Code != nil {
+			code = QueryErrorCode(*envelope.Code)
+		}
+		return &HelixError{
+			Kind:          ErrorRemote,
+			Code:          code,
+			Details:       envelope.Error,
+			StatusCode:    statusCode,
+			Retryable:     envelope.Retryable,
+			ServerDetails: string(envelope.Details),
+		}
+	}
+	details := string(body)
+	if details == "" {
+		details = fallback
+	}
+	return &HelixError{Kind: ErrorRemote, Details: details, StatusCode: statusCode}
+}

@@ -1,0 +1,654 @@
+//! Graph expansion execution for executable access plans.
+//!
+//! This module owns traversal expansion from current node rows to neighboring
+//! node rows or concrete edge rows. Access dispatch and index/search lookup stay
+//! in sibling modules.
+
+use std::collections::BTreeSet;
+
+use futures::{FutureExt as _, StreamExt as _};
+use helix_planner::ir;
+
+use super::super::*;
+use crate::encoding::keys;
+#[cfg(test)]
+use crate::encoding::v2::values;
+use crate::query_resources::adjacency;
+use crate::query_resources::bitmap;
+
+/// Parents one expansion window reads before dropping them: a record batch.
+const EXPANSION_WINDOW_ROWS: usize = helix_planner::cost::RECORD_BATCH_ROWS as usize;
+
+impl<'db> ExecutionContext<'db> {
+    /// Expands every input row, in parent order and each parent's neighbour
+    /// order.
+    ///
+    /// Parents' neighbour reads overlap, up to the request's shared index-read
+    /// budget, so a cold scope of many parents waits for a few reads in turn
+    /// rather than one per parent. Each parent keeps its own point reads:
+    /// adjacency values are merge operands, which SlateDB resolves one key at
+    /// a time even inside a multi-get. Parents are taken a record batch at a
+    /// time and dropped once expanded, so the input is freed as the output
+    /// grows. The first failing parent in order fails the expansion.
+    pub(in crate::execution::interpreter) async fn expand(
+        &self,
+        input: ExecutionValue,
+        plan: &ir::ExpandPlan,
+    ) -> Result<ExecutionValue> {
+        let this = self;
+        let mut rows = this.stream_rows(input, "expand")?.into_iter();
+        let label = match plan.output {
+            ir::ExpandOutput::Nodes => None,
+            ir::ExpandOutput::Edges => this.edge_output_label(&plan.label).await?,
+        };
+        let label = label.as_ref();
+        let mut expanded = Vec::new();
+        loop {
+            let window = rows
+                .by_ref()
+                .take(EXPANSION_WINDOW_ROWS)
+                .collect::<Vec<_>>();
+            if window.is_empty() {
+                return Ok(ExecutionValue::Stream(expanded));
+            }
+            let mut parents = this.read_children(
+                window.iter().collect(),
+                super::PARALLEL_INDEX_READS,
+                |row, _| {
+                    async move {
+                        this.expansion_ids(row, plan, label)
+                            .await
+                            .map(|ids| (row, ids))
+                    }
+                    .boxed()
+                },
+            );
+            while let Some(parent) = parents.next().await {
+                let (row, ids) = parent?;
+                for id in ids {
+                    this.check_execution_deadline()?;
+                    let mut next = row.clone();
+                    next.set_current(match plan.output {
+                        ir::ExpandOutput::Nodes => ElementRef::Node(id),
+                        ir::ExpandOutput::Edges => ElementRef::Edge(id),
+                    });
+                    expanded.push(next);
+                }
+            }
+        }
+    }
+
+    /// Neighborhood candidates for a graph-pattern expansion. Label-neighbor
+    /// indexes prune endpoints, but parallel edges can have different types.
+    /// The row operator must check candidate types before expanding another hop.
+    /// This avoids reading the global relationship-label bitmap per source node.
+    #[cfg(test)]
+    pub(in crate::execution::interpreter) async fn expand_edge_candidate_ids(
+        &self,
+        node_id: u64,
+        direction: ir::ExpandDirection,
+        label: &ir::ExpandLabelPlan,
+        target: Option<u64>,
+        batch_size: usize,
+    ) -> Result<bitmap::Bitmap> {
+        Box::pin(super::EdgeCursor::new(
+            self, node_id, direction, label, target, batch_size,
+        ))
+        .await?
+        .collect(self, None)
+        .await
+    }
+
+    /// Prepares only one parent's ordered identifiers. Edge order requires every
+    /// neighbor pair for this parent; rows and subsequent parents remain lazy.
+    pub(in crate::execution::interpreter) async fn expansion_ids(
+        &self,
+        row: &ExecutionRow,
+        plan: &ir::ExpandPlan,
+        label: Option<&EdgeOutputExpansionLabel<'_>>,
+    ) -> Result<std::vec::IntoIter<u64>> {
+        self.check_execution_deadline()?;
+        #[cfg(test)]
+        self.pull_work
+            .expansion_parents
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        match plan.output {
+            ir::ExpandOutput::Nodes => {
+                let ids = match row.current.as_ref() {
+                    Some(ElementRef::Node(node_id)) => match &plan.label {
+                        ir::ExpandLabelPlan::Any => {
+                            self.expand_any_edges(*node_id, plan.direction).await?
+                        }
+                        ir::ExpandLabelPlan::Label(label) => {
+                            self.expand_labeled_edges(*node_id, plan.direction, label)
+                                .await?
+                        }
+                    },
+                    Some(ElementRef::Edge(edge_id)) => {
+                        let Some((from, to)) = self.get_edge_endpoints(*edge_id).await? else {
+                            return Ok(Vec::new().into_iter());
+                        };
+                        match plan.direction {
+                            ir::ExpandDirection::Out => vec![to],
+                            ir::ExpandDirection::In => vec![from],
+                            ir::ExpandDirection::Both => {
+                                let previous_node =
+                                    row.path.elements().iter().rev().find_map(|element| {
+                                        match element {
+                                            ElementRef::Node(id) => Some(*id),
+                                            ElementRef::Edge(_) => None,
+                                        }
+                                    });
+                                match previous_node {
+                                    Some(previous) if previous == from => vec![to],
+                                    Some(previous) if previous == to => vec![from],
+                                    _ if from == to => vec![from],
+                                    _ => vec![from, to],
+                                }
+                            }
+                        }
+                    }
+                    None => return Ok(Vec::new().into_iter()),
+                };
+                Ok(ids.into_iter())
+            }
+            ir::ExpandOutput::Edges => {
+                let Some(ElementRef::Node(node_id)) = row.current.as_ref() else {
+                    return Ok(Vec::new().into_iter());
+                };
+                let ids = match label {
+                    None => return Ok(Vec::new().into_iter()),
+                    Some(EdgeOutputExpansionLabel::Any) => {
+                        self.expand_any_edge_ids(*node_id, plan.direction, 512)
+                            .await?
+                    }
+                    Some(EdgeOutputExpansionLabel::Label { label, edge_ids }) => {
+                        self.expand_labeled_edge_ids(
+                            *node_id,
+                            plan.direction,
+                            label,
+                            Some(edge_ids),
+                            512,
+                        )
+                        .await?
+                    }
+                };
+                Ok(ids.into_iter().collect::<Vec<_>>().into_iter())
+            }
+        }
+    }
+
+    pub(in crate::execution::interpreter) async fn edge_output_label<'a>(
+        &self,
+        label: &'a ir::ExpandLabelPlan,
+    ) -> Result<Option<EdgeOutputExpansionLabel<'a>>> {
+        match label {
+            ir::ExpandLabelPlan::Any => Ok(Some(EdgeOutputExpansionLabel::Any)),
+            ir::ExpandLabelPlan::Label(label) => {
+                let edge_ids = self.lookup_global_edge_label_index(label.as_ref()).await?;
+                Ok((!edge_ids.is_empty())
+                    .then_some(EdgeOutputExpansionLabel::Label { label, edge_ids }))
+            }
+        }
+    }
+
+    async fn expand_any_edges(
+        &self,
+        node_id: u64,
+        direction: ir::ExpandDirection,
+    ) -> Result<Vec<u64>> {
+        let key = keys::DataKey::Data {
+            scope: self.tenant_scope,
+            kind: keys::DataKeyKind::Adjacency(keys::AdjacencyKey::new(node_id)),
+        }
+        .to_bytes();
+        let Some(value) = self.get_raw(&key).await? else {
+            return Ok(Vec::new());
+        };
+        let edges = adjacency::Adjacency::decode(&value, self.row_memory.as_ref())?;
+        let mut out = BTreeSet::new();
+        match direction {
+            ir::ExpandDirection::Out | ir::ExpandDirection::Both => out.extend(edges.iter_out()),
+            ir::ExpandDirection::In => {}
+        }
+        match direction {
+            ir::ExpandDirection::In | ir::ExpandDirection::Both => out.extend(edges.iter_in()),
+            ir::ExpandDirection::Out => {}
+        }
+        Ok(out.into_iter().collect())
+    }
+
+    async fn expand_any_edge_ids(
+        &self,
+        node_id: u64,
+        direction: ir::ExpandDirection,
+        batch_size: usize,
+    ) -> Result<bitmap::Bitmap> {
+        Box::pin(super::EdgeCursor::new(
+            self,
+            node_id,
+            direction,
+            &ir::ExpandLabelPlan::Any,
+            None,
+            batch_size,
+        ))
+        .await?
+        .collect(self, None)
+        .await
+    }
+
+    async fn expand_labeled_edges(
+        &self,
+        node_id: u64,
+        direction: ir::ExpandDirection,
+        label: &ir::NonEmptyString,
+    ) -> Result<Vec<u64>> {
+        let mut out = BTreeSet::new();
+        match direction {
+            ir::ExpandDirection::Out | ir::ExpandDirection::Both => {
+                out.extend(
+                    self.lookup_out_neighbors_by_label(node_id, label.as_ref())
+                        .await?,
+                );
+            }
+            ir::ExpandDirection::In => {}
+        }
+        match direction {
+            ir::ExpandDirection::In | ir::ExpandDirection::Both => {
+                out.extend(
+                    self.lookup_in_neighbors_by_label(node_id, label.as_ref())
+                        .await?,
+                );
+            }
+            ir::ExpandDirection::Out => {}
+        }
+        Ok(out.into_iter().collect())
+    }
+
+    async fn expand_labeled_edge_ids(
+        &self,
+        node_id: u64,
+        direction: ir::ExpandDirection,
+        label: &ir::NonEmptyString,
+        label_edge_ids: Option<&roaring::RoaringTreemap>,
+        batch_size: usize,
+    ) -> Result<bitmap::Bitmap> {
+        Box::pin(super::EdgeCursor::new(
+            self,
+            node_id,
+            direction,
+            &ir::ExpandLabelPlan::Label(label.clone()),
+            None,
+            batch_size,
+        ))
+        .await?
+        .collect(self, label_edge_ids)
+        .await
+    }
+}
+
+pub(in crate::execution::interpreter) enum EdgeOutputExpansionLabel<'a> {
+    Any,
+    Label {
+        label: &'a ir::NonEmptyString,
+        edge_ids: crate::query_resources::bitmap::Bitmap,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use helix_planner::context;
+
+    use super::super::super::test_support;
+    use super::*;
+
+    #[tokio::test]
+    async fn pair_batches_are_bounded_deduplicate_members_and_release_failed_admission() {
+        let db = test_support::open_db("expand-pair-batches").await;
+        let mut ctx = ExecutionContext::new(&db, context::ParamBindings::default());
+        ctx.row_memory = Some(crate::query_resources::Budget::new(2 * 1024 * 1024));
+        for target in 0..1025 {
+            let ids = [target % 11, 100 + target % 11].into_iter().collect();
+            let mut bytes = values::indexes::equality::SecondaryEqualityBitmapValue::new(ids)
+                .encode()
+                .to_vec();
+            // Built-in pair rows retain the portable-prefix compatibility rule.
+            bytes.push(255);
+            db.inner_db()
+                .put(
+                    ctx.storage_key(keys::DataKeyKind::EdgePairIndex(
+                        keys::EdgePairIndexKey::new(7, target),
+                    )),
+                    bytes::Bytes::from(bytes),
+                )
+                .await
+                .unwrap();
+        }
+        ctx.enable_request_read_view().await.unwrap();
+        let filter = (0..11).collect::<roaring::RoaringTreemap>();
+        for batch_size in [512, 17] {
+            let cursor = super::super::EdgeCursor::from_pairs(
+                (0..1026).map(|target| (7, target)).collect(),
+                batch_size,
+            );
+            let output = Box::pin(cursor.collect(&ctx, Some(&filter))).await.unwrap();
+            assert_eq!(
+                output.iter().collect::<Vec<_>>(),
+                (0..11).collect::<Vec<_>>()
+            );
+            drop(output);
+            assert_eq!(
+                ctx.row_memory.as_ref().unwrap().available(),
+                2 * 1024 * 1024
+            );
+        }
+        let budget = ctx.row_memory.as_ref().unwrap();
+        // Merge-backed pair keys are read with point gets, never multi-gets.
+        assert_eq!(budget.reads().point_gets, 2 * 1026);
+        assert_eq!(budget.reads().multi_get_batches, 0);
+        let empty = super::super::EdgeCursor::empty(512)
+            .collect(&ctx, None)
+            .await
+            .unwrap();
+        assert!(empty.is_empty());
+        drop(empty);
+        assert_eq!(budget.reads().point_gets, 2 * 1026);
+        let cursor =
+            super::super::EdgeCursor::from_pairs((0..1026).map(|target| (7, target)).collect(), 16);
+        let (batch, rest) = Box::pin(cursor.next_batch(&ctx)).await.unwrap().unwrap();
+        assert_eq!(batch.ids().len(), 16);
+        assert_eq!(budget.reads().point_gets, 2 * 1026 + 16);
+        assert!(budget.available() < 2 * 1024 * 1024);
+        drop(batch);
+        drop(rest);
+        assert_eq!(budget.available(), 2 * 1024 * 1024);
+        ctx.row_memory = Some(crate::query_resources::Budget::new(32 * 1024));
+        let cursor =
+            super::super::EdgeCursor::from_pairs((0..512).map(|target| (7, target)).collect(), 512);
+        assert!(matches!(
+            Box::pin(cursor.next_batch(&ctx)).await,
+            Err(HelixDbError::QueryMemoryLimitExceeded)
+        ));
+        assert_eq!(ctx.row_memory.as_ref().unwrap().reads().point_gets, 0);
+        assert_eq!(ctx.row_memory.as_ref().unwrap().available(), 32 * 1024);
+        ctx.close_request_read_view().unwrap();
+        db.close().await.unwrap();
+    }
+
+    /// Labeled edge expansion decodes the source's label-neighbor row for the
+    /// selected direction. A corrupt row fails the expansion in that direction
+    /// instead of reading as an empty neighborhood.
+    #[tokio::test]
+    async fn corrupt_label_neighbor_rows_fail_labeled_edge_expansion() {
+        use crate::encoding::indexes;
+        let db = test_support::open_db("expand-corrupt-label-neighbors").await;
+        let alice = test_support::add_user(&db, "alice").await;
+        let bob = test_support::add_user(&db, "bob").await;
+        test_support::add_edge(&db, alice, bob, "KNOWS").await;
+        let label = test_support::name("KNOWS");
+        for (index_direction, node) in [
+            (indexes::EdgeDirection::Out, alice),
+            (indexes::EdgeDirection::In, bob),
+        ] {
+            db.inner_db()
+                .put(
+                    keys::DataKey::Data {
+                        scope: keys::scope::DataScope::LegacyUnscoped,
+                        kind: keys::DataKeyKind::PropertyIndex(
+                            indexes::PropertyIndexKey::EdgeLabelNeighbor(
+                                indexes::label::EdgeLabelNeighborKey::new(
+                                    index_direction,
+                                    node,
+                                    indexes::hash_property_value(label.as_ref()),
+                                ),
+                            ),
+                        ),
+                    }
+                    .to_bytes(),
+                    bytes::Bytes::from_static(b"corrupt label-neighbor bitmap"),
+                )
+                .await
+                .unwrap();
+        }
+        let ctx = ExecutionContext::new(&db, context::ParamBindings::default());
+
+        for (direction, node) in [
+            (ir::ExpandDirection::Out, alice),
+            (ir::ExpandDirection::In, bob),
+        ] {
+            assert!(matches!(
+                ctx.expand(
+                    ExecutionValue::Stream(vec![ExecutionRow::current(ElementRef::Node(node))]),
+                    &ir::ExpandPlan {
+                        direction,
+                        label: ir::ExpandLabelPlan::Label(label.clone()),
+                        output: ir::ExpandOutput::Edges,
+                    },
+                )
+                .await,
+                Err(HelixDbError::Encoding(_))
+            ));
+            assert!(matches!(
+                ctx.expand_edge_candidate_ids(
+                    node,
+                    direction,
+                    &ir::ExpandLabelPlan::Label(label.clone()),
+                    None,
+                    512,
+                )
+                .await,
+                Err(HelixDbError::Encoding(_))
+            ));
+        }
+        db.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bound_endpoint_expansion_probes_exact_pairs_in_every_direction() {
+        let db = test_support::open_db("expand-bound-endpoints").await;
+        let a = test_support::add_user(&db, "a").await;
+        let b = test_support::add_user(&db, "b").await;
+        let forward = test_support::add_edge(&db, a, b, "R").await;
+        let parallel = test_support::add_edge(&db, a, b, "S").await;
+        let backward = test_support::add_edge(&db, b, a, "R").await;
+        let self_loop = test_support::add_edge(&db, a, a, "R").await;
+        let mut ctx = ExecutionContext::new(&db, context::ParamBindings::default());
+        ctx.row_memory = Some(crate::query_resources::Budget::new(1024 * 1024));
+        // Unreadable adjacency proves this path does not scan the neighborhood.
+        db.inner_db()
+            .put(
+                ctx.storage_key(keys::DataKeyKind::Adjacency(keys::AdjacencyKey::new(a))),
+                bytes::Bytes::from_static(b"must not decode adjacency"),
+            )
+            .await
+            .unwrap();
+        ctx.enable_request_read_view().await.unwrap();
+        for (direction, target, expected, reads) in [
+            (ir::ExpandDirection::Out, b, vec![forward, parallel], 1),
+            (ir::ExpandDirection::In, b, vec![backward], 1),
+            (
+                ir::ExpandDirection::Both,
+                b,
+                vec![forward, parallel, backward],
+                2,
+            ),
+            (ir::ExpandDirection::Both, a, vec![self_loop], 1),
+            (ir::ExpandDirection::Out, u64::MAX, vec![], 1),
+        ] {
+            let before = ctx.row_memory.as_ref().unwrap().reads();
+            let ids = ctx
+                .expand_edge_candidate_ids(
+                    a,
+                    direction,
+                    &ir::ExpandLabelPlan::Any,
+                    Some(target),
+                    512,
+                )
+                .await
+                .unwrap();
+            assert_eq!(ids.into_iter().collect::<Vec<_>>(), expected);
+            let after = ctx.row_memory.as_ref().unwrap().reads();
+            assert_eq!(after.point_gets - before.point_gets, reads);
+            assert_eq!(after.multi_get_batches, before.multi_get_batches);
+            assert_eq!(ctx.row_memory.as_ref().unwrap().available(), 1024 * 1024);
+        }
+        ctx.close_request_read_view().unwrap();
+        db.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn any_node_expansion_covers_all_directions_and_missing_adjacency() {
+        let db = test_support::open_db("expand-any-node-directions").await;
+        let alice = test_support::add_user(&db, "alice").await;
+        let bob = test_support::add_user(&db, "bob").await;
+        let carol = test_support::add_user(&db, "carol").await;
+        test_support::add_edge(&db, alice, bob, "KNOWS").await;
+        test_support::add_edge(&db, carol, alice, "FOLLOWS").await;
+        let context = ExecutionContext::new(&db, context::ParamBindings::default());
+        let node_ids = |value: ExecutionValue| {
+            let ExecutionValue::Stream(rows) = value else {
+                panic!("expansion should return a stream");
+            };
+            rows.into_iter()
+                .map(|row| match row.current {
+                    Some(ElementRef::Node(id)) => id,
+                    other => panic!("expected expanded node row, got {other:?}"),
+                })
+                .collect::<Vec<_>>()
+        };
+
+        for (direction, expected) in [
+            (ir::ExpandDirection::Out, vec![bob]),
+            (ir::ExpandDirection::In, vec![carol]),
+            (ir::ExpandDirection::Both, vec![bob, carol]),
+        ] {
+            let value = context
+                .expand(
+                    ExecutionValue::Stream(vec![ExecutionRow::current(ElementRef::Node(alice))]),
+                    &ir::ExpandPlan {
+                        direction,
+                        label: ir::ExpandLabelPlan::Any,
+                        output: ir::ExpandOutput::Nodes,
+                    },
+                )
+                .await
+                .expect("any-node expansion succeeds");
+            assert_eq!(node_ids(value), expected);
+        }
+
+        let missing = context
+            .expand(
+                ExecutionValue::Stream(vec![ExecutionRow::current(ElementRef::Node(u64::MAX))]),
+                &ir::ExpandPlan {
+                    direction: ir::ExpandDirection::Out,
+                    label: ir::ExpandLabelPlan::Any,
+                    output: ir::ExpandOutput::Nodes,
+                },
+            )
+            .await
+            .expect("missing adjacency is empty");
+        assert_eq!(missing, ExecutionValue::Stream(Vec::new()));
+    }
+
+    #[tokio::test]
+    async fn edge_current_node_expansion_uses_direction_path_and_self_loop_contracts() {
+        let db = test_support::open_db("expand-edge-current-directions").await;
+        let alice = test_support::add_user(&db, "alice").await;
+        let bob = test_support::add_user(&db, "bob").await;
+        let edge = test_support::add_edge(&db, alice, bob, "KNOWS").await;
+        let self_edge = test_support::add_edge(&db, alice, alice, "SELF").await;
+        let context = ExecutionContext::new(&db, context::ParamBindings::default());
+        let node_ids = |value: ExecutionValue| {
+            let ExecutionValue::Stream(rows) = value else {
+                panic!("expansion should return a stream");
+            };
+            rows.into_iter()
+                .map(|row| match row.current {
+                    Some(ElementRef::Node(id)) => id,
+                    other => panic!("expected expanded node row, got {other:?}"),
+                })
+                .collect::<Vec<_>>()
+        };
+        let mut from_path = ExecutionRow::current(ElementRef::Node(alice));
+        from_path.set_current(ElementRef::Edge(edge));
+        let mut to_path = ExecutionRow::current(ElementRef::Node(bob));
+        to_path.set_current(ElementRef::Edge(edge));
+
+        let both = context
+            .expand(
+                ExecutionValue::Stream(vec![
+                    ExecutionRow::current(ElementRef::Edge(edge)),
+                    from_path,
+                    to_path,
+                    ExecutionRow::current(ElementRef::Edge(self_edge)),
+                    ExecutionRow::current(ElementRef::Edge(u64::MAX)),
+                    ExecutionRow::empty(),
+                ]),
+                &ir::ExpandPlan {
+                    direction: ir::ExpandDirection::Both,
+                    label: ir::ExpandLabelPlan::Any,
+                    output: ir::ExpandOutput::Nodes,
+                },
+            )
+            .await
+            .expect("edge-current both expansion succeeds");
+        assert_eq!(node_ids(both), vec![alice, bob, bob, alice, alice]);
+
+        for (direction, expected) in [
+            (ir::ExpandDirection::Out, vec![bob]),
+            (ir::ExpandDirection::In, vec![alice]),
+        ] {
+            let value = context
+                .expand(
+                    ExecutionValue::Stream(vec![ExecutionRow::current(ElementRef::Edge(edge))]),
+                    &ir::ExpandPlan {
+                        direction,
+                        label: ir::ExpandLabelPlan::Any,
+                        output: ir::ExpandOutput::Nodes,
+                    },
+                )
+                .await
+                .expect("edge-current directed expansion succeeds");
+            assert_eq!(node_ids(value), expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn edge_output_expansion_skips_absent_labels_non_nodes_and_missing_adjacency() {
+        let db = test_support::open_db("expand-edge-output-empty-inputs").await;
+        let alice = test_support::add_user(&db, "alice").await;
+        let bob = test_support::add_user(&db, "bob").await;
+        let edge = test_support::add_edge(&db, alice, bob, "KNOWS").await;
+        let context = ExecutionContext::new(&db, context::ParamBindings::default());
+
+        let absent_label = context
+            .expand(
+                ExecutionValue::Stream(vec![ExecutionRow::current(ElementRef::Node(alice))]),
+                &ir::ExpandPlan {
+                    direction: ir::ExpandDirection::Out,
+                    label: ir::ExpandLabelPlan::Label(test_support::name("MISSING")),
+                    output: ir::ExpandOutput::Edges,
+                },
+            )
+            .await
+            .expect("absent edge label is empty");
+        assert_eq!(absent_label, ExecutionValue::Stream(Vec::new()));
+
+        let non_nodes = context
+            .expand(
+                ExecutionValue::Stream(vec![
+                    ExecutionRow::current(ElementRef::Edge(edge)),
+                    ExecutionRow::empty(),
+                    ExecutionRow::current(ElementRef::Node(u64::MAX)),
+                ]),
+                &ir::ExpandPlan {
+                    direction: ir::ExpandDirection::Both,
+                    label: ir::ExpandLabelPlan::Any,
+                    output: ir::ExpandOutput::Edges,
+                },
+            )
+            .await
+            .expect("non-node and missing adjacency inputs are skipped");
+        assert_eq!(non_nodes, ExecutionValue::Stream(Vec::new()));
+    }
+}

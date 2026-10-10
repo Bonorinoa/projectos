@@ -1,0 +1,175 @@
+//! Runtime ordering contracts.
+
+use std::cmp::Ordering;
+
+use super::*;
+
+impl<'db> ExecutionContext<'db> {
+    pub(in crate::execution::interpreter) async fn order(
+        &mut self,
+        input: ExecutionValue,
+        plan: &ir::OrderPlan,
+    ) -> Result<ExecutionValue> {
+        let mut rows = self.stream_rows(input, "order")?;
+        match plan {
+            ir::OrderPlan::ExplicitSort(keys) => {
+                let properties = keys
+                    .as_ref()
+                    .iter()
+                    .map(|key| &key.property)
+                    .collect::<Vec<_>>();
+                let mut values = Vec::with_capacity(rows.len());
+                for batch in rows.chunks(RECORD_BATCH_ROWS) {
+                    let mut resolver = eval::RowValueResolver::new(self);
+                    resolver.prefetch_rows(batch, &properties).await?;
+                    for row in batch {
+                        self.check_execution_deadline()?;
+                        let mut row_values = Vec::with_capacity(keys.as_ref().len());
+                        for key in keys.as_ref() {
+                            self.check_execution_deadline()?;
+                            row_values.push(resolver.row_property(row, &key.property).await?);
+                        }
+                        values.push(row_values);
+                    }
+                }
+                let mut keyed = values.into_iter().zip(rows).collect::<Vec<_>>();
+                keyed.sort_by(|left, right| compare_order_keys(left, right, keys.as_ref()));
+                rows = keyed.into_iter().map(|(_, row)| row).collect();
+                Ok(ExecutionValue::Stream(rows))
+            }
+            ir::OrderPlan::RangeIndex { .. } => Ok(ExecutionValue::Stream(rows)),
+        }
+    }
+}
+
+fn compare_order_keys(
+    left: &(Vec<Option<DbPropertyValue>>, ExecutionRow),
+    right: &(Vec<Option<DbPropertyValue>>, ExecutionRow),
+    keys: &[ir::OrderKey],
+) -> Ordering {
+    for ((left, right), key) in left.0.iter().zip(&right.0).zip(keys) {
+        let ordering = match (left, right) {
+            (Some(left), Some(right)) => left.total_order(right),
+            (Some(_), None) => Ordering::Greater,
+            (None, Some(_)) => Ordering::Less,
+            (None, None) => Ordering::Equal,
+        };
+        if ordering != Ordering::Equal {
+            return match key.order {
+                helix_ast::traversal::Order::Asc => ordering,
+                helix_ast::traversal::Order::Desc => ordering.reverse(),
+            };
+        }
+    }
+    left.1.cmp(&right.1)
+}
+
+#[cfg(test)]
+mod tests {
+    use helix_ast::traversal::Order;
+    use helix_ast::value::PropertyValue;
+    use helix_planner::context;
+    use helix_planner::ir::AtLeast;
+
+    use super::super::super::test_support;
+    use super::*;
+
+    fn row(id: u64) -> ExecutionRow {
+        ExecutionRow::current(ElementRef::Node(id))
+    }
+
+    fn key(order: Order) -> ir::OrderKey {
+        ir::OrderKey {
+            property: ir::NonEmptyString::new("score").expect("valid property"),
+            order,
+        }
+    }
+
+    #[test]
+    fn compare_order_keys_places_missing_values_first_for_ascending() {
+        let keys = [key(Order::Asc)];
+        assert_eq!(
+            compare_order_keys(
+                &(vec![None], row(1)),
+                &(vec![Some(DbPropertyValue::I64(1))], row(2)),
+                &keys,
+            ),
+            Ordering::Less
+        );
+        assert_eq!(
+            compare_order_keys(&(vec![None], row(2)), &(vec![None], row(1)), &keys,),
+            Ordering::Greater
+        );
+    }
+
+    #[test]
+    fn compare_order_keys_reverses_value_direction_for_descending() {
+        let keys = [key(Order::Desc)];
+        assert_eq!(
+            compare_order_keys(
+                &(vec![Some(DbPropertyValue::I64(1))], row(1)),
+                &(vec![Some(DbPropertyValue::I64(2))], row(2)),
+                &keys,
+            ),
+            Ordering::Greater
+        );
+    }
+
+    #[tokio::test]
+    async fn explicit_sort_decodes_each_rows_property_blob_once_regardless_of_key_count() {
+        let db = test_support::open_db("stream-order-explicit-sort-decode-reuse").await;
+        let id = test_support::add_node_with_properties(
+            &db,
+            "User",
+            vec![
+                ("score", PropertyValue::I64(1)),
+                ("name", PropertyValue::String("ada".to_string())),
+            ],
+        )
+        .await;
+        let mut context = ExecutionContext::new(&db, context::ParamBindings::default());
+        let keys = ir::OrderKeys::new(AtLeast::from_one_and_rest(
+            ir::OrderKey {
+                property: ir::NonEmptyString::new("score").expect("valid property"),
+                order: Order::Asc,
+            },
+            vec![ir::OrderKey {
+                property: ir::NonEmptyString::new("name").expect("valid property"),
+                order: Order::Asc,
+            }],
+        ))
+        .expect("distinct sort keys");
+        let plan = ir::OrderPlan::ExplicitSort(keys);
+
+        context
+            .order(ExecutionValue::Stream(vec![row(id)]), &plan)
+            .await
+            .expect("sort over stored properties succeeds");
+
+        // Two sort keys read from the same row's element must not decode its
+        // property blob twice: `RowValueResolver` is shared across the whole
+        // key loop for a row, so one `element_properties` lookup serves both.
+        let snapshot = context.projection_read_snapshot();
+        assert_eq!(snapshot.property_gets, 1);
+        assert_eq!(snapshot.property_decodes, 1);
+    }
+
+    #[tokio::test]
+    async fn range_index_order_preserves_access_order() {
+        let db = test_support::open_db("stream-range-index-order").await;
+        let mut context = ExecutionContext::new(&db, context::ParamBindings::default());
+        let input = ExecutionValue::Stream(vec![row(2), row(1)]);
+        let plan = ir::OrderPlan::RangeIndex {
+            key: key(Order::Asc),
+            index_id: ir::NonEmptyString::new("node_range:Metric:score").expect("valid index id"),
+        };
+
+        assert_eq!(
+            context
+                .order(input.clone(), &plan)
+                .await
+                .expect("range index order is already satisfied"),
+            input
+        );
+    }
+}

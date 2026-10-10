@@ -1,0 +1,4192 @@
+//! Tantivy-backed text split construction, loading, search, and cache contracts.
+//!
+//! V2 lifecycle code uploads immutable content-addressed split blobs before a
+//! SlateDB transaction atomically attaches their durable references.
+
+use std::cmp::Reverse;
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
+use std::fs;
+use std::future::Future;
+use std::num::{NonZeroU64, NonZeroUsize};
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
+use std::sync::Arc;
+
+use bytes::Bytes;
+use futures::{future::try_join_all, StreamExt};
+use range_cache::{CacheCapacity, RangeCache};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use slatedb::object_store::{
+    path::Path as ObjectStorePath, ObjectMeta, ObjectStore, ObjectStoreExt, PutPayload,
+};
+use tantivy::collector::{FilterCollector, TopDocs};
+use tantivy::directory::RamDirectory;
+use tantivy::merge_policy::NoMergePolicy;
+use tantivy::query::{BooleanQuery, Occur, TermQuery};
+use tantivy::schema::{IndexRecordOption, NumericOptions, Schema, TextFieldIndexing, TextOptions};
+use tantivy::tokenizer::{
+    Language, LowerCaser, PreTokenizedString, SimpleTokenizer, Stemmer, TextAnalyzer, Token,
+    WhitespaceTokenizer, MAX_TOKEN_LEN,
+};
+use tantivy::{Index, IndexReader, IndexSettings, ReloadPolicy, TantivyDocument, Term};
+use tempfile::TempDir;
+use tokio::io::AsyncWriteExt;
+use uuid::Uuid;
+
+use crate::config::{TextAnalyzerKind, TextIndexDefinition};
+use crate::encoding::keys::scope::DataScope;
+use crate::encoding::property::decode_properties;
+use crate::encoding::property::property::Property;
+use crate::encoding::property::property_value::PropertyValue;
+use crate::encoding::{keys, EdgeId, NodeId};
+use crate::error::HelixDbError;
+use crate::index_lifecycle::work::{self, SplitPruning};
+use crate::search::{
+    get_edge_properties_by_id, make_text_index_live_state_key_scoped,
+    make_text_index_manifest_key_scoped, make_text_index_manifest_prefix_scoped,
+    make_text_index_manifest_scan_prefix_scoped, text_index_name, text_tenant_index_name,
+};
+use slatedb::DbReadOps;
+#[cfg(test)]
+use slatedb::{Db, IsolationLevel};
+
+const BODY_FIELD_NAME: &str = "body";
+const ENTITY_ID_FIELD_NAME: &str = "entity_id";
+const LOGICAL_VERSION_FIELD_NAME: &str = "logical_version";
+const META_JSON_FILE: &str = "meta.json";
+const MANAGED_JSON_FILE: &str = ".managed.json";
+pub(crate) const TEXT_INDEX_MANIFEST_FORMAT_V2: u32 = 2;
+type TextWarmupFuture = Pin<Box<dyn Future<Output = Result<(), HelixDbError>> + Send>>;
+
+mod bundle_storage;
+mod cache;
+mod caching_directory;
+pub(crate) mod compaction;
+mod debug_proxy_directory;
+mod hot_directory;
+#[cfg(test)]
+mod live_state_tests;
+mod overlay_directory;
+pub(crate) mod pending;
+#[cfg(feature = "production-coverage")]
+mod prefilter_benchmark;
+mod restricted;
+mod split;
+mod storage_directory;
+mod warmup;
+
+use bundle_storage::{CachedSplitStorage, ObjectStoreSplitBundleStorage};
+pub(crate) use cache::{FtsCache, FtsCacheConfig, OpenedTextSplit};
+pub use cache::{FtsCacheStateSnapshot, FtsWarmSummary};
+use caching_directory::CachingDirectory;
+use hot_directory::HotDirectory;
+#[cfg(feature = "production-coverage")]
+pub use prefilter_benchmark::{
+    FtsPrefilterBenchmarkCase, FtsPrefilterBenchmarkFixture, FtsPrefilterBenchmarkLayout,
+    FtsPrefilterBenchmarkSample, FtsPrefilterBenchmarkStrategy,
+};
+pub(crate) use restricted::{
+    RestrictedTextCandidates, RestrictedTextCandidatesBuilder, TextSearchScope,
+};
+pub(crate) use split::{
+    build_split_bundle, build_split_bundle_from_directory, decode_footer_cache_entry_bytes,
+    open_split_directory_from_file, read_footer_cache_entry_from_file,
+    split_reference_layout_is_exact, validate_split_bundle_file,
+};
+use storage_directory::StorageDirectory;
+use warmup::{FastFieldWarmupInfo, WarmupInfo};
+
+fn create_tempdir(context: &str) -> Result<TempDir, HelixDbError> {
+    let base = std::env::temp_dir();
+    fs::create_dir_all(&base).map_err(|err| {
+        HelixDbError::Config(format!(
+            "failed to ensure tempdir base '{}' for {context}: {err}",
+            base.display()
+        ))
+    })?;
+
+    tempfile::Builder::new()
+        .prefix("helix-text-")
+        .tempdir_in(&base)
+        .map_err(|err| {
+            HelixDbError::Config(format!(
+                "failed to create {context} tempdir in '{}': {err}",
+                base.display()
+            ))
+        })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextBlobRef {
+    pub sha256: [u8; 32],
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextSplitRef {
+    pub blob: TextBlobRef,
+    pub footer_offset: u64,
+    pub footer_len: u32,
+    pub hotcache_len: u32,
+    pub total_size_bytes: u64,
+}
+
+/// Process-local storage and cache dependencies for one V2 text search.
+pub(crate) struct TextSearchRuntime<'a> {
+    store: &'a Arc<dyn ObjectStore>,
+    db_path: &'a str,
+    cache: Option<&'a Arc<FtsCache>>,
+}
+
+impl<'a> TextSearchRuntime<'a> {
+    pub(crate) const fn new(
+        store: &'a Arc<dyn ObjectStore>,
+        db_path: &'a str,
+        cache: Option<&'a Arc<FtsCache>>,
+    ) -> Self {
+        Self {
+            store,
+            db_path,
+            cache,
+        }
+    }
+}
+
+/// Immutable query inputs for one restricted or unrestricted manifest search.
+pub(crate) struct TextSearchRequest<'a> {
+    query: &'a str,
+    k: usize,
+    scope: TextSearchScope,
+    demand: SplitDemand,
+}
+
+impl<'a> TextSearchRequest<'a> {
+    pub(crate) const fn new(query: &'a str, k: usize, scope: TextSearchScope) -> Self {
+        Self {
+            query,
+            k,
+            scope,
+            demand: SplitDemand::Record,
+        }
+    }
+
+    /// Sets whether this search counts toward disk-tier split admission.
+    pub(crate) const fn with_split_demand(mut self, demand: SplitDemand) -> Self {
+        self.demand = demand;
+        self
+    }
+}
+
+/// Whether a manifest search counts as a use of its splits for disk-tier
+/// admission, which admits a split on its second successful use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SplitDemand {
+    /// Records one successful use of every searched split.
+    Record,
+    /// Repeats a physical search of one logical search that already recorded
+    /// its use, such as a widened overlay search.
+    Skip,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextIndexGenerationManifest {
+    pub format_version: u32,
+    pub physical_index_name: String,
+    pub generation_id: String,
+    pub split: TextSplitRef,
+    pub splits: Vec<TextSplitRef>,
+    pub analyzer: TextAnalyzerKind,
+    pub positions_enabled: bool,
+}
+
+impl TextIndexGenerationManifest {
+    pub fn new_split(
+        physical_index_name: impl Into<String>,
+        generation_id: impl Into<String>,
+        analyzer: TextAnalyzerKind,
+        positions_enabled: bool,
+        split: TextSplitRef,
+    ) -> Self {
+        Self {
+            format_version: TEXT_INDEX_MANIFEST_FORMAT_V2,
+            physical_index_name: physical_index_name.into(),
+            generation_id: generation_id.into(),
+            split: split.clone(),
+            splits: vec![split],
+            analyzer,
+            positions_enabled,
+        }
+    }
+
+    pub fn referenced_blob_count(&self) -> usize {
+        self.split_refs().len()
+    }
+
+    pub fn split_refs(&self) -> &[TextSplitRef] {
+        self.splits.as_slice()
+    }
+
+    pub fn primary_split_ref(&self) -> &TextSplitRef {
+        self.split_refs()
+            .first()
+            .expect("text manifest must contain at least one split")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextSearchHit {
+    pub entity_id: u64,
+    pub score: f32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TextSearchCandidate {
+    pub(crate) entity_id: u64,
+    pub(crate) logical_version: u64,
+    pub(crate) score: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextIndexLiveState {
+    pub logical_version: u64,
+    pub live: bool,
+}
+
+impl TextIndexLiveState {
+    pub fn live(logical_version: u64) -> Self {
+        Self {
+            logical_version,
+            live: true,
+        }
+    }
+
+    pub fn dead(logical_version: u64) -> Self {
+        Self {
+            logical_version,
+            live: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextDocumentInput {
+    pub entity_id: u64,
+    pub logical_version: u64,
+    pub text: String,
+}
+
+/// One foreground document whose canonical analyzer has already run exactly once.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AnalyzedTextDocumentInput {
+    pub(crate) entity_id: u64,
+    pub(crate) logical_version: u64,
+    pub(crate) analyzed: IndexedTextAnalysis,
+}
+
+/// Complete immutable split materialized before any object-store publication.
+///
+/// The V2 lifecycle uses this value to derive and validate the exact blob
+/// identity before direct upload. Keeping the payload and reference together
+/// prevents a caller from pairing metadata from one Tantivy bundle with bytes
+/// from another. The paired unit tests below exercise construction, empty
+/// input, and content hashing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct UnpublishedTextSplit {
+    payload: Bytes,
+    split_ref: TextSplitRef,
+    pruning: SplitPruning,
+}
+
+impl UnpublishedTextSplit {
+    /// Wraps one locally built split with its deterministic content identity.
+    ///
+    /// Both ordinary split construction and lifecycle compaction use this
+    /// boundary so neither path can persist metadata for bytes it did not hash.
+    pub(crate) fn from_built_split(
+        built_split: split::BuiltTextSplit,
+        pruning: SplitPruning,
+    ) -> Self {
+        let sha256 = Sha256::digest(&built_split.bytes).into();
+        let size_bytes = u64::try_from(built_split.bytes.len())
+            .expect("usize text split lengths fit the durable u64 size on supported targets");
+        let split_ref = TextSplitRef {
+            blob: TextBlobRef { sha256, size_bytes },
+            footer_offset: built_split.footer_offset,
+            footer_len: built_split.footer_len,
+            hotcache_len: built_split.hotcache_len,
+            total_size_bytes: built_split.total_size_bytes,
+        };
+        Self {
+            payload: Bytes::from(built_split.bytes),
+            split_ref,
+            pruning,
+        }
+    }
+
+    /// Transfers the inseparable publication payload and reference to a V2 caller.
+    pub(crate) fn into_parts(self) -> (Bytes, TextSplitRef, SplitPruning) {
+        (self.payload, self.split_ref, self.pruning)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct TextSchemaFields {
+    entity_id: tantivy::schema::Field,
+    logical_version: tantivy::schema::Field,
+    body: tantivy::schema::Field,
+}
+
+impl TextDocumentInput {
+    pub fn new(entity_id: u64, text: impl Into<String>) -> Self {
+        Self {
+            entity_id,
+            logical_version: 1,
+            text: text.into(),
+        }
+    }
+
+    pub fn with_logical_version(mut self, logical_version: u64) -> Self {
+        self.logical_version = logical_version;
+        self
+    }
+}
+
+pub async fn load_manifest(
+    reader: &(impl DbReadOps + Send + Sync),
+    index_name: &str,
+) -> Result<Option<TextIndexGenerationManifest>, HelixDbError> {
+    load_manifest_scoped(reader, DataScope::LegacyUnscoped, index_name).await
+}
+
+pub async fn load_manifest_scoped(
+    reader: &(impl DbReadOps + Send + Sync),
+    scope: DataScope,
+    index_name: &str,
+) -> Result<Option<TextIndexGenerationManifest>, HelixDbError> {
+    let Some(bytes) = reader
+        .get(make_text_index_manifest_key_scoped(scope, index_name))
+        .await?
+    else {
+        return Ok(None);
+    };
+    decode_manifest_bytes(&bytes).map(Some)
+}
+
+pub async fn load_manifests_for_definition(
+    reader: &(impl DbReadOps + Send + Sync),
+    definition: &TextIndexDefinition,
+) -> Result<Vec<(Bytes, TextIndexGenerationManifest)>, HelixDbError> {
+    load_manifests_for_definition_scoped(reader, DataScope::LegacyUnscoped, definition).await
+}
+
+pub async fn load_manifests_for_definition_scoped(
+    reader: &(impl DbReadOps + Send + Sync),
+    scope: DataScope,
+    definition: &TextIndexDefinition,
+) -> Result<Vec<(Bytes, TextIndexGenerationManifest)>, HelixDbError> {
+    let prefix = make_text_index_manifest_prefix_scoped(
+        scope,
+        definition.element_type(),
+        definition.label(),
+        definition.property(),
+        definition.tenant_property().is_some(),
+    );
+    let mut iter = reader.scan_prefix(prefix, ..).await?;
+    let mut manifests = Vec::new();
+    while let Some(kv) = iter.next().await? {
+        let manifest = decode_manifest_bytes(&kv.value)?;
+        manifests.push((kv.key, manifest));
+    }
+    Ok(manifests)
+}
+
+pub async fn load_all_manifests(
+    reader: &(impl DbReadOps + Send + Sync),
+) -> Result<Vec<(Bytes, TextIndexGenerationManifest)>, HelixDbError> {
+    load_all_manifests_scoped(reader, DataScope::LegacyUnscoped).await
+}
+
+pub async fn load_all_manifests_scoped(
+    reader: &(impl DbReadOps + Send + Sync),
+    scope: DataScope,
+) -> Result<Vec<(Bytes, TextIndexGenerationManifest)>, HelixDbError> {
+    let prefix = make_text_index_manifest_scan_prefix_scoped(scope);
+    let mut iter = reader.scan_prefix(prefix, ..).await?;
+    let mut manifests = Vec::new();
+    while let Some(kv) = iter.next().await? {
+        let manifest = decode_manifest_bytes(&kv.value)?;
+        manifests.push((kv.key, manifest));
+    }
+    Ok(manifests)
+}
+
+fn decode_manifest_bytes(bytes: &[u8]) -> Result<TextIndexGenerationManifest, HelixDbError> {
+    crate::encoding::v2::legacy::text::manifest::decode(bytes)
+        .map_err(|error| HelixDbError::Config(error.to_string()))
+}
+
+pub async fn search_manifest(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    manifest: &TextIndexGenerationManifest,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    if k == 0 {
+        return Ok(Vec::new());
+    }
+
+    let (_index, fields, reader) = open_manifest_index(store, db_path, manifest).await?;
+    warm_searcher(&reader, fields, manifest.analyzer, query).await?;
+    search_split_index_bytes(
+        &reader,
+        fields,
+        manifest.analyzer,
+        manifest.positions_enabled,
+        query,
+        k,
+    )
+}
+
+pub async fn search_manifest_with_live_state(
+    reader: &(impl DbReadOps + Send + Sync),
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    manifest: &TextIndexGenerationManifest,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    search_manifest_with_live_state_scoped(
+        reader,
+        DataScope::LegacyUnscoped,
+        store,
+        db_path,
+        manifest,
+        query,
+        k,
+    )
+    .await
+}
+
+pub async fn search_manifest_with_live_state_scoped(
+    reader: &(impl DbReadOps + Send + Sync),
+    scope: DataScope,
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    manifest: &TextIndexGenerationManifest,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    search_manifest_with_state_source(
+        reader,
+        TextSearchRuntime::new(store, db_path, None),
+        manifest,
+        TextLiveStateSource::Legacy {
+            scope,
+            index_name: &manifest.physical_index_name,
+        },
+        None,
+        TextSearchRequest::new(query, k, TextSearchScope::Unrestricted),
+    )
+    .await
+}
+
+/// Searches one V2 generation manifest using generation-qualified live state.
+///
+/// The caller holds the matching blob reference guards across this future,
+/// including split footer/cache/blob I/O and every candidate state point read.
+pub(crate) async fn search_manifest_with_v2_live_state_scoped_and_scope(
+    reader: &(impl DbReadOps + Send + Sync),
+    runtime: TextSearchRuntime<'_>,
+    root: &crate::index_lifecycle::text::serving::ValidatedActiveTextManifestRoot,
+    manifest: &TextIndexGenerationManifest,
+    statistics: &crate::index_lifecycle::text::statistics::TextBm25Statistics,
+    request: TextSearchRequest<'_>,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    search_manifest_with_state_source(
+        reader,
+        runtime,
+        manifest,
+        TextLiveStateSource::V2(root),
+        Some(statistics),
+        request,
+    )
+    .await
+}
+
+#[derive(Clone, Copy)]
+/// Selects the persisted live-state contract for a split search.
+enum TextLiveStateSource<'a> {
+    /// Compatibility search against the pre-V2 physical manifest contract.
+    Legacy {
+        scope: DataScope,
+        index_name: &'a str,
+    },
+    /// Generation-owned state under an exact Active V2 manifest root.
+    V2(&'a crate::index_lifecycle::text::serving::ValidatedActiveTextManifestRoot),
+}
+
+/// Runs the common split search while keeping live-state ownership explicit.
+///
+/// Returns the `k` best live hits in [`HitRank`] order, exactly as an
+/// exhaustive search of every split would after dropping each candidate whose
+/// version is not the entity's live version.
+///
+/// Each split serves its candidates in descending [`HitRank`] and is
+/// re-searched with a doubled limit only while fewer than `k` live hits are
+/// known or its frontier (last served candidate) still outranks the `k`-th,
+/// so unseen candidates can never displace a hit. Live state is resolved
+/// lazily: candidates wait in a best-first queue and are resolved in batches
+/// only while the best of them outranks the `k`-th live hit, so a search
+/// reads about `k` states (plus dead or stale candidates above them) however
+/// many splits it searches.
+///
+/// Corruption is reported only where it is read: a missing or foreign state
+/// row, or live copies of one entity with different scores, fail the search
+/// when the candidate is resolved, and a served V2 hit's statistics marker is
+/// validated before return. Candidates ranked below every resolved batch are
+/// never read, so corruption confined to them is not reported.
+async fn search_manifest_with_state_source(
+    reader: &(impl DbReadOps + Send + Sync),
+    runtime: TextSearchRuntime<'_>,
+    manifest: &TextIndexGenerationManifest,
+    state_source: TextLiveStateSource<'_>,
+    statistics: Option<&crate::index_lifecycle::text::statistics::TextBm25Statistics>,
+    request: TextSearchRequest<'_>,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    const SPLIT_READ_CONCURRENCY: usize = 8;
+    /// Largest live-state batch; matches the V2 state loader's bound.
+    const MAX_STATE_BATCH: usize = 512;
+    /// Smallest live-state batch, so a run of dead or stale candidates
+    /// resolves in few round trips once `k` hits are nearly known.
+    const MIN_STATE_BATCH: usize = 64;
+    let TextSearchRequest {
+        query,
+        k,
+        scope,
+        demand,
+    } = request;
+    if k == 0 || scope.is_empty_restricted() {
+        return Ok(Vec::new());
+    }
+
+    /// How much of one split's ranked candidate list has been read.
+    enum SplitProgress {
+        /// Not searched yet; the first search asks for `min(k, total_docs)`.
+        Unsearched,
+        /// Served a full page of its best `served` candidates, fewer than its
+        /// documents; unseen candidates rank at or below `frontier`, and the
+        /// next search asks for twice as many.
+        Partial { frontier: HitRank, served: usize },
+        /// Served every candidate.
+        Exhausted,
+    }
+
+    struct SplitSearchState {
+        split_ref: TextSplitRef,
+        reader: Arc<SplitSearchReader>,
+        total_docs: usize,
+        progress: SplitProgress,
+    }
+
+    let opened = futures::stream::iter(manifest.split_refs().iter().cloned())
+        .map(|split_ref| async {
+            let index_reader = SplitSearchReader::open(&runtime, &split_ref).await?;
+            index_reader.warm(manifest.analyzer, query).await?;
+            let total_docs = index_reader.total_docs();
+            Ok::<_, HelixDbError>(SplitSearchState {
+                split_ref,
+                reader: Arc::new(index_reader),
+                total_docs,
+                progress: if total_docs == 0 {
+                    SplitProgress::Exhausted
+                } else {
+                    SplitProgress::Unsearched
+                },
+            })
+        })
+        .buffered(SPLIT_READ_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    let mut splits = opened.into_iter().collect::<Result<Vec<_>, _>>()?;
+    // Resolved live state per entity; `None` is a legacy entity without state.
+    let mut live_states = BTreeMap::<u64, Option<TextIndexLiveState>>::new();
+    // Rank of every resolved live hit, keyed by entity to merge split copies.
+    let mut hit_ranks = BTreeMap::<u64, HitRank>::new();
+    // The best `k` hit ranks, worst on top, so its top is the `k`-th hit.
+    let mut top_k = BinaryHeap::<Reverse<HitRank>>::new();
+    // Served but unresolved candidates as (rank, logical version), best on
+    // top. The version only orders an entity's copies deterministically.
+    let mut unresolved = BinaryHeap::<(HitRank, u64)>::new();
+    loop {
+        let kth = loop {
+            let kth = top_k
+                .peek()
+                .filter(|_| top_k.len() == k)
+                .map(|Reverse(rank)| *rank);
+            let Some(&(best, _)) = unresolved.peek() else {
+                break kth;
+            };
+            if kth.is_some_and(|kth| best <= kth) {
+                break kth;
+            }
+            let batch = std::iter::from_fn(|| unresolved.pop())
+                .take(
+                    k.saturating_sub(hit_ranks.len())
+                        .clamp(MIN_STATE_BATCH, MAX_STATE_BATCH),
+                )
+                .collect::<Vec<_>>();
+            let missing = batch
+                .iter()
+                .map(|(rank, _)| rank.entity_id.0)
+                .filter(|entity_id| !live_states.contains_key(entity_id))
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>();
+            if !missing.is_empty() {
+                load_text_live_states_batch(reader, state_source, &missing, &mut live_states)
+                    .await?;
+            }
+            for (rank, logical_version) in batch {
+                let state = live_states
+                    .get(&rank.entity_id.0)
+                    .expect("every candidate in a resolved batch has loaded live state");
+                if !state
+                    .as_ref()
+                    .is_none_or(|state| state.live && state.logical_version == logical_version)
+                {
+                    continue;
+                }
+                match hit_ranks.insert(rank.entity_id.0, rank) {
+                    None => {
+                        top_k.push(Reverse(rank));
+                        if top_k.len() > k {
+                            top_k.pop();
+                        }
+                    }
+                    Some(existing) if existing == rank => {}
+                    Some(_) => {
+                        return Err(HelixDbError::IndexCatalogCorruption(
+                            "duplicate live text versions have different BM25 score bits"
+                                .to_string(),
+                        ));
+                    }
+                }
+            }
+        };
+        let selected = splits
+            .iter()
+            .enumerate()
+            .filter_map(|(index, split)| {
+                let limit = match split.progress {
+                    SplitProgress::Unsearched => Some(k.min(split.total_docs)),
+                    SplitProgress::Partial { frontier, served } => kth
+                        .is_none_or(|kth| frontier > kth)
+                        .then(|| served.saturating_mul(2).min(split.total_docs)),
+                    SplitProgress::Exhausted => None,
+                };
+                limit.map(|limit| (index, Arc::clone(&split.reader), limit))
+            })
+            .collect::<Vec<_>>();
+        if selected.is_empty() {
+            break;
+        }
+
+        let analyzer = manifest.analyzer;
+        let scope = scope.clone();
+        let searched = futures::stream::iter(selected)
+            .map(|(index, split_reader, limit)| {
+                let query = query.to_owned();
+                let statistics = statistics.cloned();
+                let scope = scope.clone();
+                async move {
+                    tokio::task::spawn_blocking(move || {
+                        split_reader
+                            .search_candidates(analyzer, &query, limit, statistics.as_ref(), &scope)
+                            .map(|candidates| (index, limit, candidates))
+                    })
+                    .await
+                    .map_err(|error| {
+                        HelixDbError::Config(format!(
+                            "failed to join text split search task: {error}"
+                        ))
+                    })?
+                }
+            })
+            .buffer_unordered(SPLIT_READ_CONCURRENCY)
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for (index, requested, candidates) in searched {
+            let split = &mut splits[index];
+            // A re-search serves the previous page again first; skip it.
+            let served = match split.progress {
+                SplitProgress::Partial { served, .. } => served,
+                SplitProgress::Unsearched | SplitProgress::Exhausted => 0,
+            };
+            split.progress = match candidates.last() {
+                Some(last) if candidates.len() >= requested && requested < split.total_docs => {
+                    SplitProgress::Partial {
+                        frontier: HitRank::new(last.score, last.entity_id),
+                        served: candidates.len(),
+                    }
+                }
+                _ => SplitProgress::Exhausted,
+            };
+            unresolved.extend(candidates.into_iter().skip(served).map(|candidate| {
+                (
+                    HitRank::new(candidate.score, candidate.entity_id),
+                    candidate.logical_version,
+                )
+            }));
+        }
+    }
+
+    let hits = top_k
+        .into_sorted_vec()
+        .into_iter()
+        .map(|Reverse(rank)| TextSearchHit {
+            entity_id: rank.entity_id.0,
+            score: f32::from_bits(rank.score_bits),
+        })
+        .collect::<Vec<_>>();
+    if let TextLiveStateSource::V2(root) = state_source {
+        let served = hits.iter().map(|hit| hit.entity_id).collect::<Vec<_>>();
+        crate::index_lifecycle::text::serving::validate_live_entity_contributions(
+            reader, root, &served,
+        )
+        .await?;
+    }
+    if demand == SplitDemand::Record
+        && let Some(cache) = runtime.cache
+    {
+        futures::stream::iter(splits.iter().map(|split| split.split_ref.clone()))
+            .for_each_concurrent(SPLIT_READ_CONCURRENCY, |split| async move {
+                cache.after_successful_search(split).await;
+            })
+            .await;
+    }
+    Ok(hits)
+}
+
+/// Serving rank of one BM25 candidate or hit: a higher score ranks higher,
+/// then a lower entity ID.
+///
+/// The derived order compares the score's bits, which order like the score
+/// for the finite non-negative scores BM25 produces. It is the split
+/// collector's sort key, so a split serves its candidates in descending
+/// `HitRank` and every candidate it has not served ranks at or below its last
+/// served one. Two candidates of one entity with equal scores have equal
+/// ranks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct HitRank {
+    score_bits: u32,
+    entity_id: Reverse<u64>,
+}
+
+impl HitRank {
+    const fn new(score: f32, entity_id: u64) -> Self {
+        Self {
+            score_bits: score.to_bits(),
+            entity_id: Reverse(entity_id),
+        }
+    }
+}
+
+enum SplitSearchReader {
+    Cached(Arc<OpenedTextSplit>),
+    Direct {
+        index: Index,
+        reader: IndexReader,
+        fields: TextSchemaFields,
+    },
+}
+
+impl SplitSearchReader {
+    async fn open(
+        runtime: &TextSearchRuntime<'_>,
+        split: &TextSplitRef,
+    ) -> Result<Self, HelixDbError> {
+        match runtime.cache {
+            Some(cache) => Ok(Self::Cached(cache.get_or_open_split(split).await?)),
+            None => {
+                let index = open_remote_split_index(runtime.store, runtime.db_path, split).await?;
+                let fields = lookup_schema_fields(&index.schema())?;
+                let reader = build_reader(&index)?;
+                Ok(Self::Direct {
+                    index,
+                    reader,
+                    fields,
+                })
+            }
+        }
+    }
+
+    async fn warm(&self, analyzer: TextAnalyzerKind, query: &str) -> Result<(), HelixDbError> {
+        match self {
+            Self::Cached(split) => split.warm(analyzer, query).await,
+            Self::Direct {
+                index,
+                reader,
+                fields,
+            } => {
+                register_analyzers(index, analyzer);
+                warm_searcher(reader, *fields, analyzer, query).await
+            }
+        }
+    }
+
+    fn total_docs(&self) -> usize {
+        match self {
+            Self::Cached(split) => split.total_docs(),
+            Self::Direct { reader, .. } => reader.searcher().num_docs() as usize,
+        }
+    }
+
+    fn search_candidates(
+        &self,
+        analyzer: TextAnalyzerKind,
+        query: &str,
+        limit: usize,
+        statistics: Option<&crate::index_lifecycle::text::statistics::TextBm25Statistics>,
+        scope: &TextSearchScope,
+    ) -> Result<Vec<TextSearchCandidate>, HelixDbError> {
+        match self {
+            Self::Cached(split) => {
+                split.search_candidates_with_statistics(analyzer, query, limit, statistics, scope)
+            }
+            Self::Direct {
+                index,
+                reader,
+                fields,
+            } => {
+                register_analyzers(index, analyzer);
+                search_reader_candidates_with_statistics(
+                    reader, *fields, analyzer, query, limit, statistics, scope,
+                )
+            }
+        }
+    }
+}
+
+/// Reads the live state of at most 512 distinct entities into `live_states`.
+///
+/// A legacy entity without a state row maps to `None`, which accepts every
+/// version; a V2 entity must have a state row.
+async fn load_text_live_states_batch(
+    reader: &(impl DbReadOps + Send + Sync),
+    state_source: TextLiveStateSource<'_>,
+    entity_ids: &[u64],
+    live_states: &mut BTreeMap<u64, Option<TextIndexLiveState>>,
+) -> Result<(), HelixDbError> {
+    match state_source {
+        TextLiveStateSource::Legacy { scope, index_name } => {
+            let keys = entity_ids
+                .iter()
+                .copied()
+                .map(|entity_id| {
+                    make_text_index_live_state_key_scoped(scope, index_name, entity_id)
+                })
+                .collect::<Vec<_>>();
+            let values = reader.multi_get(&keys).await?;
+            for (entity_id, value) in entity_ids.iter().copied().zip(values) {
+                let state = value.as_deref().map(decode_live_state_bytes).transpose()?;
+                live_states.insert(entity_id, state);
+            }
+        }
+        TextLiveStateSource::V2(root) => {
+            let states = crate::index_lifecycle::text::serving::load_active_entity_states(
+                reader, root, entity_ids,
+            )
+            .await?;
+            live_states.extend(states.into_iter().map(|(entity_id, state)| {
+                (
+                    entity_id,
+                    Some(TextIndexLiveState {
+                        logical_version: state.logical_version(),
+                        live: state.is_live(),
+                    }),
+                )
+            }));
+        }
+    }
+    Ok(())
+}
+
+async fn open_manifest_index(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    manifest: &TextIndexGenerationManifest,
+) -> Result<(Index, TextSchemaFields, IndexReader), HelixDbError> {
+    let split_refs = manifest.split_refs();
+    if split_refs.len() != 1 {
+        return Err(HelixDbError::Config(format!(
+            "multi-split text manifest search is not available yet for '{}'",
+            manifest.physical_index_name
+        )));
+    }
+
+    let split_ref = manifest.primary_split_ref();
+    let index = open_remote_split_index(store, db_path, split_ref).await?;
+    register_analyzers(&index, manifest.analyzer);
+    let fields = lookup_schema_fields(&index.schema())?;
+    let reader = build_reader(&index)?;
+    Ok((index, fields, reader))
+}
+
+async fn open_remote_split_index(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    split_ref: &TextSplitRef,
+) -> Result<Index, HelixDbError> {
+    let blob_path = blob_object_store_path(db_path, split_ref.blob.sha256);
+    let footer_cache_entry = Arc::new(decode_footer_cache_entry_bytes(
+        &store
+            .get_range(
+                &blob_path,
+                split_ref.footer_offset..split_ref.total_size_bytes,
+            )
+            .await?,
+        split_ref,
+    )?);
+    let cache_bytes = usize::try_from(split_ref.total_size_bytes).map_err(|_| {
+        HelixDbError::Config("text split size exceeds platform cache limits".into())
+    })?;
+    let capacity = NonZeroUsize::new(cache_bytes)
+        .ok_or_else(|| HelixDbError::Config("text split cache size must be non-zero".into()))?;
+    let range_cache = RangeCache::new(CacheCapacity::Bounded(capacity));
+    let bundle_storage: Arc<dyn bundle_storage::SplitStorage> =
+        Arc::new(ObjectStoreSplitBundleStorage::new(
+            Arc::clone(store),
+            blob_path,
+            footer_cache_entry.footer.clone(),
+        ));
+    let directory = StorageDirectory::new(Arc::new(CachedSplitStorage::new(
+        bundle_storage,
+        range_cache.clone(),
+    )));
+    open_split_index_with_hotcache(
+        directory,
+        footer_cache_entry.hotcache_bytes.as_ref(),
+        range_cache,
+    )
+}
+
+fn open_split_index_with_hotcache(
+    directory: impl tantivy::Directory + 'static,
+    hotcache_bytes: &[u8],
+    range_cache: RangeCache<PathBuf>,
+) -> Result<Index, HelixDbError> {
+    let caching_directory: Arc<dyn tantivy::Directory> =
+        Arc::new(CachingDirectory::new(Arc::new(directory), range_cache));
+    let hot_directory = HotDirectory::open(caching_directory, hotcache_bytes)?;
+    Index::open(hot_directory).map_err(|err| {
+        HelixDbError::Config(format!("failed to open split-backed Tantivy index: {err}"))
+    })
+}
+
+pub fn search_documents(
+    definition: &TextIndexDefinition,
+    documents: &[TextDocumentInput],
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    if k == 0 || documents.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let (index, fields) = create_ram_index(definition)?;
+    populate_index(&index, fields, documents)?;
+    search_index(&index, fields, definition.analyzer(), query, k)
+}
+
+pub async fn persist_documents_as_manifest(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    definition: &TextIndexDefinition,
+    index_name: &str,
+    documents: &[TextDocumentInput],
+) -> Result<Option<TextIndexGenerationManifest>, HelixDbError> {
+    let Some(split) = persist_documents_as_split(store, db_path, definition, documents).await?
+    else {
+        return Ok(None);
+    };
+    let generation_id = Uuid::new_v4().to_string();
+
+    Ok(Some(TextIndexGenerationManifest::new_split(
+        index_name,
+        generation_id,
+        definition.analyzer(),
+        definition.positions_enabled(),
+        split,
+    )))
+}
+
+/// Builds one unchanged current-format immutable text split without object I/O.
+///
+/// This is the construction half of the V2 publication contract. Callers
+/// upload [`UnpublishedTextSplit::into_parts`] before transactionally attaching
+/// the exact reference returned by [`UnpublishedTextSplit::split_ref`].
+pub(crate) fn build_documents_as_split(
+    definition: &TextIndexDefinition,
+    documents: &[TextDocumentInput],
+) -> Result<Option<UnpublishedTextSplit>, HelixDbError> {
+    if documents.is_empty() {
+        return Ok(None);
+    }
+
+    let tempdir = create_tempdir("text-index")?;
+    let (index, fields) = create_disk_index(tempdir.path(), definition)?;
+    populate_index(&index, fields, documents)?;
+
+    let pruning = SplitPruning::from_terms(
+        documents
+            .iter()
+            .flat_map(|document| analyze_text(definition.analyzer(), &document.text).unique_terms),
+    );
+    Ok(Some(UnpublishedTextSplit::from_built_split(
+        build_split_bundle(tempdir.path())?,
+        pruning,
+    )))
+}
+
+/// Builds one current-format foreground split from canonical analyzed documents.
+///
+/// The in-memory directory changes only temporary construction. File ordering,
+/// checksummed Tantivy bytes, hotcache, footer, and trailer use the same bundle
+/// writer as the disk-backed lifecycle path.
+pub(crate) fn build_analyzed_documents_as_split(
+    definition: &TextIndexDefinition,
+    documents: Vec<AnalyzedTextDocumentInput>,
+) -> Result<Option<UnpublishedTextSplit>, HelixDbError> {
+    if documents.is_empty() {
+        return Ok(None);
+    }
+
+    let directory = RamDirectory::create();
+    let (schema, fields) = build_schema(definition.analyzer(), definition.positions_enabled());
+    let index =
+        Index::create(directory.clone(), schema, IndexSettings::default()).map_err(|error| {
+            HelixDbError::Config(format!("failed to create in-memory Tantivy index: {error}"))
+        })?;
+    register_analyzers(&index, definition.analyzer());
+    let pruning = SplitPruning::from_terms(
+        documents
+            .iter()
+            .flat_map(|document| document.analyzed.statistics().unique_terms.iter().cloned()),
+    );
+    populate_analyzed_index(&index, fields, documents)?;
+
+    let mut file_names = index.directory().list_managed_files();
+    file_names.insert(PathBuf::from(META_JSON_FILE));
+    file_names.insert(PathBuf::from(MANAGED_JSON_FILE));
+    let built = build_split_bundle_from_directory(&directory, file_names)?;
+    Ok(Some(UnpublishedTextSplit::from_built_split(built, pruning)))
+}
+
+/// Configured-static convenience wrapper that directly uploads one text split.
+///
+/// V2 lifecycle and configured indexes both use the same content-addressed
+/// object-store upload boundary before their SlateDB visibility commit.
+pub(crate) async fn persist_documents_as_split(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    definition: &TextIndexDefinition,
+    documents: &[TextDocumentInput],
+) -> Result<Option<TextSplitRef>, HelixDbError> {
+    let Some(unpublished) = build_documents_as_split(definition, documents)? else {
+        return Ok(None);
+    };
+    let (payload, split_ref, _) = unpublished.into_parts();
+    let uploaded = upload_blob(store, db_path, &payload).await?;
+    assert_eq!(
+        uploaded, split_ref.blob,
+        "the shared content-addressed constructor must return the precomputed split identity"
+    );
+    Ok(Some(split_ref))
+}
+
+pub async fn collect_node_documents_from_reader(
+    reader: &(impl DbReadOps + Send + Sync),
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<Vec<TextDocumentInput>, HelixDbError> {
+    let prefix = keys::KeyPrefix::NodeProperty.as_slice();
+    let mut iter = reader.scan_prefix(prefix, ..).await?;
+    let mut docs = Vec::new();
+
+    while let Some(kv) = iter.next().await? {
+        if kv.key.len() < 9 {
+            continue;
+        }
+        let key = keys::DataKeyKind::parse_from_slice(&kv.key)?;
+        if let keys::DataKeyKind::NodeProperty(node_property_key) = key {
+            let properties = decode_properties(&kv.value)?;
+            if let Some(document) = make_node_document(
+                node_property_key.node_id(),
+                &properties,
+                definition,
+                tenant_value,
+            )? {
+                docs.push(document);
+            }
+        } else {
+            continue;
+        }
+    }
+
+    Ok(docs)
+}
+
+pub async fn collect_edge_documents_from_reader(
+    reader: &(impl DbReadOps + Send + Sync),
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<Vec<TextDocumentInput>, HelixDbError> {
+    let prefix = keys::KeyPrefix::EdgeEndpoints.as_slice();
+    let mut iter = reader.scan_prefix(prefix, ..).await?;
+    let mut docs = Vec::new();
+
+    while let Some(kv) = iter.next().await? {
+        if kv.key.len() < 9 {
+            continue;
+        }
+        let edge_id = EdgeId::from_be_bytes(kv.key[1..9].try_into().unwrap());
+        let properties = get_edge_properties_by_id(reader, edge_id).await?;
+        if let Some(document) = make_edge_document(edge_id, &properties, definition, tenant_value)?
+        {
+            docs.push(document);
+        }
+    }
+
+    Ok(docs)
+}
+
+pub fn make_node_document(
+    node_id: NodeId,
+    properties: &[Property],
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<Option<TextDocumentInput>, HelixDbError> {
+    if !label_matches_definition(properties, definition) {
+        return Ok(None);
+    }
+
+    let Some(value) = property_value(properties, definition.property()) else {
+        return Ok(None);
+    };
+    let text = normalize_indexed_text_value(value)?;
+
+    if !tenant_matches_definition(properties, definition, tenant_value)? {
+        return Ok(None);
+    }
+
+    Ok(Some(TextDocumentInput::new(node_id, text)))
+}
+
+pub fn make_edge_document(
+    edge_id: EdgeId,
+    properties: &[Property],
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<Option<TextDocumentInput>, HelixDbError> {
+    if !label_matches_definition(properties, definition) {
+        return Ok(None);
+    }
+
+    let Some(value) = property_value(properties, definition.property()) else {
+        return Ok(None);
+    };
+    let text = normalize_indexed_text_value(value)?;
+
+    if !tenant_matches_definition(properties, definition, tenant_value)? {
+        return Ok(None);
+    }
+
+    Ok(Some(TextDocumentInput::new(edge_id, text)))
+}
+
+pub fn validate_node_properties_for_definition(
+    definition: &TextIndexDefinition,
+    properties: &[Property],
+) -> Result<(), HelixDbError> {
+    if !label_matches_definition(properties, definition) {
+        return Ok(());
+    }
+
+    let Some(value) = property_value(properties, definition.property()) else {
+        return Ok(());
+    };
+    let _ = normalize_indexed_text_value(value)?;
+
+    if let Some(tenant_property) = definition.tenant_property()
+        && property_value(properties, tenant_property)
+            .and_then(normalize_tenant_value)
+            .is_none()
+    {
+        return Err(HelixDbError::Query(format!(
+            "text index {}:{} requires tenant property '{}' when '{}' is present",
+            definition.label(),
+            definition.property(),
+            tenant_property,
+            definition.property()
+        )));
+    }
+
+    Ok(())
+}
+
+pub fn validate_edge_properties_for_definition(
+    definition: &TextIndexDefinition,
+    properties: &[Property],
+) -> Result<(), HelixDbError> {
+    if !label_matches_definition(properties, definition) {
+        return Ok(());
+    }
+
+    let Some(value) = property_value(properties, definition.property()) else {
+        return Ok(());
+    };
+    let _ = normalize_indexed_text_value(value)?;
+
+    if let Some(tenant_property) = definition.tenant_property()
+        && property_value(properties, tenant_property)
+            .and_then(normalize_tenant_value)
+            .is_none()
+    {
+        return Err(HelixDbError::Query(format!(
+            "text index {}:{} requires tenant property '{}' when '{}' is present",
+            definition.label(),
+            definition.property(),
+            tenant_property,
+            definition.property()
+        )));
+    }
+
+    Ok(())
+}
+
+/// Converts a supported text property into the exact document text.
+///
+/// Absence is owned by the caller before this boundary. A present property is
+/// either a string/string array or a typed query error, so the return type does
+/// not represent an unreachable successful-but-absent state.
+pub fn normalize_indexed_text_value(value: &PropertyValue) -> Result<String, HelixDbError> {
+    match value {
+        PropertyValue::String(text) => Ok(text.clone()),
+        PropertyValue::StringArray(items) => Ok(items.join("\n")),
+        PropertyValue::Null => Err(HelixDbError::Query(
+            "text indexes do not support null property values".into(),
+        )),
+        PropertyValue::Bool(_)
+        | PropertyValue::I64(_)
+        | PropertyValue::DateTime(_)
+        | PropertyValue::F64(_)
+        | PropertyValue::F32(_)
+        | PropertyValue::Bytes(_)
+        | PropertyValue::I64Array(_)
+        | PropertyValue::F64Array(_)
+        | PropertyValue::F32Array(_)
+        | PropertyValue::Array(_)
+        | PropertyValue::Object(_) => Err(HelixDbError::Query(
+            "text indexes only support String and StringArray values".into(),
+        )),
+    }
+}
+
+pub fn resolve_physical_index_name(
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<String, HelixDbError> {
+    match (
+        definition.tenant_property(),
+        tenant_value.and_then(normalize_tenant_value),
+    ) {
+        (Some(tenant_property), Some(tenant_value)) => Ok(text_tenant_index_name(
+            definition.element_type(),
+            definition.label(),
+            definition.property(),
+            tenant_property,
+            tenant_value,
+        )),
+        (Some(tenant_property), None) => Err(HelixDbError::Query(format!(
+            "text search for {}:{} requires tenant value for partition property '{}'",
+            definition.label(),
+            definition.property(),
+            tenant_property
+        ))),
+        (None, Some(_)) => Err(HelixDbError::Query(format!(
+            "text search for {}:{} does not support tenant values",
+            definition.label(),
+            definition.property()
+        ))),
+        (None, None) => Ok(text_index_name(
+            definition.element_type(),
+            definition.label(),
+            definition.property(),
+        )),
+    }
+}
+
+pub fn normalize_tenant_value(value: &PropertyValue) -> Option<&PropertyValue> {
+    match value {
+        PropertyValue::Null => None,
+        PropertyValue::Bool(_)
+        | PropertyValue::I64(_)
+        | PropertyValue::DateTime(_)
+        | PropertyValue::F64(_)
+        | PropertyValue::F32(_)
+        | PropertyValue::String(_)
+        | PropertyValue::Bytes(_)
+        | PropertyValue::I64Array(_)
+        | PropertyValue::F64Array(_)
+        | PropertyValue::F32Array(_)
+        | PropertyValue::StringArray(_)
+        | PropertyValue::Array(_)
+        | PropertyValue::Object(_) => Some(value),
+    }
+}
+
+pub fn manifest_blob_hashes(manifests: &[TextIndexGenerationManifest]) -> BTreeSet<[u8; 32]> {
+    manifests
+        .iter()
+        .flat_map(|manifest| manifest.split_refs().iter().map(|split| split.blob.sha256))
+        .collect()
+}
+
+pub fn encode_live_state_bytes(state: &TextIndexLiveState) -> Result<Vec<u8>, HelixDbError> {
+    crate::encoding::v2::legacy::text::live_state::encode_for_retained_api(state)
+        .map(|bytes| bytes.to_vec())
+        .map_err(|error| HelixDbError::Config(error.to_string()))
+}
+
+pub fn decode_live_state_bytes(bytes: &[u8]) -> Result<TextIndexLiveState, HelixDbError> {
+    crate::encoding::v2::legacy::text::live_state::decode(bytes)
+        .map_err(|error| HelixDbError::Config(error.to_string()))
+}
+
+pub(crate) async fn materialize_split_ref_to_file(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    split_ref: &TextSplitRef,
+    split_path: &Path,
+) -> Result<(), HelixDbError> {
+    let blob_path = blob_object_store_path(db_path, split_ref.blob.sha256);
+    let mut stream = store.get(&blob_path).await?.into_stream();
+    let mut file = tokio::fs::File::create(split_path).await.map_err(|err| {
+        HelixDbError::Config(format!(
+            "failed to create local text split file '{}': {err}",
+            split_path.display()
+        ))
+    })?;
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        file.write_all(&chunk).await.map_err(|err| {
+            HelixDbError::Config(format!(
+                "failed to stream local text split file '{}': {err}",
+                split_path.display()
+            ))
+        })?;
+    }
+    file.flush().await.map_err(|err| {
+        HelixDbError::Config(format!(
+            "failed to flush local text split file '{}': {err}",
+            split_path.display()
+        ))
+    })?;
+    Ok(())
+}
+
+pub async fn copy_blob_set(
+    store: &Arc<dyn ObjectStore>,
+    source_db_path: &str,
+    target_db_path: &str,
+    blob_hashes: &BTreeSet<[u8; 32]>,
+) -> Result<(), HelixDbError> {
+    for sha256 in blob_hashes {
+        let source_path = blob_object_store_path(source_db_path, *sha256);
+        let target_path = blob_object_store_path(target_db_path, *sha256);
+        if source_path == target_path {
+            continue;
+        }
+        let payload = store.get(&source_path).await?.bytes().await?;
+        store
+            .put(&target_path, PutPayload::from_bytes(payload))
+            .await?;
+    }
+    Ok(())
+}
+
+pub async fn list_blob_hashes(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+) -> Result<Vec<(ObjectStorePath, ObjectMeta)>, HelixDbError> {
+    let prefix = blob_prefix_object_store_path(db_path);
+    let mut stream = store.list(Some(&prefix));
+    let mut blobs = Vec::new();
+    while let Some(meta) = stream.next().await.transpose()? {
+        blobs.push((meta.location.clone(), meta));
+    }
+    Ok(blobs)
+}
+
+fn create_ram_index(
+    definition: &TextIndexDefinition,
+) -> Result<(Index, TextSchemaFields), HelixDbError> {
+    let (schema, fields) = build_schema(definition.analyzer(), definition.positions_enabled());
+    let index = Index::create_in_ram(schema);
+    register_analyzers(&index, definition.analyzer());
+    Ok((index, fields))
+}
+
+fn create_disk_index(
+    dir: &Path,
+    definition: &TextIndexDefinition,
+) -> Result<(Index, TextSchemaFields), HelixDbError> {
+    let (schema, fields) = build_schema(definition.analyzer(), definition.positions_enabled());
+    let index = Index::create_in_dir(dir, schema).map_err(|err| {
+        HelixDbError::Config(format!("failed to create Tantivy index directory: {err}"))
+    })?;
+    register_analyzers(&index, definition.analyzer());
+    Ok((index, fields))
+}
+
+fn build_schema(analyzer: TextAnalyzerKind, positions_enabled: bool) -> (Schema, TextSchemaFields) {
+    let mut schema_builder = Schema::builder();
+    let entity_id = schema_builder.add_u64_field(
+        ENTITY_ID_FIELD_NAME,
+        NumericOptions::default().set_indexed().set_fast(),
+    );
+    let logical_version = schema_builder.add_u64_field(
+        LOGICAL_VERSION_FIELD_NAME,
+        NumericOptions::default().set_indexed().set_fast(),
+    );
+    let body_indexing = TextFieldIndexing::default()
+        .set_tokenizer(analyzer.as_str())
+        .set_index_option(if positions_enabled {
+            IndexRecordOption::WithFreqsAndPositions
+        } else {
+            IndexRecordOption::WithFreqs
+        });
+    let body = schema_builder.add_text_field(
+        BODY_FIELD_NAME,
+        TextOptions::default().set_indexing_options(body_indexing),
+    );
+    let schema = schema_builder.build();
+    (
+        schema,
+        TextSchemaFields {
+            entity_id,
+            logical_version,
+            body,
+        },
+    )
+}
+
+fn register_analyzers(index: &Index, default_analyzer: TextAnalyzerKind) {
+    let tokenizers = index.tokenizers();
+    tokenizers.register(
+        TextAnalyzerKind::Standard.as_str(),
+        build_text_analyzer(TextAnalyzerKind::Standard),
+    );
+    tokenizers.register(
+        TextAnalyzerKind::StandardStemEn.as_str(),
+        build_text_analyzer(TextAnalyzerKind::StandardStemEn),
+    );
+    tokenizers.register(
+        TextAnalyzerKind::WhitespaceLowercase.as_str(),
+        build_text_analyzer(TextAnalyzerKind::WhitespaceLowercase),
+    );
+    tokenizers.register(
+        default_analyzer.as_str(),
+        build_text_analyzer(default_analyzer),
+    );
+}
+
+pub(crate) fn build_text_analyzer(kind: TextAnalyzerKind) -> TextAnalyzer {
+    match kind {
+        TextAnalyzerKind::Standard => TextAnalyzer::builder(SimpleTokenizer::default())
+            .filter(LowerCaser)
+            .build(),
+        TextAnalyzerKind::StandardStemEn => TextAnalyzer::builder(SimpleTokenizer::default())
+            .filter(LowerCaser)
+            .filter(Stemmer::new(Language::English))
+            .build(),
+        TextAnalyzerKind::WhitespaceLowercase => {
+            TextAnalyzer::builder(WhitespaceTokenizer::default())
+                .filter(LowerCaser)
+                .build()
+        }
+    }
+}
+
+fn populate_index(
+    index: &Index,
+    fields: TextSchemaFields,
+    documents: &[TextDocumentInput],
+) -> Result<(), HelixDbError> {
+    let mut writer = index
+        .writer(15_000_000)
+        .map_err(|err| HelixDbError::Config(format!("failed to create Tantivy writer: {err}")))?;
+    writer.set_merge_policy(Box::new(NoMergePolicy));
+    for document in documents {
+        let mut tantivy_document = TantivyDocument::default();
+        tantivy_document.add_u64(fields.entity_id, document.entity_id);
+        tantivy_document.add_u64(fields.logical_version, document.logical_version);
+        tantivy_document.add_text(fields.body, document.text.as_str());
+        writer.add_document(tantivy_document).map_err(|err| {
+            HelixDbError::Config(format!("failed to add Tantivy document: {err}"))
+        })?;
+    }
+    writer
+        .commit()
+        .map_err(|err| HelixDbError::Config(format!("failed to commit Tantivy writer: {err}")))?;
+    drop(writer);
+    Ok(())
+}
+
+fn populate_analyzed_index(
+    index: &Index,
+    fields: TextSchemaFields,
+    documents: Vec<AnalyzedTextDocumentInput>,
+) -> Result<(), HelixDbError> {
+    let mut writer = index.writer(15_000_000).map_err(|error| {
+        HelixDbError::Config(format!("failed to create Tantivy writer: {error}"))
+    })?;
+    writer.set_merge_policy(Box::new(NoMergePolicy));
+    for document in documents {
+        let mut tantivy_document = TantivyDocument::default();
+        tantivy_document.add_u64(fields.entity_id, document.entity_id);
+        tantivy_document.add_u64(fields.logical_version, document.logical_version);
+        tantivy_document
+            .add_pre_tokenized_text(fields.body, document.analyzed.into_pre_tokenized_string());
+        writer.add_document(tantivy_document).map_err(|error| {
+            HelixDbError::Config(format!("failed to add Tantivy document: {error}"))
+        })?;
+    }
+    writer.commit().map_err(|error| {
+        HelixDbError::Config(format!("failed to commit Tantivy writer: {error}"))
+    })?;
+    drop(writer);
+    Ok(())
+}
+
+pub(crate) async fn warm_searcher(
+    reader: &IndexReader,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+) -> Result<(), HelixDbError> {
+    let mut warmup_info = query_warmup_info(fields, analyzer, query);
+    if warmup_info.terms_grouped_by_field.is_empty()
+        && warmup_info.fast_fields.is_empty()
+        && !warmup_info.field_norms
+        && warmup_info.term_dict_fields.is_empty()
+        && warmup_info.postings_full_fields.is_empty()
+    {
+        return Ok(());
+    }
+
+    warmup_info.merge(collector_warmup_info());
+    warmup_info.simplify();
+    execute_warmup(reader, warmup_info).await
+}
+
+fn query_warmup_info(
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+) -> WarmupInfo {
+    let terms = analyze_query_terms(analyzer, query);
+    let mut warmup = WarmupInfo::default();
+    if !terms.is_empty() {
+        warmup.terms_grouped_by_field.insert(
+            fields.body,
+            terms
+                .into_iter()
+                .map(|term| (Term::from_field_text(fields.body, &term), false))
+                .collect(),
+        );
+    }
+    warmup
+        .fast_fields
+        .insert(FastFieldWarmupInfo::new(ENTITY_ID_FIELD_NAME, false));
+    warmup
+        .fast_fields
+        .insert(FastFieldWarmupInfo::new(LOGICAL_VERSION_FIELD_NAME, false));
+    warmup
+}
+
+fn collector_warmup_info() -> WarmupInfo {
+    WarmupInfo {
+        field_norms: true,
+        ..WarmupInfo::default()
+    }
+}
+
+async fn execute_warmup(reader: &IndexReader, warmup_info: WarmupInfo) -> Result<(), HelixDbError> {
+    let searcher = reader.searcher();
+    let (_, _, _, _, _) = tokio::try_join!(
+        warm_up_term_dict_fields(&searcher, &warmup_info),
+        warm_up_postings_full(&searcher, &warmup_info),
+        warm_up_terms(&searcher, &warmup_info),
+        warm_up_fastfields(&searcher, &warmup_info),
+        warm_up_fieldnorms(&searcher, &warmup_info),
+    )?;
+    Ok(())
+}
+
+async fn warm_up_term_dict_fields(
+    searcher: &tantivy::Searcher,
+    warmup_info: &WarmupInfo,
+) -> Result<(), HelixDbError> {
+    let mut warmup_futures: Vec<TextWarmupFuture> = Vec::new();
+    for segment_reader in searcher.segment_readers() {
+        for field in &warmup_info.term_dict_fields {
+            let inverted_index = segment_reader.inverted_index(*field).map_err(|err| {
+                HelixDbError::Config(format!(
+                    "failed to open inverted index for term dictionary warmup: {err}"
+                ))
+            })?;
+            let inverted_index = inverted_index.clone();
+            warmup_futures.push(Box::pin(async move {
+                inverted_index
+                    .terms()
+                    .warm_up_dictionary()
+                    .await
+                    .map_err(|err| {
+                        HelixDbError::Config(format!("failed to warm text term dictionary: {err}"))
+                    })
+            }));
+        }
+    }
+    try_join_all(warmup_futures).await.map(|_| ())
+}
+
+async fn warm_up_postings_full(
+    searcher: &tantivy::Searcher,
+    warmup_info: &WarmupInfo,
+) -> Result<(), HelixDbError> {
+    let mut warmup_futures: Vec<TextWarmupFuture> = Vec::new();
+    for segment_reader in searcher.segment_readers() {
+        for field in &warmup_info.postings_full_fields {
+            let inverted_index = segment_reader.inverted_index(*field).map_err(|err| {
+                HelixDbError::Config(format!(
+                    "failed to open inverted index for postings-full warmup: {err}"
+                ))
+            })?;
+            let inverted_index = inverted_index.clone();
+            warmup_futures.push(Box::pin(async move {
+                inverted_index
+                    .warm_postings_full(false)
+                    .await
+                    .map_err(|err| {
+                        HelixDbError::Config(format!("failed to warm full text postings: {err}"))
+                    })
+            }));
+        }
+    }
+    try_join_all(warmup_futures).await.map(|_| ())
+}
+
+async fn warm_up_terms(
+    searcher: &tantivy::Searcher,
+    warmup_info: &WarmupInfo,
+) -> Result<(), HelixDbError> {
+    let mut warmup_futures: Vec<TextWarmupFuture> = Vec::new();
+    for segment_reader in searcher.segment_readers() {
+        for (field, terms) in &warmup_info.terms_grouped_by_field {
+            let inverted_index = segment_reader.inverted_index(*field).map_err(|err| {
+                HelixDbError::Config(format!(
+                    "failed to open inverted index for term warmup: {err}"
+                ))
+            })?;
+            for (term, include_positions) in terms {
+                let inverted_index = inverted_index.clone();
+                let term = term.clone();
+                let include_positions = *include_positions;
+                warmup_futures.push(Box::pin(async move {
+                    inverted_index
+                        .warm_postings(&term, include_positions)
+                        .await
+                        .map(|_| ())
+                        .map_err(|err| {
+                            HelixDbError::Config(format!("failed to warm text postings: {err}"))
+                        })
+                }));
+            }
+        }
+    }
+    try_join_all(warmup_futures).await.map(|_| ())
+}
+
+async fn warm_up_fastfields(
+    searcher: &tantivy::Searcher,
+    warmup_info: &WarmupInfo,
+) -> Result<(), HelixDbError> {
+    let mut warmup_futures: Vec<TextWarmupFuture> = Vec::new();
+    for segment_reader in searcher.segment_readers() {
+        for fast_field in &warmup_info.fast_fields {
+            let fast_fields = segment_reader.fast_fields().clone();
+            let field_name = fast_field.name.clone();
+            warmup_futures.push(Box::pin(async move {
+                let handles = fast_fields
+                    .list_dynamic_column_handles(&field_name)
+                    .await
+                    .map_err(|err| {
+                        HelixDbError::Config(format!(
+                            "failed to list text fast field warmup handles: {err}"
+                        ))
+                    })?;
+                try_join_all(handles.into_iter().map(|handle| async move {
+                    handle.file_slice().read_bytes_async().await.map(|_| ())
+                }))
+                .await
+                .map(|_| ())
+                .map_err(|err| {
+                    HelixDbError::Config(format!(
+                        "failed to warm text fast field '{}': {err}",
+                        field_name
+                    ))
+                })
+            }));
+        }
+    }
+    try_join_all(warmup_futures).await.map(|_| ())
+}
+
+async fn warm_up_fieldnorms(
+    searcher: &tantivy::Searcher,
+    warmup_info: &WarmupInfo,
+) -> Result<(), HelixDbError> {
+    if !warmup_info.field_norms {
+        return Ok(());
+    }
+
+    let mut warmup_futures: Vec<TextWarmupFuture> = Vec::new();
+    for segment_reader in searcher.segment_readers() {
+        let schema = segment_reader.schema();
+        let fieldnorm_file = segment_reader.fieldnorms_readers().get_inner_file();
+        for (field, field_entry) in schema.fields() {
+            if !field_entry.is_indexed() {
+                continue;
+            }
+            if let Some(fieldnorm_slice) = fieldnorm_file.open_read(field) {
+                warmup_futures.push(Box::pin(async move {
+                    fieldnorm_slice
+                        .read_bytes_async()
+                        .await
+                        .map(|_| ())
+                        .map_err(|err| {
+                            HelixDbError::Config(format!("failed to warm text field norms: {err}"))
+                        })
+                }));
+            }
+        }
+    }
+    try_join_all(warmup_futures).await.map(|_| ())
+}
+
+fn search_split_index_bytes(
+    reader: &IndexReader,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    positions_enabled: bool,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    let _ = positions_enabled;
+    search_reader(reader, fields, analyzer, query, k)
+}
+
+fn search_index(
+    index: &Index,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    let reader = build_reader(index)?;
+    search_reader(&reader, fields, analyzer, query, k)
+}
+
+/// Analysis bytes of the pending documents each overlay scored, by index
+/// label, so a test bounds its own searches' analysis without observing
+/// searches of tests running beside it.
+#[cfg(test)]
+pub(crate) static PENDING_ANALYSIS_BYTES: std::sync::Mutex<Vec<(String, u64)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// Pending documents one scoring step scores between cancellation checks.
+const PENDING_SCORE_CHUNK: usize = 4_096;
+
+/// Scores pending documents exactly as persisted splits score them.
+///
+/// Each document arrives analyzed ([`analyze_text_for_indexing`]), possibly
+/// by an earlier search, and is scored from that analysis in place rather
+/// than copied into an in-memory index, and only the `k` best are kept, so a
+/// search's memory grows with `k`, not its documents. Every query term is
+/// one OR clause weighted by Tantivy's BM25 for the caller-supplied
+/// statistics, as each persisted term query weighs it; a document's field
+/// norm and term frequencies are those indexing its token stream records. A
+/// document matching no term never ranks, and hits rank by score, then
+/// ascending entity ID, as the persisted collector ranks them. Clause scores
+/// are summed in query-term order: Tantivy's own order varies with index
+/// layout, so a document matching three or more terms may differ from its
+/// published score in the last place, as it may between two persisted
+/// layouts.
+///
+/// The caller restricts `documents` to the search's traversal scope and
+/// selected them within `analysis_limit` of charged analysis, so documents
+/// charged past it are an invariant violation rather than a limit a request
+/// can reach. Scoring calls `check` before each step of at most 4,096
+/// documents and stops with its error.
+pub(crate) fn search_pending_documents(
+    definition: &TextIndexDefinition,
+    documents: &[(u64, Arc<IndexedTextAnalysis>)],
+    analysis_limit: NonZeroU64,
+    query: &str,
+    k: usize,
+    statistics: &crate::index_lifecycle::text::statistics::TextBm25Statistics,
+    mut check: impl FnMut() -> Result<(), HelixDbError>,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    let terms = analyze_query_terms(definition.analyzer(), query);
+    if documents.is_empty() || terms.is_empty() || k == 0 {
+        return Ok(Vec::new());
+    }
+    let charged = documents
+        .iter()
+        .map(|(_, analysis)| analysis.retained_bytes())
+        .fold(0, u64::saturating_add);
+    if charged > analysis_limit.get() {
+        return Err(HelixDbError::InvariantViolation(format!(
+            "pending text analysis reached {charged} bytes past the {analysis_limit} its \
+             selection was sized to"
+        )));
+    }
+    #[cfg(test)]
+    PENDING_ANALYSIS_BYTES
+        .lock()
+        .expect("pending analysis log is never poisoned")
+        .push((definition.label().to_string(), charged));
+    let (_, fields) = build_schema(definition.analyzer(), definition.positions_enabled());
+    let weights = terms
+        .iter()
+        .map(|term| {
+            tantivy::query::Bm25Weight::for_terms(
+                statistics,
+                &[Term::from_field_text(fields.body, term)],
+            )
+        })
+        .collect::<tantivy::Result<Vec<_>>>()
+        .map_err(|error| {
+            HelixDbError::InvariantViolation(format!(
+                "pending text statistics failed to weigh a query term: {error}"
+            ))
+        })?;
+    // Analyzed query terms are unique and sorted, so each token finds its
+    // clause by binary search; the counts are reused across documents rather
+    // than allocated per document.
+    debug_assert!(terms.is_sorted());
+    let mut term_frequencies = vec![0_u32; terms.len()];
+    let mut score = |analysis: &IndexedTextAnalysis| {
+        term_frequencies.fill(0);
+        analysis
+            .pre_tokenized
+            .tokens
+            .iter()
+            .filter_map(|token| terms.binary_search(&token.text).ok())
+            .for_each(|clause| {
+                term_frequencies[clause] = term_frequencies[clause].saturating_add(1);
+            });
+        let fieldnorm_id = tantivy::fieldnorm::FieldNormReader::fieldnorm_to_id(
+            u32::try_from(analysis.statistics.token_count).unwrap_or(u32::MAX),
+        );
+        term_frequencies
+            .iter()
+            .zip(&weights)
+            .filter(|(frequency, _)| **frequency > 0)
+            .map(|(frequency, weight)| weight.score(fieldnorm_id, *frequency))
+            .reduce(|total, score| total + score)
+    };
+    let rank = |left: &TextSearchHit, right: &TextSearchHit| {
+        right
+            .score
+            .total_cmp(&left.score)
+            .then_with(|| left.entity_id.cmp(&right.entity_id))
+    };
+    // Only a document among a step's `k` best, ties broken by entity ID, can
+    // be among the `k` best overall.
+    let mut hits = documents.chunks(PENDING_SCORE_CHUNK).try_fold(
+        Vec::with_capacity(k.saturating_add(PENDING_SCORE_CHUNK).min(documents.len())),
+        |mut best, chunk| {
+            check()?;
+            best.extend(chunk.iter().filter_map(|(entity_id, analysis)| {
+                score(analysis).map(|score| TextSearchHit {
+                    entity_id: *entity_id,
+                    score,
+                })
+            }));
+            if best.len() > k {
+                best.select_nth_unstable_by(k - 1, rank);
+                best.truncate(k);
+            }
+            Ok::<_, HelixDbError>(best)
+        },
+    )?;
+    hits.sort_unstable_by(rank);
+    Ok(hits)
+}
+
+fn build_reader(index: &Index) -> Result<IndexReader, HelixDbError> {
+    let reader = index
+        .reader_builder()
+        .reload_policy(ReloadPolicy::Manual)
+        .try_into()
+        .map_err(|err| HelixDbError::Config(format!("failed to create Tantivy reader: {err}")))?;
+    reader
+        .reload()
+        .map_err(|err| HelixDbError::Config(format!("failed to reload Tantivy reader: {err}")))?;
+    Ok(reader)
+}
+
+fn search_reader(
+    reader: &IndexReader,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchHit>, HelixDbError> {
+    Ok(
+        search_reader_candidates(reader, fields, analyzer, query, k)?
+            .into_iter()
+            .map(|candidate| TextSearchHit {
+                entity_id: candidate.entity_id,
+                score: candidate.score,
+            })
+            .collect(),
+    )
+}
+
+pub(crate) fn search_reader_candidates(
+    reader: &IndexReader,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+    k: usize,
+) -> Result<Vec<TextSearchCandidate>, HelixDbError> {
+    search_reader_candidates_with_statistics(
+        reader,
+        fields,
+        analyzer,
+        query,
+        k,
+        None,
+        &TextSearchScope::Unrestricted,
+    )
+}
+
+pub(crate) fn search_reader_candidates_with_statistics(
+    reader: &IndexReader,
+    fields: TextSchemaFields,
+    analyzer: TextAnalyzerKind,
+    query: &str,
+    k: usize,
+    statistics: Option<&crate::index_lifecycle::text::statistics::TextBm25Statistics>,
+    scope: &TextSearchScope,
+) -> Result<Vec<TextSearchCandidate>, HelixDbError> {
+    let terms = analyze_query_terms(analyzer, query);
+    if terms.is_empty() || k == 0 {
+        return Ok(Vec::new());
+    }
+
+    let searcher = reader.searcher();
+    let entity_id_columns = searcher
+        .segment_readers()
+        .iter()
+        .map(|segment_reader| {
+            segment_reader
+                .fast_fields()
+                .u64(ENTITY_ID_FIELD_NAME)
+                .map_err(|err| {
+                    HelixDbError::InvariantViolation(format!(
+                        "text index fast field '{ENTITY_ID_FIELD_NAME}' is unavailable: {err}"
+                    ))
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let logical_version_columns = searcher
+        .segment_readers()
+        .iter()
+        .map(|segment_reader| {
+            segment_reader
+                .fast_fields()
+                .u64(LOGICAL_VERSION_FIELD_NAME)
+                .map_err(|err| {
+                    HelixDbError::InvariantViolation(format!(
+                        "text index fast field '{LOGICAL_VERSION_FIELD_NAME}' is unavailable: {err}"
+                    ))
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let clauses = terms
+        .into_iter()
+        .map(|term| {
+            (
+                Occur::Should,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(fields.body, &term),
+                    IndexRecordOption::WithFreqs,
+                )) as Box<dyn tantivy::query::Query>,
+            )
+        })
+        .collect::<Vec<_>>();
+    let query = BooleanQuery::new(clauses);
+    let collector = TopDocs::with_limit(k).tweak_score(|segment_reader| {
+        let entity_ids = segment_reader
+            .fast_fields()
+            .u64(ENTITY_ID_FIELD_NAME)
+            .expect("text entity fast field was validated before collector construction")
+            .first_or_default_col(0);
+        move |doc, score: f32| {
+            debug_assert!(score.is_finite() && score >= 0.0);
+            HitRank::new(score, entity_ids.get_val(doc))
+        }
+    });
+    let docs = match scope {
+        TextSearchScope::Restricted(candidates) => {
+            let candidates = Arc::clone(candidates);
+            let collector = FilterCollector::new(
+                ENTITY_ID_FIELD_NAME.to_owned(),
+                move |entity_id: u64| candidates.contains(entity_id),
+                collector,
+            );
+            match statistics {
+                Some(statistics) => {
+                    searcher.search_with_statistics_provider(&query, &collector, statistics)
+                }
+                None => searcher.search(&query, &collector),
+            }
+        }
+        TextSearchScope::Unrestricted => match statistics {
+            Some(statistics) => {
+                searcher.search_with_statistics_provider(&query, &collector, statistics)
+            }
+            None => searcher.search(&query, &collector),
+        },
+    }
+    .map_err(|err| HelixDbError::Config(format!("failed to execute Tantivy search: {err}")))?;
+
+    let mut hits = Vec::with_capacity(docs.len());
+    for (rank, address) in docs {
+        let entity_id = entity_id_columns
+            .get(address.segment_ord as usize)
+            .ok_or_else(|| {
+                HelixDbError::InvariantViolation(format!(
+                    "text search hit references missing segment ordinal {}",
+                    address.segment_ord
+                ))
+            })?
+            .first(address.doc_id)
+            .ok_or_else(|| {
+                HelixDbError::InvariantViolation(
+                    "text index document is missing the entity_id field".into(),
+                )
+            })?;
+        if entity_id != rank.entity_id.0 {
+            return Err(HelixDbError::InvariantViolation(
+                "text deterministic collector observed inconsistent entity IDs".to_string(),
+            ));
+        }
+        if let Some(candidates) = scope.candidates()
+            && !candidates.contains(entity_id)
+        {
+            return Err(HelixDbError::InvariantViolation(
+                "restricted text search returned an ID outside its exact bitmap".to_string(),
+            ));
+        }
+        let logical_version = logical_version_columns
+            .get(address.segment_ord as usize)
+            .ok_or_else(|| {
+                HelixDbError::InvariantViolation(format!(
+                    "text search hit references missing logical-version segment ordinal {}",
+                    address.segment_ord
+                ))
+            })?
+            .first(address.doc_id)
+            .ok_or_else(|| {
+                HelixDbError::InvariantViolation(
+                    "text index document is missing the logical_version field".into(),
+                )
+            })?;
+        hits.push(TextSearchCandidate {
+            entity_id,
+            logical_version,
+            score: f32::from_bits(rank.score_bits),
+        });
+    }
+    Ok(hits)
+}
+
+fn lookup_schema_fields(schema: &Schema) -> Result<TextSchemaFields, HelixDbError> {
+    let entity_id = schema.get_field(ENTITY_ID_FIELD_NAME).map_err(|err| {
+        HelixDbError::InvariantViolation(format!("text index schema missing entity_id: {err}"))
+    })?;
+    let logical_version = schema
+        .get_field(LOGICAL_VERSION_FIELD_NAME)
+        .map_err(|err| {
+            HelixDbError::InvariantViolation(format!(
+                "text index schema missing logical_version: {err}"
+            ))
+        })?;
+    let body = schema.get_field(BODY_FIELD_NAME).map_err(|err| {
+        HelixDbError::InvariantViolation(format!("text index schema missing body: {err}"))
+    })?;
+    Ok(TextSchemaFields {
+        entity_id,
+        logical_version,
+        body,
+    })
+}
+
+/// Canonical token accounting shared by indexing, statistics, queries, and warmup.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AnalyzedText {
+    pub(crate) token_count: u64,
+    pub(crate) unique_terms: Vec<Bytes>,
+}
+
+/// Canonical foreground analysis reusable by statistics, pruning, and Tantivy.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct IndexedTextAnalysis {
+    statistics: AnalyzedText,
+    pre_tokenized: PreTokenizedString,
+    retained_bytes: u64,
+}
+
+impl IndexedTextAnalysis {
+    pub(crate) const fn statistics(&self) -> &AnalyzedText {
+        &self.statistics
+    }
+
+    fn into_pre_tokenized_string(self) -> PreTokenizedString {
+        self.pre_tokenized
+    }
+
+    /// Returns the analyzed text.
+    pub(crate) fn text(&self) -> &str {
+        &self.pre_tokenized.text
+    }
+
+    pub(crate) fn retained_bytes(&self) -> u64 {
+        self.retained_bytes
+    }
+
+    /// Charges `budget` exactly what analyzing this text again under it
+    /// would ([`analyze_text_for_indexing`]): [`Self::retained_bytes`] when
+    /// it fits, or else the same refusal, at the same token, that analysis
+    /// reports.
+    pub(crate) fn recharge(
+        &self,
+        budget: &mut TextAnalysisMemoryBudget,
+    ) -> Result<(), HelixDbError> {
+        if budget.try_reserve(self.retained_bytes).is_ok() {
+            return Ok(());
+        }
+        // Analysis charged the text, then each retained token in order, and
+        // nothing else, so replaying those charges fails where it would.
+        budget
+            .try_reserve(u64::try_from(self.pre_tokenized.text.capacity()).unwrap_or(u64::MAX))?;
+        self.pre_tokenized.tokens.iter().try_for_each(|token| {
+            budget.try_reserve(indexed_token_charge(
+                u64::try_from(token.text.len()).unwrap_or(u64::MAX),
+            ))
+        })?;
+        Err(HelixDbError::InvariantViolation(
+            "a text analysis's charges fit a budget its total did not".to_string(),
+        ))
+    }
+}
+
+/// Aggregate peak-memory admission for foreground text analysis.
+///
+/// The accounting intentionally overestimates allocator, token-vector,
+/// unique-term, and Tantivy ownership so the admitted value is a safe upper
+/// bound rather than a heap-profiler estimate. The budget is consumed before
+/// each retained token is cloned or allocated.
+#[derive(Debug)]
+pub(crate) struct TextAnalysisMemoryBudget {
+    limit: NonZeroU64,
+    used: u64,
+}
+
+impl TextAnalysisMemoryBudget {
+    pub(crate) const fn new(limit: NonZeroU64) -> Self {
+        Self { limit, used: 0 }
+    }
+
+    /// Charges `additional` bytes, or fails with the charge it would reach
+    /// past the limit and charges nothing.
+    fn try_reserve(&mut self, additional: u64) -> Result<(), HelixDbError> {
+        let observed = self.used.saturating_add(additional);
+        if observed > self.limit.get() {
+            return Err(HelixDbError::ActiveTextMutationLimitExceeded {
+                resource: crate::error::ActiveTextMutationResource::AnalysisBytes,
+                observed,
+                limit: self.limit.get(),
+            });
+        }
+        self.used = observed;
+        Ok(())
+    }
+
+    #[cfg(test)]
+    const fn used(&self) -> u64 {
+        self.used
+    }
+}
+
+/// Bytes a [`TextAnalysisMemoryBudget`] charges for one retained indexed token.
+///
+/// Conservatively covers vector over-allocation, owned token text,
+/// unique-term tree/vector storage, and downstream Tantivy copies.
+pub(crate) const fn indexed_token_charge(token_bytes: u64) -> u64 {
+    const OVERHEAD: u64 = (core::mem::size_of::<Token>() * 3
+        + core::mem::size_of::<Bytes>() * 2
+        + core::mem::size_of::<usize>() * 6) as u64;
+    OVERHEAD.saturating_add(token_bytes.saturating_mul(3))
+}
+
+/// Split bytes that do not grow with the document, rounded up to over twice
+/// the largest measured: Tantivy's meta, managed, fast-field, field-norm,
+/// store, and file footers, plus the bundle footer and hotcache.
+const SINGLE_DOCUMENT_SPLIT_OVERHEAD: u64 = 16 * 1024;
+
+/// Upper bound on the immutable split holding only one document that a
+/// [`TextAnalysisMemoryBudget`] charged `analysis_bytes`.
+///
+/// The body is indexed but not stored. Beyond its fixed layout, a split
+/// stores each distinct term in up to three places (its term-dictionary
+/// block, the block index, and the hotcache's copy of that index) plus a few
+/// bytes of frequency and position per token. Analysis charges every retained
+/// token [`indexed_token_charge`] (over 280 bytes plus three per token byte)
+/// on top of the text, and lowercasing grows a token to at most one and a
+/// half times its text, so every token byte is charged more than three and a
+/// half bytes. Adversarial documents measure below 0.71 of their charge
+/// beyond the fixed layout
+/// (`single_document_splits_stay_within_the_analysis_bound`).
+pub(crate) const fn single_document_split_bytes(analysis_bytes: u64) -> u64 {
+    SINGLE_DOCUMENT_SPLIT_OVERHEAD.saturating_add(analysis_bytes)
+}
+
+/// What indexing one document charges and retains, as admission sizes it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TextAnalysisTotals {
+    /// Bytes [`analyze_text_for_indexing`] charges for an owned copy of the
+    /// text whose capacity equals its length.
+    pub(crate) analysis_bytes: u64,
+    /// Bytes of the source text.
+    pub(crate) text_bytes: u64,
+    /// Distinct indexed terms.
+    pub(crate) unique_terms: u64,
+    /// Bytes of all distinct indexed terms together.
+    pub(crate) unique_term_bytes: u64,
+}
+
+impl TextAnalysisTotals {
+    /// Returns totals no analyzer exceeds for ASCII `text`, without running
+    /// one; `None` for other text, whose lowercase forms can grow.
+    ///
+    /// Both tokenizers emit disjoint, non-empty substrings of the text.
+    /// Lowercasing keeps an ASCII token's length, and English stemming only
+    /// deletes a suffix or replaces it with an ASCII one no longer than it.
+    /// An ASCII text of `L` bytes therefore yields at most `L` tokens holding
+    /// at most `L` bytes, so every total is at most its value for `L` distinct
+    /// one-byte terms.
+    pub(crate) fn ascii_bound(text: &str) -> Option<Self> {
+        text.is_ascii().then(|| {
+            let bytes = u64::try_from(text.len()).unwrap_or(u64::MAX);
+            Self {
+                analysis_bytes: bytes.saturating_add(bytes.saturating_mul(indexed_token_charge(1))),
+                text_bytes: bytes,
+                unique_terms: bytes,
+                unique_term_bytes: bytes,
+            }
+        })
+    }
+}
+
+/// Analyzes `text` like [`analyze_text`] while charging `budget` exactly what
+/// [`analyze_text_for_indexing`] charges for an owned copy of it whose
+/// capacity equals its length.
+///
+/// Only distinct terms are retained, and analysis stops at the first token
+/// the budget rejects, so sizing a document neither copies its text nor
+/// keeps its token stream.
+pub(crate) fn analyze_text_within_budget(
+    analyzer: TextAnalyzerKind,
+    text: &str,
+    budget: &mut TextAnalysisMemoryBudget,
+) -> Result<(AnalyzedText, TextAnalysisTotals), HelixDbError> {
+    let charged_before = budget.used;
+    let text_bytes = u64::try_from(text.len()).unwrap_or(u64::MAX);
+    budget.try_reserve(text_bytes)?;
+    let mut terms = BTreeSet::<Bytes>::new();
+    let mut token_count = 0_u64;
+    let mut text_analyzer = build_text_analyzer(analyzer);
+    let mut stream = text_analyzer.token_stream(text);
+    // Tantivy streams tokens through one reused buffer rather than an
+    // iterator, and the loop returns at the first rejected charge.
+    while stream.advance() {
+        let term = stream.token().text.as_bytes();
+        if term.is_empty() || term.len() > MAX_TOKEN_LEN {
+            continue;
+        }
+        budget.try_reserve(indexed_token_charge(
+            u64::try_from(term.len()).unwrap_or(u64::MAX),
+        ))?;
+        token_count = token_count
+            .checked_add(1)
+            .expect("an in-memory text cannot contain more than u64 tokens");
+        if !terms.contains(term) {
+            terms.insert(Bytes::copy_from_slice(term));
+        }
+    }
+    let totals = TextAnalysisTotals {
+        analysis_bytes: budget
+            .used
+            .checked_sub(charged_before)
+            .expect("text analysis budget consumption is monotonic"),
+        text_bytes,
+        unique_terms: u64::try_from(terms.len()).unwrap_or(u64::MAX),
+        unique_term_bytes: terms
+            .iter()
+            .map(|term| u64::try_from(term.len()).unwrap_or(u64::MAX))
+            .fold(0, u64::saturating_add),
+    };
+    Ok((
+        AnalyzedText {
+            token_count,
+            unique_terms: terms.into_iter().collect(),
+        },
+        totals,
+    ))
+}
+
+/// Applies the production analyzer and Tantivy's postings token-length boundary.
+pub(crate) fn analyze_text(analyzer: TextAnalyzerKind, text: &str) -> AnalyzedText {
+    let mut terms = BTreeSet::new();
+    let mut token_count = 0_u64;
+    let mut text_analyzer = build_text_analyzer(analyzer);
+    let mut stream = text_analyzer.token_stream(text);
+    stream.process(&mut |token| {
+        if !token.text.is_empty() && token.text.len() <= MAX_TOKEN_LEN {
+            token_count = token_count
+                .checked_add(1)
+                .expect("an in-memory text cannot contain more than u64 tokens");
+            terms.insert(Bytes::copy_from_slice(token.text.as_bytes()));
+        }
+    });
+    drop(stream);
+    AnalyzedText {
+        token_count,
+        unique_terms: terms.into_iter().collect(),
+    }
+}
+
+/// Runs the production analyzer once while retaining Tantivy's exact token stream.
+pub(crate) fn analyze_text_for_indexing(
+    analyzer: TextAnalyzerKind,
+    text: String,
+    budget: &mut TextAnalysisMemoryBudget,
+) -> Result<IndexedTextAnalysis, HelixDbError> {
+    // One temporary tokenizer token remains bounded by MAX_TOKEN_LEN. All
+    // request-retained memory is charged before cloning from that token.
+    let retained_before = budget.used;
+    budget.try_reserve(u64::try_from(text.capacity()).unwrap_or(u64::MAX))?;
+    let mut terms = BTreeSet::new();
+    let mut tokens = Vec::new();
+    let mut analysis_error = None;
+    let mut text_analyzer = build_text_analyzer(analyzer);
+    let mut stream = text_analyzer.token_stream(&text);
+    stream.process(&mut |token| {
+        if analysis_error.is_some() {
+            return;
+        }
+        if !token.text.is_empty() && token.text.len() <= MAX_TOKEN_LEN {
+            if let Err(error) = budget.try_reserve(indexed_token_charge(
+                u64::try_from(token.text.len()).unwrap_or(u64::MAX),
+            )) {
+                analysis_error = Some(error);
+                return;
+            }
+            terms.insert(Bytes::copy_from_slice(token.text.as_bytes()));
+            tokens.push(token.clone());
+        }
+    });
+    drop(stream);
+    if let Some(error) = analysis_error {
+        return Err(error);
+    }
+    let retained_bytes = budget
+        .used
+        .checked_sub(retained_before)
+        .expect("text analysis budget consumption is monotonic");
+    Ok(IndexedTextAnalysis {
+        statistics: AnalyzedText {
+            token_count: u64::try_from(tokens.len())
+                .expect("an in-memory text cannot contain more than u64 tokens"),
+            unique_terms: terms.into_iter().collect(),
+        },
+        pre_tokenized: PreTokenizedString { text, tokens },
+        retained_bytes,
+    })
+}
+
+fn analyze_query_terms(analyzer: TextAnalyzerKind, query: &str) -> Vec<String> {
+    analyze_text(analyzer, query)
+        .unique_terms
+        .into_iter()
+        .map(|term| {
+            String::from_utf8(term.to_vec()).expect("Tantivy analyzers emit valid UTF-8 terms")
+        })
+        .collect()
+}
+
+fn property_value<'a>(properties: &'a [Property], name: &str) -> Option<&'a PropertyValue> {
+    properties
+        .iter()
+        .find(|property| property.name == name)
+        .map(|property| &property.value)
+}
+
+fn label_matches_definition(properties: &[Property], definition: &TextIndexDefinition) -> bool {
+    extract_label(properties)
+        .map(|label| label == definition.label())
+        .unwrap_or(false)
+}
+
+fn tenant_matches_definition(
+    properties: &[Property],
+    definition: &TextIndexDefinition,
+    tenant_value: Option<&PropertyValue>,
+) -> Result<bool, HelixDbError> {
+    if let Some(expected_tenant) = tenant_value {
+        let Some(tenant_property) = definition.tenant_property() else {
+            return Err(HelixDbError::Query(format!(
+                "text search for {}:{} does not support tenant values",
+                definition.label(),
+                definition.property()
+            )));
+        };
+        let current_tenant = property_value(properties, tenant_property)
+            .and_then(normalize_tenant_value)
+            .ok_or_else(|| {
+                HelixDbError::Query(format!(
+                    "text index {}:{} requires tenant property '{}' when '{}' is present",
+                    definition.label(),
+                    definition.property(),
+                    tenant_property,
+                    definition.property()
+                ))
+            })?;
+        return Ok(current_tenant == expected_tenant);
+    }
+
+    if let Some(tenant_property) = definition.tenant_property() {
+        let _current_tenant = property_value(properties, tenant_property)
+            .and_then(normalize_tenant_value)
+            .ok_or_else(|| {
+                HelixDbError::Query(format!(
+                    "text index {}:{} requires tenant property '{}' when '{}' is present",
+                    definition.label(),
+                    definition.property(),
+                    tenant_property,
+                    definition.property()
+                ))
+            })?;
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
+fn extract_label(properties: &[Property]) -> Option<&str> {
+    property_value(properties, "$label").and_then(PropertyValue::as_str)
+}
+
+fn should_persist_file(file_name: &str) -> bool {
+    file_name != META_JSON_FILE && !file_name.ends_with(".lock")
+}
+
+pub(crate) async fn upload_blob(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    payload: &[u8],
+) -> Result<TextBlobRef, HelixDbError> {
+    let sha256 = Sha256::digest(payload);
+    let mut hash = [0u8; 32];
+    hash.copy_from_slice(&sha256);
+    let location = blob_object_store_path(db_path, hash);
+    store
+        .put(
+            &location,
+            PutPayload::from_bytes(Bytes::copy_from_slice(payload)),
+        )
+        .await?;
+    Ok(TextBlobRef {
+        sha256: hash,
+        size_bytes: payload.len() as u64,
+    })
+}
+
+/// Publishes an already hashed Active split without copying or hashing it again.
+pub(crate) async fn upload_prepared_blob(
+    store: &Arc<dyn ObjectStore>,
+    db_path: &str,
+    payload: Bytes,
+    split: work::SplitRef,
+) -> Result<(), HelixDbError> {
+    let payload_size = u64::try_from(payload.len()).unwrap_or(u64::MAX);
+    if payload_size != split.blob().size() {
+        return Err(HelixDbError::InvariantViolation(
+            "prepared text upload size disagrees with its split reference".to_string(),
+        ));
+    }
+    let location = blob_object_store_path(db_path, *split.blob().hash());
+    store
+        .put(&location, PutPayload::from_bytes(payload))
+        .await?;
+    Ok(())
+}
+
+/// Returns the canonical content-addressed object path for one text blob.
+///
+/// Uploads and reads share one constructor so content-addressed paths cannot
+/// drift onto differently normalized database prefixes.
+pub(crate) fn blob_object_store_path(db_path: &str, sha256: [u8; 32]) -> ObjectStorePath {
+    let base = db_path.trim_matches('/');
+    let hex = sha256_hex(sha256);
+    if base.is_empty() {
+        ObjectStorePath::from(format!("fts/blobs/{hex}"))
+    } else {
+        ObjectStorePath::from(format!("{base}/fts/blobs/{hex}"))
+    }
+}
+
+fn blob_prefix_object_store_path(db_path: &str) -> ObjectStorePath {
+    let base = db_path.trim_matches('/');
+    if base.is_empty() {
+        ObjectStorePath::from("fts/blobs")
+    } else {
+        ObjectStorePath::from(format!("{base}/fts/blobs"))
+    }
+}
+
+fn sha256_hex(sha256: [u8; 32]) -> String {
+    sha256.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{TextAnalyzerKind, TextIndexDefinition};
+    use crate::encoding::keys::scope::TenantId;
+    use crate::encoding::property::encode_properties;
+    use proptest::prelude::*;
+    use slatedb::object_store::memory::InMemory;
+    use std::sync::Arc;
+
+    #[test]
+    fn manifest_roundtrip_preserves_fields() {
+        let manifest = TextIndexGenerationManifest::new_split(
+            "fts:n:1:2",
+            "gen-1",
+            TextAnalyzerKind::Standard,
+            false,
+            TextSplitRef {
+                blob: TextBlobRef {
+                    sha256: [7u8; 32],
+                    size_bytes: 42,
+                },
+                footer_offset: 10,
+                footer_len: 12,
+                hotcache_len: 0,
+                total_size_bytes: 42,
+            },
+        );
+
+        let encoded = serde_json::to_vec(&manifest).expect("encode manifest");
+        let decoded = decode_manifest_bytes(&encoded).expect("decode manifest");
+        assert_eq!(decoded, manifest);
+        assert_eq!(decoded.format_version, TEXT_INDEX_MANIFEST_FORMAT_V2);
+        assert_eq!(decoded.splits.len(), 1);
+    }
+
+    #[test]
+    fn manifest_decoder_rejects_compatibility_and_inconsistent_shapes() {
+        let manifest = TextIndexGenerationManifest::new_split(
+            "fts:n:1:2",
+            "gen-1",
+            TextAnalyzerKind::Standard,
+            false,
+            TextSplitRef {
+                blob: TextBlobRef {
+                    sha256: [7u8; 32],
+                    size_bytes: 42,
+                },
+                footer_offset: 10,
+                footer_len: 12,
+                hotcache_len: 0,
+                total_size_bytes: 42,
+            },
+        );
+
+        let mut unsupported = manifest.clone();
+        unsupported.format_version = 1;
+        assert!(
+            decode_manifest_bytes(&serde_json::to_vec(&unsupported).unwrap())
+                .unwrap_err()
+                .to_string()
+                .contains("unsupported text manifest format version")
+        );
+
+        let mut empty = manifest.clone();
+        empty.splits.clear();
+        assert!(decode_manifest_bytes(&serde_json::to_vec(&empty).unwrap()).is_err());
+
+        let mut mismatched = manifest.clone();
+        mismatched.splits[0].blob.sha256 = [8; 32];
+        assert!(decode_manifest_bytes(&serde_json::to_vec(&mismatched).unwrap()).is_err());
+
+        let mut missing_fields = serde_json::to_value(manifest).unwrap();
+        let object = missing_fields.as_object_mut().unwrap();
+        object.remove("format_version");
+        object.remove("splits");
+        assert!(decode_manifest_bytes(&serde_json::to_vec(&missing_fields).unwrap()).is_err());
+    }
+
+    #[test]
+    fn manifest_blob_hashes_includes_split_artifacts() {
+        let left = TextIndexGenerationManifest::new_split(
+            "fts:n:1:2",
+            "gen-1",
+            TextAnalyzerKind::Standard,
+            false,
+            TextSplitRef {
+                blob: TextBlobRef {
+                    sha256: [7u8; 32],
+                    size_bytes: 42,
+                },
+                footer_offset: 10,
+                footer_len: 12,
+                hotcache_len: 0,
+                total_size_bytes: 42,
+            },
+        );
+        let right = TextIndexGenerationManifest::new_split(
+            "fts:n:1:2",
+            "gen-2",
+            TextAnalyzerKind::Standard,
+            false,
+            TextSplitRef {
+                blob: TextBlobRef {
+                    sha256: [9u8; 32],
+                    size_bytes: 99,
+                },
+                footer_offset: 10,
+                footer_len: 20,
+                hotcache_len: 0,
+                total_size_bytes: 99,
+            },
+        );
+
+        let hashes = manifest_blob_hashes(&[left, right]);
+        assert!(hashes.contains(&[7u8; 32]));
+        assert!(hashes.contains(&[9u8; 32]));
+    }
+
+    #[test]
+    fn live_state_roundtrip_preserves_version_and_liveness() {
+        let state = TextIndexLiveState::live(7);
+        let encoded = encode_live_state_bytes(&state).expect("encode live state");
+        let decoded = decode_live_state_bytes(&encoded).expect("decode live state");
+        assert_eq!(decoded, state);
+    }
+
+    #[test]
+    fn normalize_indexed_text_value_supports_strings_and_arrays() {
+        assert_eq!(
+            normalize_indexed_text_value(&PropertyValue::String("hello".into())).unwrap(),
+            "hello"
+        );
+        assert_eq!(
+            normalize_indexed_text_value(&PropertyValue::StringArray(vec![
+                "hello".into(),
+                "world".into(),
+            ]))
+            .unwrap(),
+            "hello\nworld"
+        );
+        assert!(normalize_indexed_text_value(&PropertyValue::I64(1)).is_err());
+    }
+
+    #[test]
+    fn analyzer_selection_changes_query_matching() {
+        let definition = TextIndexDefinition::new_node("Doc", "body")
+            .expect("test text definition is valid")
+            .with_analyzer(TextAnalyzerKind::StandardStemEn);
+        let documents = vec![TextDocumentInput::new(1, "running runner".to_string())];
+        let hits = search_documents(&definition, &documents, "run", 10).expect("search");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entity_id, 1);
+    }
+
+    #[test]
+    fn restricted_collector_matches_exhaustive_filtered_bm25_and_refills_to_k() {
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let documents = [
+            TextDocumentInput::new(1, "needle needle needle"),
+            TextDocumentInput::new(2, "needle needle"),
+            TextDocumentInput::new(3, "needle"),
+            TextDocumentInput::new(4, "needle filler filler"),
+            TextDocumentInput::new(5, "unrelated"),
+        ];
+        let (index, fields) = create_ram_index(&definition).unwrap();
+        populate_index(&index, fields, &documents).unwrap();
+        let reader = build_reader(&index).unwrap();
+        let candidates = Arc::new(RestrictedTextCandidates::from_ids([2, 3, 4, 4]).unwrap());
+        let scope = TextSearchScope::restricted(Arc::clone(&candidates));
+
+        let exhaustive = search_reader_candidates(
+            &reader,
+            fields,
+            definition.analyzer(),
+            "needle",
+            documents.len(),
+        )
+        .unwrap();
+        let oracle = exhaustive
+            .into_iter()
+            .filter(|hit| candidates.contains(hit.entity_id))
+            .take(3)
+            .collect::<Vec<_>>();
+        let restricted = search_reader_candidates_with_statistics(
+            &reader,
+            fields,
+            definition.analyzer(),
+            "needle",
+            3,
+            None,
+            &scope,
+        )
+        .unwrap();
+
+        assert_eq!(restricted, oracle);
+        assert_eq!(
+            restricted
+                .iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>(),
+            vec![2, 3, 4]
+        );
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(32))]
+
+        #[test]
+        fn restricted_collector_property_matches_exhaustive_intersection_top_k(
+            term_counts in prop::collection::vec(1_usize..8, 1..24),
+            candidate_ids in prop::collection::vec(0_u64..32, 0..40),
+            requested_k in 1_usize..16,
+        ) {
+            let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+            let documents = term_counts
+                .iter()
+                .enumerate()
+                .map(|(entity_id, count)| {
+                    TextDocumentInput::new(
+                        u64::try_from(entity_id).unwrap(),
+                        std::iter::repeat_n("needle", *count).collect::<Vec<_>>().join(" "),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let (index, fields) = create_ram_index(&definition).unwrap();
+            populate_index(&index, fields, &documents).unwrap();
+            let reader = build_reader(&index).unwrap();
+            let candidates = Arc::new(
+                RestrictedTextCandidates::from_ids(candidate_ids).unwrap(),
+            );
+            let scope = TextSearchScope::restricted(Arc::clone(&candidates));
+
+            let oracle = search_reader_candidates(
+                &reader,
+                fields,
+                definition.analyzer(),
+                "needle",
+                documents.len(),
+            )
+            .unwrap()
+            .into_iter()
+            .filter(|hit| candidates.contains(hit.entity_id))
+            .take(requested_k)
+            .collect::<Vec<_>>();
+            let restricted = search_reader_candidates_with_statistics(
+                &reader,
+                fields,
+                definition.analyzer(),
+                "needle",
+                requested_k,
+                None,
+                &scope,
+            )
+            .unwrap();
+
+            prop_assert_eq!(restricted, oracle);
+        }
+    }
+
+    /// Analyzes `text` as a text search analyzes pending documents.
+    fn pending_analysis(text: &str) -> Arc<IndexedTextAnalysis> {
+        Arc::new(
+            analyze_text_for_indexing(
+                TextAnalyzerKind::Standard,
+                text.to_string(),
+                &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+            )
+            .unwrap(),
+        )
+    }
+
+    /// Statistics of `documents` plus `others` documents published beside
+    /// them, holding `other_tokens` tokens and each analyzed term
+    /// `other_frequency` times.
+    fn corpus_statistics(
+        documents: &[(u64, Arc<IndexedTextAnalysis>)],
+        others: u64,
+        other_tokens: u64,
+        other_frequency: u64,
+    ) -> crate::index_lifecycle::text::statistics::TextBm25Statistics {
+        let mut frequencies = BTreeMap::<Bytes, u64>::new();
+        documents
+            .iter()
+            .flat_map(|(_, analysis)| &analysis.statistics.unique_terms)
+            .for_each(|term| *frequencies.entry(term.clone()).or_default() += 1);
+        frequencies
+            .values_mut()
+            .for_each(|frequency| *frequency += other_frequency.min(others));
+        crate::index_lifecycle::text::statistics::TextBm25Statistics::for_benchmark(
+            documents.len() as u64 + others,
+            documents
+                .iter()
+                .map(|(_, analysis)| analysis.statistics.token_count)
+                .sum::<u64>()
+                + other_tokens,
+            frequencies,
+        )
+    }
+
+    /// What a Tantivy index of `documents`, built as publication builds a
+    /// split, answers for the same statistics and scope.
+    fn indexed_hits(
+        documents: &[(u64, Arc<IndexedTextAnalysis>)],
+        query: &str,
+        k: usize,
+        statistics: &crate::index_lifecycle::text::statistics::TextBm25Statistics,
+        scope: &TextSearchScope,
+    ) -> Vec<TextSearchHit> {
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let (index, fields) = create_ram_index(&definition).unwrap();
+        populate_analyzed_index(
+            &index,
+            fields,
+            documents
+                .iter()
+                .map(|(entity_id, analysis)| AnalyzedTextDocumentInput {
+                    entity_id: *entity_id,
+                    logical_version: 0,
+                    analyzed: (**analysis).clone(),
+                })
+                .collect(),
+        )
+        .unwrap();
+        let reader = build_reader(&index).unwrap();
+        search_reader_candidates_with_statistics(
+            &reader,
+            fields,
+            definition.analyzer(),
+            query,
+            k,
+            Some(statistics),
+            scope,
+        )
+        .unwrap()
+        .into_iter()
+        .map(|candidate| TextSearchHit {
+            entity_id: candidate.entity_id,
+            score: candidate.score,
+        })
+        .collect()
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(64))]
+
+        /// Scoring pending analyses in place answers exactly what indexing
+        /// them answers, to the bit, for queries of up to two terms: field
+        /// norms past Tantivy's lossless range, repeated terms, documents
+        /// matching nothing or holding no token, ties, restricted scopes,
+        /// and corpus statistics beyond the pending documents.
+        #[test]
+        fn pending_documents_score_exactly_as_an_index_of_them(
+            bodies in prop::collection::vec(prop::collection::vec(0_usize..5, 0..120), 1..24),
+            query in prop::collection::vec(0_usize..6, 1..3),
+            restricted in prop::option::of(prop::collection::vec(0_u64..80, 0..40)),
+            published in (0_u64..1_000, 0_u64..50_000, 0_u64..1_000),
+            k in 1_usize..30,
+        ) {
+            const WORDS: [&str; 6] = ["alpha", "beta", "gamma", "delta", "epsilon", "missing"];
+            let (others, other_tokens, other_frequency) = published;
+            let documents = bodies
+                .iter()
+                .enumerate()
+                .map(|(ordinal, words)| {
+                    let text = words.iter().map(|word| WORDS[*word]).collect::<Vec<_>>();
+                    (ordinal as u64 * 3 + 1, pending_analysis(&text.join(" ")))
+                })
+                .collect::<Vec<_>>();
+            let statistics = corpus_statistics(&documents, others, other_tokens, other_frequency);
+            let query = query.iter().map(|word| WORDS[*word]).collect::<Vec<_>>().join(" ");
+            let scope = restricted.map_or(TextSearchScope::Unrestricted, |ids| {
+                TextSearchScope::restricted(Arc::new(RestrictedTextCandidates::from_ids(ids).unwrap()))
+            });
+            let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+            // The caller passes only documents in scope.
+            let in_scope = documents
+                .iter()
+                .filter(|(id, _)| scope.candidates().is_none_or(|ids| ids.contains(*id)))
+                .cloned()
+                .collect::<Vec<_>>();
+            let scored = search_pending_documents(
+                &definition,
+                &in_scope,
+                NonZeroU64::MAX,
+                &query,
+                k,
+                &statistics,
+                || Ok(()),
+            )
+            .unwrap();
+            prop_assert_eq!(scored, indexed_hits(&documents, &query, k, &statistics, &scope));
+        }
+    }
+
+    /// Past two matching terms only the float sum order may differ from an
+    /// index's, never the hits or more than rounding.
+    #[test]
+    fn pending_documents_matching_many_terms_score_within_rounding_of_an_index() {
+        let documents = (0..40_u64)
+            .map(|id| {
+                let filler = "epsilon ".repeat(usize::try_from(id).unwrap());
+                (
+                    id,
+                    pending_analysis(&format!("alpha beta gamma delta {filler}")),
+                )
+            })
+            .collect::<Vec<_>>();
+        let statistics = corpus_statistics(&documents, 100, 4_000, 7);
+        let query = "delta gamma beta alpha epsilon";
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let by_id = |mut hits: Vec<TextSearchHit>| {
+            hits.sort_by_key(|hit| hit.entity_id);
+            hits
+        };
+        let scored = by_id(
+            search_pending_documents(
+                &definition,
+                &documents,
+                NonZeroU64::MAX,
+                query,
+                documents.len(),
+                &statistics,
+                || Ok(()),
+            )
+            .unwrap(),
+        );
+        let indexed = by_id(indexed_hits(
+            &documents,
+            query,
+            documents.len(),
+            &statistics,
+            &TextSearchScope::Unrestricted,
+        ));
+        assert_eq!(scored.len(), documents.len());
+        for (scored, indexed) in scored.iter().zip(&indexed) {
+            assert_eq!(scored.entity_id, indexed.entity_id);
+            assert!(
+                (scored.score - indexed.score).abs() <= indexed.score * 4.0 * f32::EPSILON,
+                "{scored:?} vs {indexed:?}"
+            );
+        }
+    }
+
+    /// Ties keep the lowest entity IDs; a zero `k` or a query without terms
+    /// finds nothing; documents charged past the bound their selection was
+    /// sized to are an invariant violation, not a result.
+    #[test]
+    fn pending_document_scoring_ranks_ties_and_rejects_impossible_input() {
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let documents = [9_u64, 4, 7, 1, 5]
+            .map(|id| (id, pending_analysis("alpha beta")))
+            .to_vec();
+        let statistics = corpus_statistics(&documents, 0, 0, 0);
+        let search = |query: &str, k: usize, limit: u64| {
+            search_pending_documents(
+                &definition,
+                &documents,
+                NonZeroU64::new(limit).unwrap(),
+                query,
+                k,
+                &statistics,
+                || Ok(()),
+            )
+        };
+        let charged = documents
+            .iter()
+            .map(|(_, analysis)| analysis.retained_bytes())
+            .sum::<u64>();
+        let top = search("alpha", 3, charged).unwrap();
+        assert_eq!(
+            top.iter().map(|hit| hit.entity_id).collect::<Vec<_>>(),
+            [1, 4, 5]
+        );
+        assert_eq!(
+            top,
+            indexed_hits(
+                &documents,
+                "alpha",
+                3,
+                &statistics,
+                &TextSearchScope::Unrestricted
+            )
+        );
+        assert!(search("alpha", 0, charged).unwrap().is_empty());
+        assert!(search("!! ??", 3, charged).unwrap().is_empty());
+        assert!(matches!(
+            search("alpha", 3, charged - 1),
+            Err(HelixDbError::InvariantViolation(_))
+        ));
+    }
+
+    /// Scoring in steps keeps exactly the `k` best of every document, ties
+    /// across steps included, and checks before each step, stopping with
+    /// the check's error.
+    #[test]
+    fn pending_document_scoring_keeps_the_k_best_across_steps_and_checks_each() {
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let count = 2 * PENDING_SCORE_CHUNK as u64 + 5;
+        // Field norms repeat every seven documents, so scores tie across
+        // steps; every fifth document matches nothing.
+        let documents = (0..count)
+            .map(|id| {
+                let body = if id % 5 == 0 {
+                    "other".to_string()
+                } else {
+                    format!("alpha {}", "beta ".repeat(usize::try_from(id % 7).unwrap()))
+                };
+                (count - id, pending_analysis(&body))
+            })
+            .collect::<Vec<_>>();
+        let statistics = corpus_statistics(&documents, 0, 0, 0);
+        for k in [1, 10, PENDING_SCORE_CHUNK + 1, count as usize] {
+            let mut checks = 0;
+            let scored = search_pending_documents(
+                &definition,
+                &documents,
+                NonZeroU64::MAX,
+                "alpha",
+                k,
+                &statistics,
+                || {
+                    checks += 1;
+                    Ok(())
+                },
+            )
+            .unwrap();
+            assert_eq!(checks, 3, "k {k}");
+            assert_eq!(
+                scored,
+                indexed_hits(
+                    &documents,
+                    "alpha",
+                    k,
+                    &statistics,
+                    &TextSearchScope::Unrestricted
+                ),
+                "k {k}"
+            );
+        }
+        let mut checks = 0;
+        let error = search_pending_documents(
+            &definition,
+            &documents,
+            NonZeroU64::MAX,
+            "alpha",
+            10,
+            &statistics,
+            || {
+                checks += 1;
+                if checks == 2 {
+                    return Err(HelixDbError::QueryDeadlineExceeded);
+                }
+                Ok(())
+            },
+        )
+        .expect_err("a failed check stops scoring");
+        assert!(matches!(error, HelixDbError::QueryDeadlineExceeded));
+        assert_eq!(checks, 2);
+    }
+
+    #[test]
+    fn standard_analyzer_matches_timestamp_style_suffix_tokens() {
+        let definition =
+            TextIndexDefinition::new_node("Doc", "body").expect("test text definition is valid");
+        let documents = vec![TextDocumentInput::new(
+            1,
+            "helix staging fts postgamma20260417T154822".to_string(),
+        )];
+
+        let hits = search_documents(&definition, &documents, "postgamma20260417T154822", 10)
+            .expect("search");
+
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entity_id, 1);
+    }
+
+    #[test]
+    fn unpublished_split_binds_payload_to_its_content_addressed_reference() {
+        let definition =
+            TextIndexDefinition::new_node("Doc", "body").expect("test text definition is valid");
+        let documents = vec![TextDocumentInput::new(7, "bounded lifecycle split")];
+
+        let unpublished = build_documents_as_split(&definition, &documents)
+            .expect("build split")
+            .expect("non-empty documents produce a split");
+        let (payload, split, pruning) = unpublished.into_parts();
+        let expected_hash: [u8; 32] = Sha256::digest(&payload).into();
+        let expected_size = u64::try_from(payload.len()).unwrap();
+
+        assert_eq!(split.blob.sha256, expected_hash);
+        assert_eq!(split.blob.size_bytes, expected_size);
+        assert_eq!(split.total_size_bytes, expected_size);
+        assert!(pruning.may_match_any([b"bounded".as_slice()]));
+        assert!(build_documents_as_split(&definition, &[])
+            .expect("empty split build")
+            .is_none());
+    }
+
+    /// Worst-case one-document splits stay within the bound admission charges.
+    ///
+    /// Long distinct terms that share a stem in pairs keep the block index
+    /// from shortening its keys, random two-byte and case-expanding characters
+    /// resist compression and grow when lowercased, and many short or
+    /// repeated terms stress postings, positions, and the fixed layout.
+    #[test]
+    fn single_document_splits_stay_within_the_analysis_bound() {
+        let mut state = 7_u64;
+        let mut random = |alphabet: &[char], len: usize| {
+            (0..len)
+                .map(|_| {
+                    state = state
+                        .wrapping_mul(6_364_136_223_846_793_005)
+                        .wrapping_add(1_442_695_040_888_963_407);
+                    alphabet[usize::try_from(state >> 33).unwrap() % alphabet.len()]
+                })
+                .collect::<String>()
+        };
+        let printable = ('!'..='~').collect::<Vec<_>>();
+        let two_byte = ('\u{100}'..='\u{7FF}')
+            .filter(|character| !character.is_whitespace())
+            .collect::<Vec<_>>();
+        let expanding = ['\u{130}', '\u{23A}', '\u{23E}'];
+        let mut paired = |alphabet: &[char], stems: usize, len: usize| {
+            (0..stems)
+                .map(|_| random(alphabet, len))
+                .flat_map(|stem| [format!("{stem}0 "), format!("{stem}1 ")])
+                .collect::<String>()
+        };
+        let documents = [
+            "a".to_string(),
+            " ".to_string(),
+            "x".repeat(MAX_TOKEN_LEN + 1),
+            paired(&two_byte, 10, 30_000),
+            paired(&two_byte, 50, 4_000),
+            paired(&expanding, 50, 4_000),
+            paired(&printable, 200, 1_000),
+            paired(&printable, 5_000, 3),
+            "a ".repeat(100_000),
+            (0..100_000)
+                .map(|index| format!("t{} ", (index * 7_919) % 4_000))
+                .collect(),
+        ];
+        let mut worst = 0.0_f64;
+        for analyzer in [
+            TextAnalyzerKind::Standard,
+            TextAnalyzerKind::StandardStemEn,
+            TextAnalyzerKind::WhitespaceLowercase,
+        ] {
+            for positions in [false, true] {
+                let definition = TextIndexDefinition::new_node("Doc", "body")
+                    .expect("test text definition is valid")
+                    .with_analyzer(analyzer)
+                    .with_positions_enabled(positions);
+                for text in &documents {
+                    let (_, totals) = analyze_text_within_budget(
+                        analyzer,
+                        text,
+                        &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                    )
+                    .expect("an unbounded budget admits every document");
+                    let analyzed = analyze_text_for_indexing(
+                        analyzer,
+                        text.clone(),
+                        &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                    )
+                    .expect("an unbounded budget admits every document");
+                    let (payload, _, _) = build_analyzed_documents_as_split(
+                        &definition,
+                        vec![AnalyzedTextDocumentInput {
+                            entity_id: u64::MAX,
+                            logical_version: u64::MAX,
+                            analyzed,
+                        }],
+                    )
+                    .expect("build one-document split")
+                    .expect("one document produces a split")
+                    .into_parts();
+                    let split = u64::try_from(payload.len()).unwrap();
+                    assert!(
+                        split <= single_document_split_bytes(totals.analysis_bytes),
+                        "{analyzer:?} positions={positions}: {split} bytes for {totals:?}"
+                    );
+                    worst = worst.max(
+                        split.saturating_sub(SINGLE_DOCUMENT_SPLIT_OVERHEAD) as f64
+                            / totals.analysis_bytes.max(1) as f64,
+                    );
+                }
+            }
+        }
+        // The stem pairs reach the adversarial regime the bound must cover.
+        assert!(worst > 0.5, "{worst}");
+    }
+
+    #[test]
+    fn foreground_analyzed_split_preserves_format_and_search_semantics() {
+        let definition = TextIndexDefinition::new_node("Doc", "body")
+            .expect("test text definition is valid")
+            .with_analyzer(TextAnalyzerKind::StandardStemEn)
+            .with_positions_enabled(true);
+        let documents = [
+            TextDocumentInput::new(7, "Running runners bounded lifecycle split")
+                .with_logical_version(3),
+            TextDocumentInput::new(9, "Unrelated document").with_logical_version(4),
+        ];
+        let mut analysis_budget = TextAnalysisMemoryBudget::new(NonZeroU64::new(u64::MAX).unwrap());
+        let analyzed = documents
+            .iter()
+            .map(|document| {
+                Ok(AnalyzedTextDocumentInput {
+                    entity_id: document.entity_id,
+                    logical_version: document.logical_version,
+                    analyzed: analyze_text_for_indexing(
+                        definition.analyzer(),
+                        document.text.clone(),
+                        &mut analysis_budget,
+                    )?,
+                })
+            })
+            .collect::<Result<Vec<_>, HelixDbError>>()
+            .expect("foreground analysis stays within its memory budget");
+
+        let unpublished = build_analyzed_documents_as_split(&definition, analyzed)
+            .expect("build analyzed split")
+            .expect("non-empty analyzed documents produce a split");
+        let (payload, split, pruning) = unpublished.into_parts();
+        assert!(pruning.may_match_any([b"run".as_slice()]));
+
+        let tempdir = tempfile::tempdir().expect("create split directory");
+        let path = tempdir.path().join("foreground.split");
+        std::fs::write(&path, &payload).expect("persist exact foreground payload");
+        validate_split_bundle_file(&path, &split).expect("validate deployed split layout");
+
+        let directory = open_split_directory_from_file(&path).expect("open split directory");
+        let index = Index::open(directory).expect("open foreground Tantivy index");
+        register_analyzers(&index, definition.analyzer());
+        let (_, fields) = build_schema(definition.analyzer(), definition.positions_enabled());
+        for query in ["run", "runner", "bounded lifecycle"] {
+            let expected = search_documents(&definition, &documents, query, 10)
+                .expect("search disk-independent baseline")
+                .into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>();
+            let actual = search_index(&index, fields, definition.analyzer(), query, 10)
+                .expect("search analyzed split")
+                .into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected, "query '{query}' changed semantics");
+        }
+        assert!(build_analyzed_documents_as_split(&definition, Vec::new())
+            .expect("empty analyzed split build")
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn configured_split_upload_preserves_the_precomputed_reference() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let definition =
+            TextIndexDefinition::new_node("Doc", "body").expect("test text definition is valid");
+        let documents = vec![TextDocumentInput::new(7, "bounded lifecycle split")];
+
+        let split = persist_documents_as_split(&store, "db", &definition, &documents)
+            .await
+            .expect("upload split")
+            .expect("non-empty documents produce a split");
+        let metadata = store
+            .head(&blob_object_store_path("db", split.blob.sha256))
+            .await
+            .expect("uploaded content-addressed blob exists");
+
+        assert_eq!(metadata.size, split.blob.size_bytes);
+        assert_eq!(split.total_size_bytes, split.blob.size_bytes);
+        assert!(persist_documents_as_split(&store, "db", &definition, &[])
+            .await
+            .expect("empty split build")
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn reopened_persisted_split_preserves_all_document_tokens() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let definition =
+            TextIndexDefinition::new_node("Doc", "body").expect("test text definition is valid");
+        let documents = vec![
+            TextDocumentInput::new(0, "helix staging fts prealpha20260417T170219"),
+            TextDocumentInput::new(1, "helix staging fts prebeta20260417T170219"),
+            TextDocumentInput::new(1000, "helix staging fts postgamma20260417T170219"),
+        ];
+
+        let manifest =
+            persist_documents_as_manifest(&store, "db", &definition, "fts:n:Doc:body", &documents)
+                .await
+                .expect("persist manifest")
+                .expect("manifest exists");
+
+        for query in [
+            "helix",
+            "staging",
+            "fts",
+            "postgamma20260417T170219",
+            "helix staging fts",
+        ] {
+            let hits = search_manifest(&store, "db", &manifest, query, 10)
+                .await
+                .unwrap_or_else(|err| panic!("search '{query}' failed: {err}"));
+            let ids = hits
+                .into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                ids.len(),
+                3.min(if query.starts_with("postgamma") { 1 } else { 3 })
+            );
+            if query.starts_with("postgamma") {
+                assert_eq!(ids, vec![1000]);
+            } else {
+                assert_eq!(
+                    ids,
+                    vec![0, 1, 1000],
+                    "query '{query}' should see every doc"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn foreground_analysis_rejects_short_token_expansion_before_exceeding_memory_budget() {
+        let limit = NonZeroU64::new(512).unwrap();
+        let mut budget = TextAnalysisMemoryBudget::new(limit);
+        let error = analyze_text_for_indexing(
+            TextAnalyzerKind::WhitespaceLowercase,
+            "a ".repeat(128),
+            &mut budget,
+        )
+        .expect_err("short-token expansion exceeds retained-memory policy");
+
+        assert!(matches!(
+            error,
+            HelixDbError::ActiveTextMutationLimitExceeded {
+                resource: crate::error::ActiveTextMutationResource::AnalysisBytes,
+                observed,
+                limit: 512,
+            } if observed > limit.get()
+        ));
+        assert!(budget.used() <= limit.get());
+    }
+
+    const ANALYZERS: [TextAnalyzerKind; 3] = [
+        TextAnalyzerKind::Standard,
+        TextAnalyzerKind::StandardStemEn,
+        TextAnalyzerKind::WhitespaceLowercase,
+    ];
+
+    /// Words that exercise every English stemmer rewrite and exception.
+    const STEMMER_WORDS: &str = "caresses ponies ties cries gas this eed agreed feed \
+        plastered bled motoring sing conflated troubled sized hopping tanned falling \
+        hissing fizzed failing filing happy sky relational conditional rational valenci \
+        hesitanci digitizer conformabli radicalli differentli vileli analogousli \
+        vietnamization predication operator feudalism decisiveness hopefulness \
+        callousness formaliti sensitiviti sensibiliti fruitfulli lessli archaeologi \
+        triplicate formative formalize electriciti electrical hopeful goodness revival \
+        allowance inference airliner gyroscopic adjustable defensible irritant \
+        replacement adjustment dependent adoption homologou communism activate \
+        angulariti homologous effective bowdlerize probate rate cease skis skies dying \
+        lying tying idly gently ugly early only singly news howe atlas cosmos bias andes \
+        inning outing canning herring earring proceed exceed succeed generously arsenal \
+        communal generate yying sayings";
+
+    fn sizing_corpus() -> Vec<String> {
+        vec![
+            String::new(),
+            "!!! ???".to_string(),
+            "Hello, happy tax payer!".to_string(),
+            "a a a b b c".to_string(),
+            "Ünïcödé İstanbul ΣΊΣΥΦΟΣ Ⱥ ǅ ß".to_string(),
+            "x".repeat(70_000),
+            STEMMER_WORDS.to_string(),
+        ]
+    }
+
+    /// Budgeted sizing counts exactly what indexing analysis retains and
+    /// charges, and both reject one byte below that charge identically.
+    #[test]
+    fn budgeted_sizing_matches_indexing_analysis_exactly() {
+        for analyzer in ANALYZERS {
+            for text in sizing_corpus() {
+                let indexed = analyze_text_for_indexing(
+                    analyzer,
+                    text.clone(),
+                    &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                )
+                .unwrap();
+                let (statistics, totals) = analyze_text_within_budget(
+                    analyzer,
+                    &text,
+                    &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                )
+                .unwrap();
+                assert_eq!(&statistics, indexed.statistics());
+                assert_eq!(statistics, analyze_text(analyzer, &text));
+                assert_eq!(totals.analysis_bytes, indexed.retained_bytes());
+                assert_eq!(totals.text_bytes, text.len() as u64);
+                assert_eq!(totals.unique_terms, statistics.unique_terms.len() as u64);
+                assert_eq!(
+                    totals.unique_term_bytes,
+                    statistics
+                        .unique_terms
+                        .iter()
+                        .map(|term| term.len() as u64)
+                        .sum::<u64>()
+                );
+                let Some(short) = NonZeroU64::new(totals.analysis_bytes.saturating_sub(1)) else {
+                    continue;
+                };
+                analyze_text_within_budget(
+                    analyzer,
+                    &text,
+                    &mut TextAnalysisMemoryBudget::new(
+                        NonZeroU64::new(totals.analysis_bytes).unwrap(),
+                    ),
+                )
+                .expect("the exact charge is admitted");
+                let sized = analyze_text_within_budget(
+                    analyzer,
+                    &text,
+                    &mut TextAnalysisMemoryBudget::new(short),
+                )
+                .map(drop)
+                .unwrap_err();
+                let full = analyze_text_for_indexing(
+                    analyzer,
+                    text.clone(),
+                    &mut TextAnalysisMemoryBudget::new(short),
+                )
+                .map(drop)
+                .unwrap_err();
+                assert_eq!(sized.to_string(), full.to_string(), "{analyzer:?}");
+            }
+        }
+    }
+
+    /// The ASCII bound covers every analyzer, stemming included, and is
+    /// refused for text whose lowercase forms can grow.
+    #[test]
+    fn ascii_bound_covers_every_analyzer_or_is_refused() {
+        for text in sizing_corpus() {
+            let Some(bound) = TextAnalysisTotals::ascii_bound(&text) else {
+                assert!(!text.is_ascii());
+                continue;
+            };
+            for analyzer in ANALYZERS {
+                let (_, exact) = analyze_text_within_budget(
+                    analyzer,
+                    &text,
+                    &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                )
+                .unwrap();
+                assert!(exact.analysis_bytes <= bound.analysis_bytes, "{analyzer:?}");
+                assert_eq!(exact.text_bytes, bound.text_bytes);
+                assert!(exact.unique_terms <= bound.unique_terms, "{analyzer:?}");
+                assert!(
+                    exact.unique_term_bytes <= bound.unique_term_bytes,
+                    "{analyzer:?}"
+                );
+            }
+        }
+        // Stemming never lengthens a word, so no stem outgrows its source.
+        for word in STEMMER_WORDS.split_whitespace() {
+            let stems = analyze_text(TextAnalyzerKind::StandardStemEn, word).unique_terms;
+            assert!(stems.iter().all(|stem| stem.len() <= word.len()), "{word}");
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn ascii_bound_never_undercounts(text in "[ -~]{0,160}") {
+            let bound = TextAnalysisTotals::ascii_bound(&text).unwrap();
+            for analyzer in ANALYZERS {
+                let (_, exact) = analyze_text_within_budget(
+                    analyzer,
+                    &text,
+                    &mut TextAnalysisMemoryBudget::new(NonZeroU64::MAX),
+                )
+                .unwrap();
+                prop_assert!(exact.analysis_bytes <= bound.analysis_bytes);
+                prop_assert!(exact.unique_terms <= bound.unique_terms);
+                prop_assert!(exact.unique_term_bytes <= bound.unique_term_bytes);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn manifest_loaders_isolate_definitions_and_storage_scopes() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let db = Db::builder("text-manifest-loaders", store)
+            .build()
+            .await
+            .unwrap();
+        let node_definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let edge_definition = TextIndexDefinition::new_edge("MENTIONS", "body").unwrap();
+        let tenant_definition = TextIndexDefinition::new_node("Doc", "body")
+            .unwrap()
+            .with_tenant_property("firmId")
+            .unwrap();
+        let node_name = resolve_physical_index_name(&node_definition, None).unwrap();
+        let edge_name = resolve_physical_index_name(&edge_definition, None).unwrap();
+        let tenant_value = PropertyValue::String("tenant-a".into());
+        let tenant_name =
+            resolve_physical_index_name(&tenant_definition, Some(&tenant_value)).unwrap();
+        let scope =
+            DataScope::Tenant(TenantId::from_ulid_str("0000000000000000000000000A").unwrap());
+        let split = TextSplitRef {
+            blob: TextBlobRef {
+                sha256: [7; 32],
+                size_bytes: 42,
+            },
+            footer_offset: 10,
+            footer_len: 12,
+            hotcache_len: 0,
+            total_size_bytes: 42,
+        };
+        let node_manifest = TextIndexGenerationManifest::new_split(
+            &node_name,
+            "node-generation",
+            TextAnalyzerKind::Standard,
+            false,
+            split.clone(),
+        );
+        let edge_manifest = TextIndexGenerationManifest::new_split(
+            &edge_name,
+            "edge-generation",
+            TextAnalyzerKind::Standard,
+            false,
+            split.clone(),
+        );
+        let tenant_manifest = TextIndexGenerationManifest::new_split(
+            &tenant_name,
+            "tenant-generation",
+            TextAnalyzerKind::Standard,
+            false,
+            split,
+        );
+
+        assert!(load_manifest(&db, "missing").await.unwrap().is_none());
+        let tx = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        tx.put(
+            make_text_index_manifest_key_scoped(DataScope::LegacyUnscoped, &node_name),
+            Bytes::from(serde_json::to_vec(&node_manifest).unwrap()),
+        )
+        .unwrap();
+        tx.put(
+            make_text_index_manifest_key_scoped(DataScope::LegacyUnscoped, &edge_name),
+            Bytes::from(serde_json::to_vec(&edge_manifest).unwrap()),
+        )
+        .unwrap();
+        tx.put(
+            make_text_index_manifest_key_scoped(scope, &tenant_name),
+            Bytes::from(serde_json::to_vec(&tenant_manifest).unwrap()),
+        )
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        assert_eq!(
+            load_manifest(&db, &node_name).await.unwrap(),
+            Some(node_manifest)
+        );
+        assert_eq!(
+            load_manifest_scoped(&db, scope, &tenant_name)
+                .await
+                .unwrap(),
+            Some(tenant_manifest)
+        );
+        assert!(
+            load_manifest_scoped(&db, DataScope::LegacyUnscoped, &tenant_name)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            load_manifests_for_definition(&db, &node_definition)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            load_manifests_for_definition_scoped(&db, scope, &tenant_definition)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(load_all_manifests(&db).await.unwrap().len(), 2);
+        assert_eq!(
+            load_all_manifests_scoped(&db, scope).await.unwrap().len(),
+            1
+        );
+
+        let tx = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        tx.put(
+            make_text_index_manifest_key_scoped(DataScope::LegacyUnscoped, "malformed"),
+            Bytes::from_static(b"not-json"),
+        )
+        .unwrap();
+        tx.commit().await.unwrap();
+        assert!(load_manifest(&db, "malformed").await.is_err());
+        assert!(load_all_manifests(&db).await.is_err());
+        assert!(decode_manifest_bytes(b"{").is_err());
+    }
+
+    #[tokio::test]
+    async fn live_state_search_filters_versions_and_deduplicates_splits() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let db = Db::builder("text-live-search", Arc::clone(&store))
+            .build()
+            .await
+            .unwrap();
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let index_name = resolve_physical_index_name(&definition, None).unwrap();
+        let left = persist_documents_as_manifest(
+            &store,
+            "live-db",
+            &definition,
+            &index_name,
+            &[
+                TextDocumentInput::new(1, "common alpha"),
+                TextDocumentInput::new(2, "common alpha").with_logical_version(2),
+                TextDocumentInput::new(3, "common alpha"),
+            ],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let right = persist_documents_as_manifest(
+            &store,
+            "live-db",
+            &definition,
+            &index_name,
+            &[
+                TextDocumentInput::new(1, "common alpha"),
+                TextDocumentInput::new(4, "common beta"),
+                TextDocumentInput::new(3, "common gamma"),
+            ],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let mut manifest = left;
+        manifest.splits.push(right.primary_split_ref().clone());
+
+        let tx = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        for (entity_id, state) in [
+            (1, TextIndexLiveState::live(1)),
+            (2, TextIndexLiveState::live(1)),
+            (3, TextIndexLiveState::dead(1)),
+        ] {
+            tx.put(
+                make_text_index_live_state_key_scoped(
+                    DataScope::LegacyUnscoped,
+                    &index_name,
+                    entity_id,
+                ),
+                Bytes::from(encode_live_state_bytes(&state).unwrap()),
+            )
+            .unwrap();
+        }
+        tx.commit().await.unwrap();
+
+        assert!(
+            search_manifest_with_live_state(&db, &store, "live-db", &manifest, "common", 0)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let hits = search_manifest_with_live_state(&db, &store, "live-db", &manifest, "common", 10)
+            .await
+            .unwrap();
+        assert_eq!(
+            hits.into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>(),
+            vec![1, 4]
+        );
+        assert!(search_manifest(&store, "live-db", &manifest, "common", 10)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn live_state_search_overfetches_past_stale_top_candidates() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let db = Db::builder("text-live-overfetch", Arc::clone(&store))
+            .build()
+            .await
+            .unwrap();
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let index_name = resolve_physical_index_name(&definition, None).unwrap();
+        let manifest = persist_documents_as_manifest(
+            &store,
+            "overfetch-db",
+            &definition,
+            &index_name,
+            &[
+                TextDocumentInput::new(1, "needle"),
+                TextDocumentInput::new(2, "needle padding padding padding padding"),
+            ],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let unfiltered = search_manifest(&store, "overfetch-db", &manifest, "needle", 2)
+            .await
+            .unwrap();
+        assert_eq!(
+            unfiltered
+                .iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>(),
+            vec![1, 2]
+        );
+
+        let transaction = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        for (entity_id, state) in [
+            (1, TextIndexLiveState::dead(1)),
+            (2, TextIndexLiveState::live(1)),
+        ] {
+            transaction
+                .put(
+                    make_text_index_live_state_key_scoped(
+                        DataScope::LegacyUnscoped,
+                        &index_name,
+                        entity_id,
+                    ),
+                    Bytes::from(encode_live_state_bytes(&state).unwrap()),
+                )
+                .unwrap();
+        }
+        transaction.commit().await.unwrap();
+
+        let hits =
+            search_manifest_with_live_state(&db, &store, "overfetch-db", &manifest, "needle", 1)
+                .await
+                .unwrap();
+        assert_eq!(
+            hits.into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>(),
+            vec![2]
+        );
+    }
+
+    #[tokio::test]
+    async fn restricted_live_state_search_refills_past_stale_version_in_same_split() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let db = Db::builder("restricted-text-same-split-refill", Arc::clone(&store))
+            .build()
+            .await
+            .unwrap();
+        let definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let index_name = resolve_physical_index_name(&definition, None).unwrap();
+        let manifest = persist_documents_as_manifest(
+            &store,
+            "restricted-text-same-split-refill",
+            &definition,
+            &index_name,
+            &[
+                TextDocumentInput::new(1, "needle").with_logical_version(1),
+                TextDocumentInput::new(1, "needle padding padding padding padding")
+                    .with_logical_version(2),
+            ],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        let transaction = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        transaction
+            .put(
+                make_text_index_live_state_key_scoped(DataScope::LegacyUnscoped, &index_name, 1),
+                Bytes::from(encode_live_state_bytes(&TextIndexLiveState::live(2)).unwrap()),
+            )
+            .unwrap();
+        transaction.commit().await.unwrap();
+
+        let candidates = Arc::new(RestrictedTextCandidates::from_ids([1]).unwrap());
+        let hits = search_manifest_with_state_source(
+            &db,
+            TextSearchRuntime::new(&store, "restricted-text-same-split-refill", None),
+            &manifest,
+            TextLiveStateSource::Legacy {
+                scope: DataScope::LegacyUnscoped,
+                index_name: &index_name,
+            },
+            None,
+            TextSearchRequest::new(
+                "needle",
+                1,
+                TextSearchScope::restricted(Arc::clone(&candidates)),
+            ),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            hits.into_iter()
+                .map(|hit| hit.entity_id)
+                .collect::<Vec<_>>(),
+            vec![1]
+        );
+    }
+
+    #[tokio::test]
+    async fn blob_uploads_are_idempotent_and_copy_content_addressed_objects() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let referenced = upload_blob(&store, "/source/", b"referenced")
+            .await
+            .unwrap();
+        let duplicate = upload_blob(&store, "source", b"referenced").await.unwrap();
+        upload_blob(&store, "source", b"unreferenced")
+            .await
+            .unwrap();
+        assert_eq!(referenced, duplicate);
+        assert_eq!(list_blob_hashes(&store, "source").await.unwrap().len(), 2);
+
+        let referenced_hashes = BTreeSet::from([referenced.sha256]);
+        copy_blob_set(&store, "source", "source", &referenced_hashes)
+            .await
+            .unwrap();
+        copy_blob_set(&store, "source", "/target/", &referenced_hashes)
+            .await
+            .unwrap();
+        assert_eq!(list_blob_hashes(&store, "target").await.unwrap().len(), 1);
+        assert!(store
+            .head(&blob_object_store_path("source", referenced.sha256))
+            .await
+            .is_ok());
+        assert_eq!(sha256_hex([0xab; 32]), "ab".repeat(32));
+    }
+
+    #[tokio::test]
+    async fn document_collectors_read_typed_node_and_edge_rows() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let db = Db::builder("text-document-collectors", store)
+            .build()
+            .await
+            .unwrap();
+        let node_definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let edge_definition = TextIndexDefinition::new_edge("MENTIONS", "body").unwrap();
+        let tx = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        tx.put(Bytes::from_static(&[0x02]), Bytes::new()).unwrap();
+        tx.put(
+            keys::DataKey::Data {
+                scope: DataScope::LegacyUnscoped,
+                kind: keys::DataKeyKind::NodeProperty(keys::NodePropertyKey::new(1)),
+            }
+            .to_bytes(),
+            encode_properties(&[
+                Property::string("$label", "Doc"),
+                Property::string("body", "alpha node"),
+            ]),
+        )
+        .unwrap();
+        tx.put(
+            keys::DataKey::Data {
+                scope: DataScope::LegacyUnscoped,
+                kind: keys::DataKeyKind::NodeProperty(keys::NodePropertyKey::new(2)),
+            }
+            .to_bytes(),
+            encode_properties(&[
+                Property::string("$label", "Other"),
+                Property::string("body", "ignored node"),
+            ]),
+        )
+        .unwrap();
+        crate::search::store_edge_endpoints(&tx, 10, 1, 2)
+            .await
+            .unwrap();
+        crate::search::store_edge_properties_by_id(
+            &tx,
+            10,
+            &[
+                Property::string("$label", "MENTIONS"),
+                Property::new(
+                    "body",
+                    PropertyValue::StringArray(vec!["alpha".into(), "edge".into()]),
+                ),
+            ],
+        )
+        .await
+        .unwrap();
+        crate::search::store_edge_endpoints(&tx, 11, 1, 2)
+            .await
+            .unwrap();
+        tx.put(Bytes::from_static(&[0x04]), Bytes::new()).unwrap();
+        tx.commit().await.unwrap();
+
+        assert_eq!(
+            collect_node_documents_from_reader(&db, &node_definition, None)
+                .await
+                .unwrap(),
+            vec![TextDocumentInput::new(1, "alpha node")]
+        );
+        assert_eq!(
+            collect_edge_documents_from_reader(&db, &edge_definition, None)
+                .await
+                .unwrap(),
+            vec![TextDocumentInput::new(10, "alpha\nedge")]
+        );
+
+        let tx = db.begin(IsolationLevel::Snapshot).await.unwrap();
+        tx.put(
+            keys::DataKey::Data {
+                scope: DataScope::LegacyUnscoped,
+                kind: keys::DataKeyKind::NodeProperty(keys::NodePropertyKey::new(3)),
+            }
+            .to_bytes(),
+            Bytes::from_static(b"invalid-properties"),
+        )
+        .unwrap();
+        tx.commit().await.unwrap();
+        assert!(
+            collect_node_documents_from_reader(&db, &node_definition, None)
+                .await
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn document_construction_and_validation_cover_value_and_tenant_contracts() {
+        let node_definition = TextIndexDefinition::new_node("Doc", "body").unwrap();
+        let edge_definition = TextIndexDefinition::new_edge("MENTIONS", "body").unwrap();
+        let tenant_definition = TextIndexDefinition::new_node("Doc", "body")
+            .unwrap()
+            .with_tenant_property("firmId")
+            .unwrap();
+        let tenant_a = PropertyValue::String("tenant-a".into());
+        let tenant_b = PropertyValue::String("tenant-b".into());
+        let node_properties = vec![
+            Property::string("$label", "Doc"),
+            Property::string("body", "alpha"),
+        ];
+
+        assert!(make_node_document(1, &[], &node_definition, None)
+            .unwrap()
+            .is_none());
+        assert!(make_node_document(
+            1,
+            &[Property::string("$label", "Doc")],
+            &node_definition,
+            None,
+        )
+        .unwrap()
+        .is_none());
+        assert_eq!(
+            make_node_document(1, &node_properties, &node_definition, None)
+                .unwrap()
+                .unwrap(),
+            TextDocumentInput::new(1, "alpha")
+        );
+        assert!(
+            make_node_document(1, &node_properties, &node_definition, Some(&tenant_a)).is_err()
+        );
+
+        let tenant_properties = vec![
+            Property::string("$label", "Doc"),
+            Property::string("body", "tenant text"),
+            Property::new("firmId", tenant_a.clone()),
+        ];
+        assert!(
+            make_node_document(2, &tenant_properties, &tenant_definition, None)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            make_node_document(2, &tenant_properties, &tenant_definition, Some(&tenant_b))
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            make_node_document(2, &tenant_properties, &tenant_definition, Some(&tenant_a))
+                .unwrap()
+                .unwrap()
+                .text,
+            "tenant text"
+        );
+        assert!(
+            make_node_document(2, &node_properties, &tenant_definition, Some(&tenant_a)).is_err()
+        );
+
+        let wrong_node_label = [Property::string("$label", "Other")];
+        let missing_node_body = [Property::string("$label", "Doc")];
+        let invalid_node_body = [
+            Property::string("$label", "Doc"),
+            Property::new("body", PropertyValue::Bool(true)),
+        ];
+        validate_node_properties_for_definition(&node_definition, &wrong_node_label).unwrap();
+        validate_node_properties_for_definition(&node_definition, &missing_node_body).unwrap();
+        assert!(
+            validate_node_properties_for_definition(&node_definition, &invalid_node_body).is_err()
+        );
+        assert!(
+            validate_node_properties_for_definition(&tenant_definition, &node_properties).is_err()
+        );
+        validate_node_properties_for_definition(&tenant_definition, &tenant_properties).unwrap();
+
+        let wrong_edge_label = [Property::string("$label", "Other")];
+        let missing_edge_body = [Property::string("$label", "MENTIONS")];
+        let invalid_edge_body = [
+            Property::string("$label", "MENTIONS"),
+            Property::new("body", PropertyValue::I64(1)),
+        ];
+        validate_edge_properties_for_definition(&edge_definition, &wrong_edge_label).unwrap();
+        validate_edge_properties_for_definition(&edge_definition, &missing_edge_body).unwrap();
+        assert!(
+            validate_edge_properties_for_definition(&edge_definition, &invalid_edge_body).is_err()
+        );
+        assert!(make_edge_document(9, &[], &edge_definition, None)
+            .unwrap()
+            .is_none());
+        assert!(make_edge_document(
+            9,
+            &[Property::string("$label", "MENTIONS")],
+            &edge_definition,
+            None,
+        )
+        .unwrap()
+        .is_none());
+
+        assert!(normalize_indexed_text_value(&PropertyValue::Null).is_err());
+        assert!(normalize_indexed_text_value(&PropertyValue::Bool(true)).is_err());
+        assert!(normalize_tenant_value(&PropertyValue::Null).is_none());
+        assert!(normalize_tenant_value(&tenant_a).is_some());
+        assert!(resolve_physical_index_name(&node_definition, Some(&tenant_a)).is_err());
+    }
+
+    #[tokio::test]
+    async fn empty_inputs_and_required_schema_have_explicit_search_contracts() {
+        let store: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
+        let definition = TextIndexDefinition::new_node("Doc", "body")
+            .unwrap()
+            .with_analyzer(TextAnalyzerKind::WhitespaceLowercase)
+            .with_positions_enabled(true);
+        assert!(search_documents(&definition, &[], "alpha", 10)
+            .unwrap()
+            .is_empty());
+        assert!(search_documents(
+            &definition,
+            &[TextDocumentInput::new(1, "Alpha")],
+            "alpha",
+            0,
+        )
+        .unwrap()
+        .is_empty());
+        assert!(
+            persist_documents_as_manifest(&store, "empty-db", &definition, "empty", &[])
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(decode_live_state_bytes(b"not-json").is_err());
+        assert!(!should_persist_file(META_JSON_FILE));
+        assert!(!should_persist_file("writer.lock"));
+        assert!(should_persist_file("segment.idx"));
+
+        let empty_schema = Schema::builder().build();
+        assert!(lookup_schema_fields(&empty_schema).is_err());
+        let mut entity_only = Schema::builder();
+        entity_only.add_u64_field(ENTITY_ID_FIELD_NAME, NumericOptions::default());
+        assert!(lookup_schema_fields(&entity_only.build()).is_err());
+    }
+
+    #[test]
+    fn resolve_physical_index_name_requires_tenant_when_configured() {
+        let definition = TextIndexDefinition::new_node("Doc", "body")
+            .expect("test text definition is valid")
+            .with_tenant_property("firmId")
+            .expect("test tenant property is valid");
+        let tenant = PropertyValue::String("tenant-a".into());
+        assert!(resolve_physical_index_name(&definition, Some(&tenant)).is_ok());
+        assert!(resolve_physical_index_name(&definition, None).is_err());
+    }
+
+    #[test]
+    fn make_edge_document_respects_label_and_tenant() {
+        let definition = TextIndexDefinition::new_edge("REL", "body")
+            .expect("test text definition is valid")
+            .with_tenant_property("firmId")
+            .expect("test tenant property is valid");
+        let properties = vec![
+            Property::new("$label", "REL"),
+            Property::new("firmId", "tenant-a"),
+            Property::new("body", "alice edge"),
+        ];
+        let tenant = PropertyValue::String("tenant-a".into());
+        let doc = make_edge_document(9, &properties, &definition, Some(&tenant)).expect("edge doc");
+        assert_eq!(doc.expect("present").entity_id, 9);
+    }
+}

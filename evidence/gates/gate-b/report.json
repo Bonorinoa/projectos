@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "gate": "M0 Gate B - local graph database evaluation",
-  "as_of": "2026-10-09",
+  "as_of": "2026-10-10",
   "decision": "not_ready_to_select",
   "roadmap_recommendation": {
     "task": "m0.graph",
     "status": "implemented",
-    "note": "Both Python candidate contracts pass. A pinned Helix Rust/Tauri macOS arm64 debug app builds and passes six local operations; full adapter, license closure, universal/Linux packages and representative-scale memory remain open."
+    "note": "Both Python candidate contracts pass. A pinned Helix Rust/Tauri macOS arm64 debug app builds and passes six local operations against the ProjectOS vendored fork (AGPL-3.0 helix-metrics stripped at rev c72e64f); full adapter, upstream license closure, universal/Linux packages and representative-scale memory remain open."
   },
   "selection_recommendation": {
     "preferred_for_next_bakeoff": "helix",
@@ -15,7 +15,7 @@
       "Both engines produced the same canonical export hash and passed the same host-level correctness/recovery harness.",
       "Helix published a universal2 embedded runtime and showed lower store bytes and slightly lower peak RSS on the spike corpus.",
       "Ladybug has clearer MIT licensing and a mature embedded/concurrency contract, but the tested macOS Python artifact was thin arm64 and linked Homebrew OpenSSL paths.",
-      "Helix remains provisional: Python SDK/runtime licensing discrepancies, missing upstream crate license metadata and an AGPL-3.0 metrics dependency require review; the narrow Rust/Tauri host probe does not establish release readiness."
+      "Helix remains provisional: Python SDK/runtime licensing discrepancies persist and the narrow Rust/Tauri host probe does not establish release readiness. The dependency-graph license blocker is resolved for the Rust path: the sole AGPL-3.0 crate (helix-metrics, a mandatory telemetry dependency) is stripped in the ProjectOS vendored fork (vendor/helix-db, same rev c72e64f), the remaining tree is Apache-2.0 and the crate-metadata gap is closed; the fork pin carries that maintenance obligation."
     ],
     "next_decision_test": "Run the same adapter through pinned Rust crates in a minimal Tauri sidecar-free shell, package/sign a universal macOS app and Linux x86_64/aarch64 artifacts on clean hosts, then repeat crash/migration and memory tests on the frozen release corpus."
   },
@@ -246,18 +246,18 @@
     "The memory corpus is deterministic but small; no production representative corpus or acceptance ceiling is yet approved.",
     "No candidate was silently replaced and no server/sidecar mode was used."
   ],
-  "updatedAt": "2026-10-09T20:27:01.542Z",
+  "updatedAt": "2026-10-10T01:15:23.272Z",
   "rustIntegration": "evidence/gates/gate-b/rust-integration.json",
   "sourceHashes": {
-    "spikes/gate-b/rust-tauri/Cargo.toml": "6e1243d5d6c2ff99b06d9e76a0ef3a3e322b4a8a86534ad51b5faaa51db9a0f6",
-    "spikes/gate-b/rust-tauri/Cargo.lock": "827bef3726c14198a3b15627b70b1600bbe158e4428013efdf81af6ed736a8f4",
+    "spikes/gate-b/rust-tauri/Cargo.toml": "28202add259ef8f44dcf23ad7c7ff6cc5f6c10c2e288343ccaccf6248dfa84bc",
+    "spikes/gate-b/rust-tauri/Cargo.lock": "081d2d964800a505fe8863cc88ba233d440d3281a848010aca1a7d39cce9c35e",
     "spikes/gate-b/rust-tauri/rust-toolchain.toml": "3003a09987459e5921dcddde94f8ea929b2d5e66efbbc30160e9d78de7ff010a",
     "spikes/gate-b/rust-tauri/build.rs": "4379ba89924184a9a57d189938af36565f876df56bc4edcca39fc5a2bd282e8a",
     "spikes/gate-b/rust-tauri/src/main.rs": "cd9da266fe5ba7f772982892ef876b2f15257f9d180f55e44adfe20241a9a589",
     "spikes/gate-b/rust-tauri/tauri.conf.json": "7334cafec7ea259b8d390c22d17e0befe40337d203f841cf1b4443e03a3dbdc4",
     "spikes/gate-b/rust-tauri/ui/index.html": "a64a6350dbadc96a8b770f409e88147960e73f7c856b6984963d29d52ab9a5c4",
     "spikes/gate-b/rust-tauri/ui/probe.js": "20c7d565bf4711084d00ed428c70b6a94cbeb219519d26e47b938a7d50783130",
-    "spikes/gate-b/rust-tauri/evidence.mjs": "faacedff68435d14b6efe85bc2693147dc21eaf3c1f195df1996ac70c3ed4319",
+    "spikes/gate-b/rust-tauri/evidence.mjs": "e29c2701e3d4e6f9c5cb41737774083f417c1c4b93087266af83313030bd5576",
     "spikes/gate-b/rust-tauri/README.md": "3b93421ed1ff255355e8454b1cfb32fd307650ffecbd536126fe17bcd1cd7e07",
     "spikes/gate-a/src-tauri/icons/icon.png": "f551c6ff1f68f768e159d47052a350e39600319e25af3e414e2ffc7b0e1e0d9d",
     "spikes/gate-b/requirements.lock": "4be1537d8b3e507bbe0e4a3049fa20e01454f883c349a8ba104bcb6bb7c37e46",

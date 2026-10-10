@@ -6,8 +6,10 @@ rust-version = "1.97.1"
 publish = false
 
 [dependencies]
-helix-db = { git = "https://github.com/HelixDB/helix-db.git", rev = "c72e64f0c7e480f3d125f071659d5e3ad7b8da15", features = ["embedded"] }
-helix-core-db = { package = "db", git = "https://github.com/HelixDB/helix-db.git", rev = "c72e64f0c7e480f3d125f071659d5e3ad7b8da15" }
+# Vendored fork at the same upstream rev, AGPL-3.0 helix-metrics crate stripped.
+# See vendor/helix-db/VENDOR.md and evidence/gates/gate-b/license-screen-helix-metrics.md.
+helix-db = { path = "../../../vendor/helix-db/sdks/rust", features = ["embedded"] }
+helix-core-db = { package = "db", path = "../../../vendor/helix-db/crates/db" }
 serde_json = "=1.0.151"
 tokio = { version = "=1.53.2", features = ["rt-multi-thread", "macros"] }
 tempfile = "=3.27.0"

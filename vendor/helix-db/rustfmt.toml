@@ -1,0 +1,4 @@
+# Parse the workspace edition while retaining its existing formatting style.
+# All other settings use the defaults of the pinned stable toolchain.
+edition = "2024"
+style_edition = "2015"

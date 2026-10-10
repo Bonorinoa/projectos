@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-10-09T20:27:20.268Z",
-  "commit": "sha256:e6b0384696d943de600eee250715a09eb1942971b945484286aacf73cc63bae9",
+  "updatedAt": "2026-10-10T01:15:56.598Z",
+  "commit": "sha256:b80049fe12aa48ce4c50e2bf9903ccf21ba3572d8093e268b82681f68d9ff327",
   "sourceSnapshot": "projectos-source-snapshot.json",
   "sourceStats": {
-    "files": 79,
-    "source": 37,
+    "files": 99,
+    "source": 41,
     "tests": 10
   },
   "tasks": {
@@ -28,7 +28,7 @@
       "evidence": [
         "evidence/gates/gate-c/report.json"
       ],
-      "note": "Native file broker and active symlink-swap tests pass. Supported production confinement, hard OS memory ceiling and signed cross-platform package remain blocked."
+      "note": "Evidence is stale; rerun after source changes."
     },
     "m0.recovery": {
       "status": "implemented",
@@ -45,5 +45,7 @@
       "note": "Mock provider, PKCE callback and encrypted-vault contracts implemented. Native credential/egress boundary, OS keyring, live opt-in conformance and Linux remain open."
     }
   },
-  "diagnostics": []
+  "diagnostics": [
+    "worker: evidence source mismatch: docs/adr-worker-isolation.md"
+  ]
 }

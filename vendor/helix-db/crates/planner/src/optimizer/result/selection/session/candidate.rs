@@ -1,0 +1,83 @@
+//! Candidate filtering and deterministic best-alternative selection.
+
+use super::super::super::PhysicalAlternativeEntry;
+use super::super::SelectionError;
+use super::SelectionSession;
+use crate::optimizer::ordering;
+use crate::{cost, memo, properties};
+
+impl<'a> SelectionSession<'a> {
+    pub(super) fn best_alternative_entry_and_cost_satisfying(
+        &mut self,
+        group: memo::MemoGroupId,
+        required: &properties::RequiredProperties,
+    ) -> Result<(&'a PhysicalAlternativeEntry, cost::CostVector), SelectionError> {
+        if required == &properties::RequiredProperties::default() {
+            return self
+                .best_default_selection(group)
+                .map(|selected| (selected.entry, selected.selected_cost));
+        }
+        self.ensure_memo_group(group)?;
+        if !self.visiting.insert(group) {
+            return Err(SelectionError::RecursiveSelectionCycle { group });
+        }
+        let best = self.best_alternative_entry_and_cost_in_visiting_group(group, required);
+        self.visiting.remove(&group);
+        best
+    }
+
+    pub(super) fn best_alternative_entry_and_cost_in_visiting_group(
+        &mut self,
+        group: memo::MemoGroupId,
+        required: &properties::RequiredProperties,
+    ) -> Result<(&'a PhysicalAlternativeEntry, cost::CostVector), SelectionError> {
+        let alternatives = self
+            .result
+            .physical_for_group(group)
+            .ok_or(SelectionError::NoPhysicalAlternatives { group })?;
+        if alternatives.alternatives.is_empty() {
+            return Err(SelectionError::NoPhysicalAlternatives { group });
+        }
+
+        let mut saw_satisfying_properties = false;
+        let mut first_failure = None;
+        let mut best = None;
+        for entry in alternatives
+            .alternatives
+            .iter()
+            .filter(|entry| entry.alternative.delivered.satisfies(required))
+        {
+            saw_satisfying_properties = true;
+            match self.entry_total_cost(group, entry) {
+                Ok(cost) => {
+                    let replace = best.as_ref().is_none_or(
+                        |(best, best_cost): &(&PhysicalAlternativeEntry, cost::CostVector)| {
+                            ordering::compare_alternatives(
+                                (&entry.alternative, cost),
+                                (&best.alternative, *best_cost),
+                            )
+                            .is_lt()
+                        },
+                    );
+                    if replace {
+                        best = Some((entry, cost));
+                    }
+                }
+                Err(error) => {
+                    first_failure.get_or_insert(error);
+                }
+            }
+        }
+
+        if let Some((entry, cost)) = best {
+            return Ok((entry, cost));
+        }
+        if !saw_satisfying_properties {
+            return Err(SelectionError::UnsatisfiedRequiredProperties {
+                group,
+                required: required.clone(),
+            });
+        }
+        Err(first_failure.unwrap_or(SelectionError::NoPhysicalAlternatives { group }))
+    }
+}

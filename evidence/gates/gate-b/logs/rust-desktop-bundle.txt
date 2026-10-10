@@ -13,9 +13,9 @@
    Compiling block2 v0.6.2
    Compiling dispatch2 v0.3.1
    Compiling lz4 v1.28.1
-   Compiling zstd-safe v7.3.0
    Compiling objc2-io-kit v0.3.2
    Compiling sysinfo v0.35.2
+   Compiling zstd-safe v7.3.0
    Compiling zstd v0.13.3
    Compiling tantivy-sstable v0.7.0
    Compiling foyer-storage v0.22.3
@@ -39,17 +39,16 @@
    Compiling hyper-rustls v0.27.10
    Compiling reqwest v0.13.5
    Compiling reqwest v0.12.28
-   Compiling object_store v0.14.2
-   Compiling helix-metrics v0.1.1 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
    Compiling object_store v0.12.5
+   Compiling object_store v0.14.2
    Compiling slatedb-common v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
    Compiling slatedb-txn-obj v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
    Compiling slatedb v0.16.0 (https://github.com/HelixDB/slatedb.git?rev=2fb25fdaa61d42cc3756f979a8a7b37dbfc483fd#2fb25fda)
-   Compiling db v0.1.0 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
-   Compiling helix-db v3.0.0 (https://github.com/HelixDB/helix-db.git?rev=c72e64f0c7e480f3d125f071659d5e3ad7b8da15#c72e64f0)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 26s
+   Compiling db v0.1.0 (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/vendor/helix-db/crates/db)
+   Compiling helix-db v3.0.0 (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/vendor/helix-db/sdks/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 52.52s
        Built application at: /Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri/target/debug/projectos-graph-embedding
     Bundling ProjectOS Graph Probe.app (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri/target/debug/bundle/macos/ProjectOS Graph Probe.app)
     Finished 1 bundle at:
-        /Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri/target/debug/bundle/macos/ProjectOS Graph Probe.app (226.08 MiB)
+        /Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri/target/debug/bundle/macos/ProjectOS Graph Probe.app (218.96 MiB)
 

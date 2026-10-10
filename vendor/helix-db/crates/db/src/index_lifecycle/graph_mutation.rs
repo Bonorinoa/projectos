@@ -1,0 +1,766 @@
+//! Canonical in-memory graph transitions shared by graph-transaction index
+//! maintenance: staged secondary rows and queued vector/text operations.
+//!
+//! These types are deliberately runtime-only. Property rows continue to use
+//! the canonical value codec; retaining the encoded bytes beside the decoded values
+//! prevents each index family from rebuilding the same payload.
+
+use std::sync::Arc;
+
+use bytes::Bytes;
+
+use crate::encoding::v2::keys::scope::DataScope;
+use crate::encoding::v2::keys::IndexEntity;
+use crate::encoding::v2::keys::{DataKey, DataKeyKind};
+use crate::encoding::v2::values::property::{self, Property};
+use crate::error::Result;
+use crate::query_resources::{self, properties};
+
+use super::{IndexElementKind, IndexEntityId};
+pub(crate) mod map;
+
+#[cfg(test)]
+mod write_tests;
+
+/// Graph identity whose element kind is encoded by its enum variant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) enum GraphEntity {
+    /// One node property row.
+    Node(IndexEntityId),
+    /// One edge property row.
+    Edge(IndexEntityId),
+}
+
+impl GraphEntity {
+    /// Binds a node ID to the node property keyspace.
+    pub(crate) const fn node(id: u64) -> Self {
+        Self::Node(IndexEntityId::new(id))
+    }
+
+    /// Binds an edge ID to the edge property-by-ID keyspace.
+    pub(crate) const fn edge(id: u64) -> Self {
+        Self::Edge(IndexEntityId::new(id))
+    }
+
+    /// Returns the index-facing entity representation.
+    pub(crate) const fn index_entity(self) -> IndexEntity {
+        match self {
+            Self::Node(id) => IndexEntity {
+                kind: IndexElementKind::Node,
+                id,
+            },
+            Self::Edge(id) => IndexEntity {
+                kind: IndexElementKind::Edge,
+                id,
+            },
+        }
+    }
+
+    fn property_key_kind(self) -> DataKeyKind<'static> {
+        match self {
+            Self::Node(id) => {
+                DataKeyKind::NodeProperty(crate::encoding::v2::keys::NodePropertyKey::new(id.get()))
+            }
+            Self::Edge(id) => DataKeyKind::EdgePropertyById(
+                crate::encoding::v2::keys::EdgePropertyByIdKey::new(id.get()),
+            ),
+        }
+    }
+
+    /// Returns the canonical scoped property-row key.
+    pub(crate) fn property_key(self, scope: DataScope) -> Bytes {
+        DataKey::Data {
+            scope,
+            kind: self.property_key_kind(),
+        }
+        .to_bytes()
+    }
+
+    pub(crate) fn property_key_len(self, scope: DataScope) -> usize {
+        DataKey::Data {
+            scope,
+            kind: self.property_key_kind(),
+        }
+        .encoded_len()
+    }
+}
+
+/// One decoded property row paired with its canonical encoding.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct CanonicalPropertyRow {
+    properties: Arc<properties::Decoded>,
+    encoded: properties::Encoded,
+}
+
+impl CanonicalPropertyRow {
+    /// Encodes an owned property set exactly once through the canonical codec.
+    pub(crate) fn new(properties: Vec<Property>) -> Self {
+        let encoded = property::encode_properties(&properties);
+        Self {
+            properties: Arc::new(properties::Decoded::native(properties)),
+            encoded: properties::Encoded::native(encoded),
+        }
+    }
+
+    /// Retains owned inputs and admits scratch/output before canonical encoding.
+    pub(crate) fn new_with_budget(
+        properties: Vec<Property>,
+        budget: Option<&query_resources::Budget>,
+    ) -> Result<Self> {
+        let Some(budget) = budget else {
+            return Ok(Self::new(properties));
+        };
+        Self::from_decoded(properties::Decoded::owned(properties, budget)?)
+    }
+
+    fn from_decoded(properties: properties::Decoded) -> Result<Self> {
+        let encoded = match properties.budget() {
+            Some(budget) => {
+                properties::Encoded::new(&property::write::Prepared::new(&properties)?, budget)?
+            }
+            None => properties::Encoded::native(property::encode_properties(&properties)),
+        };
+        Ok(Self {
+            properties: properties.share()?,
+            encoded,
+        })
+    }
+
+    /// Shares write bytes and their separate transaction-lifetime reservation.
+    pub(crate) fn write_payload(&self) -> properties::Encoded {
+        self.encoded.clone()
+    }
+
+    /// Admit the entire transaction-visible snapshot, retaining original bytes
+    /// and all native property types. Both raw and decoded owners share their
+    /// reservations across index consumers without duplicating payloads.
+    pub(crate) fn decode_with_budget(
+        encoded: Bytes,
+        budget: Option<&query_resources::Budget>,
+    ) -> Result<Self> {
+        Self::decode_read(properties::Read::new(encoded, budget)?)
+    }
+
+    pub(crate) fn decode_read(read: properties::Read) -> Result<Self> {
+        let (encoded, properties) = read.decode()?;
+        Ok(Self {
+            properties,
+            encoded: properties::Encoded::native(encoded),
+        })
+    }
+
+    /// Borrows the decoded properties.
+    pub(crate) fn properties(&self) -> &[Property] {
+        &self.properties
+    }
+
+    /// Borrows the exact canonical bytes for storage and validation.
+    #[cfg(test)]
+    pub(crate) const fn encoded(&self) -> &Bytes {
+        &self.encoded.bytes
+    }
+}
+
+/// Sorted, nonempty property names shared by every index consumer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ChangedProperties(Arc<ChangedNames>);
+struct ChangedNames {
+    first: Box<str>,
+    rest: Vec<Box<str>>,
+    _memory: Option<query_resources::Reservation>,
+}
+impl std::fmt::Debug for ChangedNames {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list()
+            .entries(std::iter::once(&self.first).chain(&self.rest))
+            .finish()
+    }
+}
+impl PartialEq for ChangedNames {
+    fn eq(&self, other: &Self) -> bool {
+        self.first == other.first && self.rest == other.rest
+    }
+}
+impl Eq for ChangedNames {}
+impl ChangedProperties {
+    fn admitted(name: &str, budget: Option<&query_resources::Budget>) -> Result<Self> {
+        Self::from_names(std::iter::once(name), budget)
+            .map(|names| names.expect("one name produces a nonempty change set"))
+    }
+
+    /// The cloned iterator must inspect the same immutable names on each pass.
+    /// Empty changes are represented by None, so a replacement cannot have an
+    /// empty routing set. Sorting/deduplication needs no temporary allocation.
+    fn from_names<'a>(
+        mut names: impl Iterator<Item = &'a str> + Clone,
+        budget: Option<&query_resources::Budget>,
+    ) -> Result<Option<Self>> {
+        let (count, bytes) = names
+            .clone()
+            .fold((0_usize, 0_usize), |(count, bytes), name| {
+                (count.saturating_add(1), bytes.saturating_add(name.len()))
+            });
+        if count == 0 {
+            return Ok(None);
+        }
+        let capacity = if count == 1 { 0 } else { count };
+        let memory = budget
+            .map(|budget| {
+                budget.reserve(
+                    bytes
+                        .saturating_add(capacity.saturating_mul(size_of::<Box<str>>()))
+                        .saturating_add(size_of::<ChangedNames>() + 2 * size_of::<usize>()),
+                )
+            })
+            .transpose()?;
+        let (first, rest) = if count == 1 {
+            (
+                names.next().expect("counted one immutable name").into(),
+                Vec::new(),
+            )
+        } else {
+            let mut owned = Vec::with_capacity(count);
+            owned.extend(names.map(Box::<str>::from));
+            assert_eq!(
+                owned.len(),
+                count,
+                "immutable change names cannot change between passes"
+            );
+            owned.sort_unstable();
+            owned.dedup();
+            let first = owned.remove(0);
+            (first, owned)
+        };
+        Ok(Some(Self(Arc::new(ChangedNames {
+            first,
+            rest,
+            _memory: memory,
+        }))))
+    }
+
+    pub(crate) fn contains(&self, name: &str) -> bool {
+        self.0.first.as_ref() == name
+            || self
+                .0
+                .rest
+                .binary_search_by(|candidate| candidate.as_ref().cmp(name))
+                .is_ok()
+    }
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &str> + Clone {
+        std::iter::once(self.0.first.as_ref()).chain(self.0.rest.iter().map(Box::as_ref))
+    }
+}
+
+/// A requested edit whose variants exclude an absent set value.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum PropertyEdit {
+    /// Insert or replace one named property.
+    Set(Property),
+    /// Remove one named property when present.
+    Remove(Box<str>),
+}
+
+impl PropertyEdit {
+    /// Creates a set edit from the already-evaluated property value.
+    pub(crate) const fn set(property: Property) -> Self {
+        Self::Set(property)
+    }
+
+    /// Creates a remove edit for one non-empty planner-validated name.
+    pub(crate) fn remove(name: impl Into<Box<str>>) -> Self {
+        Self::Remove(name.into())
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            Self::Set(property) => property.name.as_str(),
+            Self::Remove(name) => name,
+        }
+    }
+}
+
+/// Closed authoritative graph property-row transition.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum GraphMutationTransition {
+    /// The canonical row must not exist before this transaction.
+    Create {
+        /// Storage scope of the new row.
+        scope: DataScope,
+        /// Typed graph identity of the new row.
+        entity: GraphEntity,
+        /// Complete new row.
+        after: CanonicalPropertyRow,
+    },
+    /// One existing row changes at least one property.
+    Replace {
+        /// Storage scope of the row.
+        scope: DataScope,
+        /// Typed graph identity of the row.
+        entity: GraphEntity,
+        /// Complete transaction-visible state before replacement.
+        before: CanonicalPropertyRow,
+        /// Complete state after replacement.
+        after: CanonicalPropertyRow,
+        /// Non-empty set of changed property names.
+        changed: ChangedProperties,
+    },
+    /// One existing row is removed without a replacement value.
+    Delete {
+        /// Storage scope of the removed row.
+        scope: DataScope,
+        /// Typed graph identity of the removed row.
+        entity: GraphEntity,
+        /// Complete transaction-visible state before deletion.
+        before: CanonicalPropertyRow,
+    },
+}
+
+/// Result of applying a property edit to one canonical row.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum PropertyEditOutcome {
+    /// The requested value was already authoritative; no write is needed.
+    Unchanged(CanonicalPropertyRow),
+    /// The edit produced a non-empty replacement transition.
+    Changed(GraphMutationTransition),
+}
+
+impl GraphMutationTransition {
+    /// Creates one typed row insertion.
+    pub(crate) const fn create(
+        scope: DataScope,
+        entity: GraphEntity,
+        after: CanonicalPropertyRow,
+    ) -> Self {
+        Self::Create {
+            scope,
+            entity,
+            after,
+        }
+    }
+
+    /// Applies one edit and returns a replacement only when bytes must change.
+    #[cfg(any(test, feature = "production-coverage"))]
+    pub(crate) fn edit(
+        scope: DataScope,
+        entity: GraphEntity,
+        before: CanonicalPropertyRow,
+        edit: PropertyEdit,
+    ) -> PropertyEditOutcome {
+        Self::edit_with_budget(scope, entity, before, edit, None)
+            .expect("unbudgeted native property editing is infallible")
+    }
+
+    pub(crate) fn edit_with_budget(
+        scope: DataScope,
+        entity: GraphEntity,
+        before: CanonicalPropertyRow,
+        edit: PropertyEdit,
+        budget: Option<&query_resources::Budget>,
+    ) -> Result<PropertyEditOutcome> {
+        // Validate before recursive bitwise equality, cloning or encoding.
+        let extra_payload = match budget {
+            Some(_) => {
+                property::write::Prepared::new(before.properties())?;
+                match &edit {
+                    PropertyEdit::Set(property) => {
+                        property::write::Prepared::new(std::slice::from_ref(property))?
+                            .retained_bytes(1)
+                            .saturating_sub(size_of::<Property>())
+                    }
+                    PropertyEdit::Remove(_) => 0,
+                }
+            }
+            None => 0,
+        };
+        let name = edit.name();
+        let position = before
+            .properties()
+            .iter()
+            .position(|property| property.name == name);
+        match (&edit, position) {
+            (PropertyEdit::Set(property), Some(position))
+                if before.properties()[position].same_v1_representation(property) =>
+            {
+                return Ok(PropertyEditOutcome::Unchanged(before));
+            }
+            (PropertyEdit::Remove(_), None) => {
+                return Ok(PropertyEditOutcome::Unchanged(before));
+            }
+            (PropertyEdit::Set(_), _) | (PropertyEdit::Remove(_), Some(_)) => {}
+        }
+
+        let changed = ChangedProperties::admitted(name, budget)?;
+        let insert = position.is_none();
+        let apply = |properties: &mut Vec<Property>| match (edit, position) {
+            (PropertyEdit::Set(property), Some(position)) => properties[position] = property,
+            (PropertyEdit::Set(property), None) => properties.push(property),
+            (PropertyEdit::Remove(_), Some(position)) => {
+                properties.remove(position);
+            }
+            (PropertyEdit::Remove(_), None) => {
+                unreachable!("an absent remove returns before constructing a transition")
+            }
+        };
+        let after = match budget {
+            Some(budget) => CanonicalPropertyRow::from_decoded(properties::Decoded::rewritten(
+                before.properties(),
+                insert,
+                extra_payload,
+                budget,
+                apply,
+            )?)?,
+            None => {
+                let mut properties = before.properties().to_vec();
+                apply(&mut properties);
+                CanonicalPropertyRow::new(properties)
+            }
+        };
+        Ok(PropertyEditOutcome::Changed(Self::Replace {
+            scope,
+            entity,
+            before,
+            after,
+            changed,
+        }))
+    }
+
+    /// Creates one typed row deletion.
+    pub(crate) const fn delete(
+        scope: DataScope,
+        entity: GraphEntity,
+        before: CanonicalPropertyRow,
+    ) -> Self {
+        Self::Delete {
+            scope,
+            entity,
+            before,
+        }
+    }
+
+    /// Returns the row scope.
+    pub(crate) const fn scope(&self) -> DataScope {
+        match self {
+            Self::Create { scope, .. }
+            | Self::Replace { scope, .. }
+            | Self::Delete { scope, .. } => *scope,
+        }
+    }
+
+    /// Returns the typed graph entity.
+    pub(crate) const fn entity(&self) -> GraphEntity {
+        match self {
+            Self::Create { entity, .. }
+            | Self::Replace { entity, .. }
+            | Self::Delete { entity, .. } => *entity,
+        }
+    }
+
+    /// Returns the complete before row when one must exist.
+    pub(crate) const fn before(&self) -> Option<&CanonicalPropertyRow> {
+        match self {
+            Self::Create { .. } => None,
+            Self::Replace { before, .. } | Self::Delete { before, .. } => Some(before),
+        }
+    }
+
+    /// Returns the complete after row when one remains.
+    pub(crate) const fn after(&self) -> Option<&CanonicalPropertyRow> {
+        match self {
+            Self::Create { after, .. } | Self::Replace { after, .. } => Some(after),
+            Self::Delete { .. } => None,
+        }
+    }
+
+    /// Returns replacement names, or `None` for whole-row create/delete work.
+    pub(crate) const fn changed(&self) -> Option<&ChangedProperties> {
+        match self {
+            Self::Replace { changed, .. } => Some(changed),
+            Self::Create { .. } | Self::Delete { .. } => None,
+        }
+    }
+
+    /// Returns the canonical scoped graph-row key.
+    #[cfg(test)]
+    pub(crate) fn graph_key(&self) -> Bytes {
+        self.entity().property_key(self.scope())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::encoding::v2::values::property::property_value::PropertyValue;
+
+    fn row() -> CanonicalPropertyRow {
+        CanonicalPropertyRow::new(vec![
+            Property::string("$label", "User"),
+            Property::string("name", "Ada"),
+        ])
+    }
+
+    #[test]
+    fn canonical_row_reuses_exact_v1_bytes() {
+        let original = row();
+        let decoded =
+            CanonicalPropertyRow::decode_with_budget(original.encoded().clone(), None).unwrap();
+
+        assert_eq!(decoded, original);
+        assert_eq!(decoded.encoded().len(), original.encoded().len());
+    }
+
+    #[test]
+    fn property_edits_exclude_empty_replacements() {
+        let scope = DataScope::LegacyUnscoped;
+        let entity = GraphEntity::node(7);
+        let unchanged = GraphMutationTransition::edit(
+            scope,
+            entity,
+            row(),
+            PropertyEdit::set(Property::string("name", "Ada")),
+        );
+        assert!(matches!(unchanged, PropertyEditOutcome::Unchanged(_)));
+
+        let removed =
+            GraphMutationTransition::edit(scope, entity, row(), PropertyEdit::remove("missing"));
+        assert!(matches!(removed, PropertyEditOutcome::Unchanged(_)));
+
+        let PropertyEditOutcome::Changed(changed) = GraphMutationTransition::edit(
+            scope,
+            entity,
+            row(),
+            PropertyEdit::set(Property::string("name", "Grace")),
+        ) else {
+            panic!("different values produce a replacement");
+        };
+        assert!(changed.changed().unwrap().contains("name"));
+        assert_eq!(
+            changed.changed().unwrap().iter().collect::<Vec<_>>(),
+            ["name"]
+        );
+        assert_eq!(
+            changed
+                .after()
+                .unwrap()
+                .properties()
+                .iter()
+                .find(|property| property.name == "name")
+                .and_then(|property| property.value.as_str()),
+            Some("Grace")
+        );
+        let (changed_scope, changed_entity, before, after) = (
+            changed.scope(),
+            changed.entity(),
+            changed.before().cloned(),
+            changed.after().cloned(),
+        );
+        assert_eq!(changed_scope, scope);
+        assert_eq!(changed_entity, entity);
+        assert_eq!(
+            before.as_ref().map(CanonicalPropertyRow::properties),
+            Some(row().properties())
+        );
+        assert_eq!(
+            after
+                .as_ref()
+                .and_then(|row| row
+                    .properties()
+                    .iter()
+                    .find(|property| property.name == "name"))
+                .and_then(|property| property.value.as_str()),
+            Some("Grace")
+        );
+
+        let PropertyEditOutcome::Changed(added) = GraphMutationTransition::edit(
+            scope,
+            entity,
+            row(),
+            PropertyEdit::set(Property::string("title", "Engineer")),
+        ) else {
+            panic!("a new property produces a replacement");
+        };
+        assert_eq!(
+            added
+                .after()
+                .expect("an added property has an after row")
+                .properties()
+                .last(),
+            Some(&Property::string("title", "Engineer"))
+        );
+
+        let PropertyEditOutcome::Changed(removed) =
+            GraphMutationTransition::edit(scope, entity, row(), PropertyEdit::remove("name"))
+        else {
+            panic!("an existing property produces a replacement");
+        };
+        assert_eq!(
+            removed.after().unwrap().properties(),
+            [Property::string("$label", "User")]
+        );
+    }
+
+    #[test]
+    fn representation_distinct_floats_are_routed_as_index_changes() {
+        let scope = DataScope::LegacyUnscoped;
+        let entity = GraphEntity::node(7);
+        let before = CanonicalPropertyRow::new(vec![Property::f64("score", -0.0)]);
+        let before_bytes = before.encoded().clone();
+        let PropertyEditOutcome::Changed(transition) = GraphMutationTransition::edit(
+            scope,
+            entity,
+            before,
+            PropertyEdit::set(Property::f64("score", 0.0)),
+        ) else {
+            panic!("signed-zero replacement must remain observable");
+        };
+        let after = transition.after().expect("replacement has an after row");
+        assert_ne!(after.encoded(), &before_bytes);
+        assert_eq!(
+            after.encoded(),
+            &property::encode_properties(&[Property::f64("score", 0.0)])
+        );
+        assert!(
+            transition
+                .changed()
+                .expect("replacement has changed properties")
+                .contains("score"),
+            "every index family must observe the representation-distinct property"
+        );
+        let decoded =
+            CanonicalPropertyRow::decode_with_budget(after.encoded().clone(), None).unwrap();
+        let PropertyValue::F64(value) = decoded.properties()[0].value else {
+            panic!("score remains an f64");
+        };
+        assert_eq!(value.to_bits(), 0.0_f64.to_bits());
+
+        let nan_bits = 0x7ff8_0000_0000_0042;
+        let nan = f64::from_bits(nan_bits);
+        let unchanged = GraphMutationTransition::edit(
+            scope,
+            entity,
+            CanonicalPropertyRow::new(vec![Property::f64("score", nan)]),
+            PropertyEdit::set(Property::f64("score", nan)),
+        );
+        let PropertyEditOutcome::Unchanged(unchanged) = unchanged else {
+            panic!("bit-identical NaN must not create index or graph writes");
+        };
+        assert_eq!(
+            unchanged.encoded(),
+            &property::encode_properties(&[Property::f64("score", nan)])
+        );
+
+        let changed_nan = GraphMutationTransition::edit(
+            scope,
+            entity,
+            unchanged,
+            PropertyEdit::set(Property::f64(
+                "score",
+                f64::from_bits(nan_bits.saturating_add(1)),
+            )),
+        );
+        assert!(matches!(changed_nan, PropertyEditOutcome::Changed(_)));
+    }
+
+    #[test]
+    fn nested_float_representations_participate_in_no_op_detection() {
+        let nested = |value| {
+            Property::new(
+                "metadata",
+                PropertyValue::Object(BTreeMap::from([(
+                    "values".to_string(),
+                    PropertyValue::Array(vec![
+                        PropertyValue::F64(value),
+                        PropertyValue::F32Array(vec![value as f32]),
+                    ]),
+                )])),
+            )
+        };
+        let before = CanonicalPropertyRow::new(vec![nested(-0.0)]);
+        let before_bytes = before.encoded().clone();
+        let PropertyEditOutcome::Changed(transition) = GraphMutationTransition::edit(
+            DataScope::LegacyUnscoped,
+            GraphEntity::node(9),
+            before,
+            PropertyEdit::set(nested(0.0)),
+        ) else {
+            panic!("nested signed-zero replacement must change the canonical row");
+        };
+        let after = transition.after().expect("replacement has an after row");
+        assert_ne!(after.encoded(), &before_bytes);
+        assert_eq!(
+            after.encoded(),
+            &property::encode_properties(&[nested(0.0)])
+        );
+    }
+
+    #[test]
+    fn transition_variants_preserve_typed_keys_and_presence() {
+        let scope = DataScope::LegacyUnscoped;
+        let node = GraphEntity::node(3);
+        let edge = GraphEntity::edge(4);
+        let create = GraphMutationTransition::create(scope, node, row());
+        let delete = GraphMutationTransition::delete(scope, edge, row());
+
+        assert!(matches!(
+            node.index_entity(),
+            IndexEntity {
+                kind: IndexElementKind::Node,
+                id,
+            } if id == IndexEntityId::new(3)
+        ));
+        assert!(matches!(
+            edge.index_entity(),
+            IndexEntity {
+                kind: IndexElementKind::Edge,
+                id,
+            } if id == IndexEntityId::new(4)
+        ));
+        assert_eq!(create.scope(), scope);
+        assert_eq!(create.entity(), node);
+        assert!(create.changed().is_none());
+        assert!(create.before().is_none());
+        assert!(create.after().is_some());
+        assert_eq!(delete.scope(), scope);
+        assert_eq!(delete.entity(), edge);
+        assert!(delete.changed().is_none());
+        assert!(delete.before().is_some());
+        assert!(delete.after().is_none());
+        assert!(matches!(
+            DataKey::parse_from_slice(scope, &create.graph_key()).unwrap(),
+            DataKey::Data {
+                kind: DataKeyKind::NodeProperty(_),
+                ..
+            }
+        ));
+        assert!(matches!(
+            DataKey::parse_from_slice(scope, &delete.graph_key()).unwrap(),
+            DataKey::Data {
+                kind: DataKeyKind::EdgePropertyById(_),
+                ..
+            }
+        ));
+
+        let (create_scope, create_entity, before, after) = (
+            create.scope(),
+            create.entity(),
+            create.before().cloned(),
+            create.after().cloned(),
+        );
+        assert_eq!(create_scope, scope);
+        assert_eq!(create_entity, node);
+        assert!(before.is_none());
+        assert!(after.is_some());
+
+        let (delete_scope, delete_entity, before, after) = (
+            delete.scope(),
+            delete.entity(),
+            delete.before().cloned(),
+            delete.after().cloned(),
+        );
+        assert_eq!(delete_scope, scope);
+        assert_eq!(delete_entity, edge);
+        assert!(before.is_some());
+        assert!(after.is_none());
+    }
+}

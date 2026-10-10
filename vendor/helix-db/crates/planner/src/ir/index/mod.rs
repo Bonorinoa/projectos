@@ -1,0 +1,25 @@
+//! Index and range contract ADTs.
+//!
+//! These modules encode search-index metadata, secondary-index lookup
+//! literals, range-index literals, and static range proofs used by access
+//! planning rules.
+
+mod equality;
+mod range;
+mod search;
+
+pub(crate) use range::RangeLiteralRef;
+
+pub use equality::{
+    EqualityIndexValueSemantics, IndexValue, LiteralEqualityIndexValueSemantics,
+    RuntimeEqualitySet, SecondaryIndexLiteral, SecondaryIndexLiteralError,
+    MAX_INDEXED_EQUALITY_BYTES,
+};
+pub use range::{
+    BoundInclusivity, IndexBetweenRange, IndexBound, IndexRange, RangeIndexF32, RangeIndexF64,
+    RangeIndexLiteral, RangeIndexValue,
+};
+pub use search::{
+    RestrictedTextSearchPlan, RestrictedVectorSearchPlan, SearchIndexPlan, SearchTenantPlan,
+    SearchTenantValuePlan, SearchTenantValuePlanError,
+};

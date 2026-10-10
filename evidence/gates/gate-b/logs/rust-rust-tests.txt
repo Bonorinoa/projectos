@@ -7,5 +7,5 @@ test tests::local_contract_still_passes_with_explicitly_disabled_telemetry ... o
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.80s
 
    Compiling projectos-graph-embedding v0.0.1 (/Users/bonorinoa/Documents/ChatGPT/ProjectOS/spikes/gate-b/rust-tauri)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.84s
-     Running unittests src/main.rs (target/debug/deps/projectos_graph_embedding-522a31a7a8ea2501)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.15s
+     Running unittests src/main.rs (target/debug/deps/projectos_graph_embedding-8ca2b05cf43ff0f0)

@@ -1,0 +1,16 @@
+.git
+.github
+.helix
+.vscode
+.zed
+**/target
+**/node_modules
+**/__pycache__
+**/.coverage
+**/.coverage.*
+**/htmlcov
+**/.venv
+*.log
+*.tar
+*.tar.gz
+.DS_Store

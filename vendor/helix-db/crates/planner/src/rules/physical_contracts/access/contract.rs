@@ -1,0 +1,143 @@
+use crate::{catalog, cost, ir, physical, properties};
+
+#[derive(Debug, Clone, PartialEq)]
+pub(in crate::rules) struct AccessPhysicalContract {
+    pub(in crate::rules) access: physical::PhysicalAccess,
+    pub(in crate::rules) delivered: properties::DeliveredProperties,
+    pub(in crate::rules) cost: cost::CostVector,
+    pub(in crate::rules) estimated_rows: cost::EstimatedRows,
+    execution: AccessExecutionCost,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum AccessExecutionCost {
+    MaterializedRows,
+    SecondaryIds {
+        cost: cost::CostVector,
+        source: SecondaryIdSource,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SecondaryIdSource {
+    Other,
+    Range {
+        iteration: ir::RangeScanIteration,
+    },
+    BatchableEquality {
+        index_id: ir::NonEmptyString,
+        key: catalog::ScopedPropertyKey,
+        uniqueness: catalog::IndexUniqueness,
+    },
+}
+
+impl AccessPhysicalContract {
+    pub(in crate::rules) fn with_access(mut self, access: physical::PhysicalAccess) -> Self {
+        self.access = access;
+        self
+    }
+
+    pub(in crate::rules) fn new(
+        access: physical::PhysicalAccess,
+        delivered: properties::DeliveredProperties,
+        cost: cost::CostVector,
+        estimated_rows: cost::EstimatedRows,
+    ) -> Self {
+        Self {
+            access,
+            delivered,
+            cost,
+            estimated_rows,
+            execution: AccessExecutionCost::MaterializedRows,
+        }
+    }
+
+    pub(in crate::rules) fn new_secondary(
+        access: physical::PhysicalAccess,
+        delivered: properties::DeliveredProperties,
+        id_cost: cost::CostVector,
+        materialization_cost: cost::CostVector,
+        estimated_rows: cost::EstimatedRows,
+    ) -> Self {
+        Self {
+            access,
+            delivered,
+            cost: id_cost.serial(materialization_cost),
+            estimated_rows,
+            execution: AccessExecutionCost::SecondaryIds {
+                cost: id_cost,
+                source: SecondaryIdSource::Other,
+            },
+        }
+    }
+
+    pub(in crate::rules) fn with_batchable_equality(
+        mut self,
+        index_id: ir::NonEmptyString,
+        key: catalog::ScopedPropertyKey,
+        uniqueness: catalog::IndexUniqueness,
+    ) -> Self {
+        let AccessExecutionCost::SecondaryIds { source, .. } = &mut self.execution else {
+            unreachable!("an equality contract produces secondary IDs");
+        };
+        *source = SecondaryIdSource::BatchableEquality {
+            index_id,
+            key,
+            uniqueness,
+        };
+        self
+    }
+
+    pub(in crate::rules) fn with_range_iteration(
+        mut self,
+        iteration: ir::RangeScanIteration,
+    ) -> Self {
+        let AccessExecutionCost::SecondaryIds { source, .. } = &mut self.execution else {
+            unreachable!("a range contract produces secondary IDs");
+        };
+        *source = SecondaryIdSource::Range { iteration };
+        self
+    }
+
+    pub(in crate::rules) fn range_iteration(&self) -> Option<ir::RangeScanIteration> {
+        match &self.execution {
+            AccessExecutionCost::SecondaryIds {
+                source: SecondaryIdSource::Range { iteration },
+                ..
+            } => Some(*iteration),
+            _ => None,
+        }
+    }
+
+    pub(in crate::rules) fn secondary_id_cost(&self) -> Option<cost::CostVector> {
+        match &self.execution {
+            AccessExecutionCost::MaterializedRows => None,
+            AccessExecutionCost::SecondaryIds { cost, .. } => Some(*cost),
+        }
+    }
+
+    pub(in crate::rules) fn batchable_equality_identity(
+        &self,
+    ) -> Option<(
+        &ir::NonEmptyString,
+        &catalog::ScopedPropertyKey,
+        catalog::IndexUniqueness,
+    )> {
+        match &self.execution {
+            AccessExecutionCost::SecondaryIds {
+                source:
+                    SecondaryIdSource::BatchableEquality {
+                        index_id,
+                        key,
+                        uniqueness,
+                    },
+                ..
+            } => Some((index_id, key, *uniqueness)),
+            AccessExecutionCost::MaterializedRows
+            | AccessExecutionCost::SecondaryIds {
+                source: SecondaryIdSource::Other | SecondaryIdSource::Range { .. },
+                ..
+            } => None,
+        }
+    }
+}

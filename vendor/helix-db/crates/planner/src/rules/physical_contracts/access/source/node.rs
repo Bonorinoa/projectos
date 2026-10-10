@@ -1,0 +1,151 @@
+//! Node source access physical-contract adapter.
+
+use crate::{catalog, context, cost, exec, ir, properties};
+
+use super::super::contract::AccessPhysicalContract;
+use super::shared;
+
+pub(in crate::rules) fn node_access_contract(
+    plan: &ir::NodeAccessPlan,
+    storage: &cost::StorageCostProfile,
+    stats: &context::StatsSnapshot,
+) -> AccessPhysicalContract {
+    let mut contract = shared::access_contract::<NodeAccessFamily>(plan, storage, stats);
+    contract.delivered.ordering = exec::node_range_ordering(plan);
+    let exact = match plan {
+        ir::NodeAccessPlan::Union(_) | ir::NodeAccessPlan::Intersect(_) => {
+            exec::node_secondary_set(plan).map(|set| exec::ExecNodeAccessPlan::SecondarySet { set })
+        }
+        ir::NodeAccessPlan::Empty
+        | ir::NodeAccessPlan::PointIds { .. }
+        | ir::NodeAccessPlan::FromParam { .. }
+        | ir::NodeAccessPlan::FromVar { .. }
+        | ir::NodeAccessPlan::AllScan
+        | ir::NodeAccessPlan::LabelScan { .. }
+        | ir::NodeAccessPlan::EqualityIndex { .. }
+        | ir::NodeAccessPlan::RangeIndex { .. }
+        | ir::NodeAccessPlan::VectorSearch { .. }
+        | ir::NodeAccessPlan::TextSearch { .. }
+        | ir::NodeAccessPlan::ScanThenFilter { .. }
+        | ir::NodeAccessPlan::BranchResidualUnion(_) => None,
+    };
+    match exact {
+        Some(exact) => {
+            contract.with_access(crate::physical::PhysicalAccess::NodeExact(Box::new(exact)))
+        }
+        None => contract,
+    }
+}
+
+struct NodeAccessFamily;
+
+impl shared::AccessSourceFamily for NodeAccessFamily {
+    type Plan = ir::NodeAccessPlan;
+
+    fn element() -> properties::ElementKind {
+        properties::ElementKind::Node
+    }
+
+    fn point_keyspace() -> exec::ElementKeyspace {
+        exec::ElementKeyspace::NodeProperty
+    }
+
+    fn all_scan_keyspace() -> exec::ElementKeyspace {
+        exec::ElementKeyspace::NodeProperty
+    }
+
+    fn source_parts(plan: &Self::Plan) -> shared::AccessSourceParts<'_, Self::Plan> {
+        match plan {
+            ir::NodeAccessPlan::Empty => shared::AccessSourceParts::Empty,
+            ir::NodeAccessPlan::PointIds { ids } => shared::AccessSourceParts::PointIds(ids),
+            ir::NodeAccessPlan::FromParam { .. } | ir::NodeAccessPlan::FromVar { .. } => {
+                shared::AccessSourceParts::RuntimeInput
+            }
+            ir::NodeAccessPlan::AllScan => shared::AccessSourceParts::AllScan,
+            ir::NodeAccessPlan::LabelScan { label } => {
+                shared::AccessSourceParts::LabelScan { label }
+            }
+            ir::NodeAccessPlan::EqualityIndex { index, key, value } => {
+                shared::AccessSourceParts::EqualityIndex {
+                    access: crate::physical::PhysicalAccess::NodeExact(Box::new(
+                        exec::ExecNodeAccessPlan::exact_equality(
+                            index.clone(),
+                            key.clone(),
+                            value.clone(),
+                        ),
+                    )),
+                    index_id: &index.index_id,
+                    key,
+                    kind: match index.uniqueness {
+                        catalog::IndexUniqueness::Unique => shared::EqualityIndexKind::Unique,
+                        catalog::IndexUniqueness::NonUnique => shared::EqualityIndexKind::NonUnique,
+                    },
+                    semantics: value.semantics(),
+                    indexed_values: match value {
+                        ir::IndexValue::LiteralSet(values) => values
+                            .iter()
+                            .filter(|value| {
+                                value.semantics() == ir::LiteralEqualityIndexValueSemantics::Indexed
+                            })
+                            .count(),
+                        ir::IndexValue::Literal(_)
+                        | ir::IndexValue::Param(_)
+                        | ir::IndexValue::ParamSet(_) => 1,
+                    },
+                }
+            }
+            ir::NodeAccessPlan::RangeIndex { key, iteration, .. } => {
+                shared::AccessSourceParts::RangeIndex {
+                    key,
+                    iteration: *iteration,
+                }
+            }
+            ir::NodeAccessPlan::VectorSearch { k, .. } => {
+                shared::AccessSourceParts::VectorSearch { k }
+            }
+            ir::NodeAccessPlan::TextSearch { k, .. } => shared::AccessSourceParts::TextSearch { k },
+            ir::NodeAccessPlan::Intersect(plans) => shared::AccessSourceParts::Intersect(
+                plans.iter().map(|plan| plan.as_ref()).collect(),
+            ),
+            ir::NodeAccessPlan::Union(plans) => {
+                shared::AccessSourceParts::Union(plans.iter().map(|plan| plan.as_ref()).collect())
+            }
+            ir::NodeAccessPlan::ScanThenFilter { source, residual } => {
+                shared::AccessSourceParts::ScanThenFilter {
+                    source: source.as_ref(),
+                    residual,
+                }
+            }
+            ir::NodeAccessPlan::BranchResidualUnion(branches) => {
+                shared::AccessSourceParts::BranchResidualUnion(
+                    branches
+                        .as_ref()
+                        .iter()
+                        .map(|branch| (branch.source().as_ref(), branch.residual()))
+                        .collect(),
+                )
+            }
+        }
+    }
+
+    fn label_cardinality(
+        stats: &context::StatsSnapshot,
+        label: &ir::NonEmptyString,
+    ) -> Option<u64> {
+        stats.node_label_cardinality.get(label).copied()
+    }
+
+    fn equality_cardinality(
+        stats: &context::StatsSnapshot,
+        key: &catalog::ScopedPropertyKey,
+    ) -> Option<u64> {
+        stats.node_eq_cardinality.get(key).copied()
+    }
+
+    fn range_cardinality(
+        stats: &context::StatsSnapshot,
+        key: &catalog::ScopedPropertyDirectionKey,
+    ) -> Option<u64> {
+        stats.node_range_cardinality.get(key).copied()
+    }
+}
