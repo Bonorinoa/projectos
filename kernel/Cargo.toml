@@ -1,0 +1,17 @@
+[package]
+name = "projectos-kernel"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.97.1"
+license = "Apache-2.0"
+publish = false
+description = "ProjectOS kernel: project registration, .projectos sidecar, capability broker, worker boundary"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
