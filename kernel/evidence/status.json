@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "note": "Kernel M1/M2 task claims. Every 'verified'/'implemented' entry carries sourceHashes binding it to exact file bytes; scripts/update-roadmap.mjs recomputes and BLOCKS the task on mismatch. States are planned|detected|implemented|verified|blocked; 'accepted' is human-only.",
+  "tasks": {
+    "m1.registry": {
+      "status": "verified",
+      "evidence": [
+        "kernel/INTERFACES.md",
+        "kernel/tests/sidecar_registration.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/registration.rs": "721283323b73f85c1862a70af12bbec3665dad1fb2b9fe47525718037be049bf",
+        "kernel/src/sidecar.rs": "5360dd57946571f7b1069a45b588ed88e628ecde8026c86c49722a4f8ef6fa52",
+        "kernel/tests/sidecar_registration.rs": "86e9b7f27ae86797cfacfe33a9c2cdc00ce636c610ad7c945fd704217fc67d4b"
+      },
+      "note": "Project identity, .projectos sidecar, register/open/move, alias rejection and the writer lock; 8 contract tests + M1 acceptance A1/A3/A4."
+    },
+    "m1.graphs": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/graph.rs",
+        "kernel/tests/profile.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/graph.rs": "9b926380ba3cbf6f7ec4e3bb3a4bc0d7fe787ccd7cd385b7afc4cfd7c24e269c",
+        "kernel/src/graph_memory.rs": "caf8eceb8b02ff04768c6d580b5429d29e3f836e90941a3769beaf7045042c0e",
+        "kernel/src/profile.rs": "d727a49eb70f567266faf815c68e8bfd52a28a842874b5785a2b321d213541ab",
+        "kernel/tests/graph.rs": "ae71d47bc751ddb4bcb2c330f5b59be3d0dbc72f0d448b08c71eb2c04df9dce4",
+        "kernel/tests/profile.rs": "031ec3152c2ce191288f517b8a36b89b3df79ee0cf5246a28729c86ccd57e3ea"
+      },
+      "note": "GraphEngine trait + in-memory adapter (byte-stable snapshots, cycle-safe lineage) and the profile split with sidecar-UUID authority; M1 acceptance A2."
+    },
+    "m1.capabilities": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/broker.rs",
+        "kernel/tests/adversarial.rs",
+        "kernel/tests/m2_adversarial.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/broker.rs": "176878c4ac16784d65827d55534a3a86117cb66c282139985ef0f68b317716df",
+        "kernel/src/worker.rs": "02d24eeda133a61dd3341d13bfdfa261f1534542d0fa6712209272fed2d27931",
+        "kernel/tests/broker.rs": "6b9b8e67bda3288f6f8ca9eb9744ba2ba2555ade0abf0742829ef3ac1a4d43be",
+        "kernel/tests/adversarial.rs": "4e9ae7d2926110e9dc17a5db62e9f739cad187756affae78ec6281529e24284e",
+        "kernel/tests/m2_adversarial.rs": "37633332ec3e05067de30a153a446543ea6987bb38111257e42aa8620271471e"
+      },
+      "note": "Capability broker (component-relative resolution, realpath containment, symlink-write refusal) + WorkerHost trait; 6 contract + 18 adversarial tests."
+    },
+    "m1.mutation": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/journal.rs",
+        "kernel/tests/m1b_adversarial.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/journal.rs": "492b927f93fe4fcd91c4ac916254af631138ca3d02f82deefb671ab09eef5225",
+        "kernel/tests/journal.rs": "9a455fb3223993df2ae44de2bd91be5d69773324ad2d05eda6e5669a949c1ff5",
+        "kernel/tests/m1b_adversarial.rs": "f7353efb1f000856aec56b4ff3d0a91b44fca9c94c6ceb6ecb3ea62d0f2c040b"
+      },
+      "note": "Append-only journal, quiesced checkpoints, replay and recorded stale-lock takeover; M1 acceptance A1/A4/A5."
+    },
+    "m1.trace": {
+      "status": "implemented",
+      "evidence": [
+        "kernel/tests/receipts.rs",
+        "app/ui/preview/trace.png"
+      ],
+      "sourceHashes": {
+        "kernel/src/receipts.rs": "90342da44f66ed554c53770dc1787f5db3f27a0245eae8e4b01204d83bc583e6",
+        "kernel/tests/receipts.rs": "615303734f83ea93adf230ad480d3b487fd5e31639654d243b1d69fc9555481e"
+      },
+      "note": "Durable redacted receipt facts + broker-denial ingestion verified by tests. The trace VIEWER is mock-bridged (native wiring is M2.1), so this stays 'implemented', not 'verified'."
+    },
+    "m1.offline": {
+      "status": "planned",
+      "evidence": [],
+      "sourceHashes": {},
+      "note": "Central offline enforcement is not built (an M1 non-goal). Recorded, not claimed."
+    },
+    "m2.editor": {
+      "status": "verified",
+      "evidence": [
+        "kernel/INTERFACES-M2.md",
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/selection.rs": "cf4e21342de55b1b59207092d1a15d82e32bc0554e77016072fde3ea53d61fd8",
+        "kernel/tests/m2_acceptance.rs": "fea6c027311a3ec0432866231bd72c65cd4b4d2c10c0fedc1b0fd570ea33d17b"
+      },
+      "note": "Byte-range selection anchors; a stale selection fails safely (M2 acceptance A2)."
+    },
+    "m2.actions": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/actions.rs",
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/actions.rs": "d8807a1f2ccb56e0c0066f61d8a39b161a78e11843aaf6e47815ab537be5e90f",
+        "kernel/tests/actions.rs": "794129cc641c232610040d2ec0add7166effbea7962a215e7f51e32ed929382f"
+      },
+      "note": "Typed selection actions with declared contracts (Rephrase/Complete=Replacement, Explain/FactCheck=Annotation); stale anchors refused."
+    },
+    "m2.diff": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/proposals.rs": "3b8f89d4b7c61c46c9dd025d6fbdb9ffb972f6625b934e3ccedda76e823a23ea",
+        "kernel/tests/m2_acceptance.rs": "fea6c027311a3ec0432866231bd72c65cd4b4d2c10c0fedc1b0fd570ea33d17b"
+      },
+      "note": "Proposal/diff/decision/revision loop: atomic apply, recoverable content-addressed before-image, journal + redacted receipt; reject mutates nothing (A2/A3)."
+    },
+    "m2.recipe": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/recipe.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/recipe.rs": "f1c00005a3b10486a2b96a440e63086b81f07ff7e880de06a5e4d572c27e4aaa",
+        "kernel/tests/recipe.rs": "6bb802b2a26179368682ef175dc10ade2267e29f1527e97162d60998b04e97f9"
+      },
+      "note": "Inspectable, bounded, cancellable publish-readiness recipe with a human approval gate."
+    },
+    "m2.context": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/lens.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/lens.rs": "39ddacdba24a05a6ad096e205e38e54e1f3013f7b272f7db825522e913dff9d9",
+        "kernel/tests/lens.rs": "6519d6d885646a674ae826242ba4aa48a1adcc5d4c9d41e2e79759d2f1eb626d"
+      },
+      "note": "One-hop / lineage / evidence lens rows (deterministic, table-equivalent)."
+    },
+    "m2.milestone": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/milestone.rs"
+      ],
+      "sourceHashes": {
+        "kernel/src/milestone.rs": "0539380314657f6c88f4dd308c3102ca0c2f78d7839c22216c663dc7fdc149d3",
+        "kernel/tests/milestone.rs": "635d34424809baa071ecb607168425a7fe655fcc924849bbc12fc14d3ca0b494"
+      },
+      "note": "Named milestones (quiesced checkpoints) + portable export (no secrets/.tmp)."
+    },
+    "m2.e2e": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "sourceHashes": {
+        "kernel/tests/m2_acceptance.rs": "fea6c027311a3ec0432866231bd72c65cd4b4d2c10c0fedc1b0fd570ea33d17b",
+        "kernel/tests/actions.rs": "794129cc641c232610040d2ec0add7166effbea7962a215e7f51e32ed929382f",
+        "kernel/tests/recipe.rs": "6bb802b2a26179368682ef175dc10ade2267e29f1527e97162d60998b04e97f9",
+        "kernel/tests/milestone.rs": "635d34424809baa071ecb607168425a7fe655fcc924849bbc12fc14d3ca0b494",
+        "kernel/tests/lens.rs": "6519d6d885646a674ae826242ba4aa48a1adcc5d4c9d41e2e79759d2f1eb626d"
+      },
+      "note": "Offline end-to-end Substack golden path with a redacted, model-disclosing receipt (no live provider)."
+    }
+  }
+}

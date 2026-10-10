@@ -19,6 +19,7 @@ function refreshEvidence() {
     }
   }
   for(const dir of ['spikes','scripts','evidence']) walk(resolve(root,dir));
+  try { walk(resolve(root,'kernel')); } catch { /* kernel/ absent (e.g. test fixtures) */ }
   const next=hash.digest('hex');
   if(next===signature) return;
   const result=spawnSync(process.execPath,[resolve(root,'scripts/update-roadmap.mjs')],{encoding:'utf8'});

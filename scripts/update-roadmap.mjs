@@ -15,6 +15,7 @@ function walk(dir) {
 }
 walk(resolve(root,'spikes'));
 walk(resolve(root,'scripts'));
+if (existsSync(resolve(root,'kernel'))) walk(resolve(root,'kernel'));
 const revision = 'sha256:' + createHash('sha256').update(JSON.stringify(Object.entries(sources).sort())).digest('hex');
 const snapshot = {schemaVersion:1, revision, scope:'All non-generated spike and script files; excludes reports, docs, design, build/runtime outputs and caches.', files:sources};
 writeFileSync(resolve(root,'projectos-source-snapshot.json'), JSON.stringify(snapshot,null,2)+'\n');
@@ -39,6 +40,30 @@ for (const [letter,id] of [['a','shell'],['b','graph'],['c','worker'],['d','reco
   if (missingHashes) diagnostics.push(`${id}: no exact-source hashes recorded; implementation evidence not established`);
   tasks[`m0.${id}`]={status:mismatches.length?'blocked':missingHashes?'detected':status,evidence:[reportPath],note:mismatches.length?'Evidence is stale; rerun after source changes.':missingHashes?'Report lacks exact-source hashes; rerun evidence before trusting implementation status.':failed?'Latest contract checks failed; see report before continuing.':notes[letter]};
   if (letter==='b' && existsSync(resolve(root,'evidence/gates/gate-b/rust-integration.json'))) tasks[`m0.${id}`].evidence.push('evidence/gates/gate-b/rust-integration.json');
+}
+// Kernel task claims (M1/M2) from kernel/evidence/status.json. Every 'verified'
+// or 'implemented' claim is bound to exact source hashes; a source mismatch
+// blocks the task so a stale claim cannot survive a code change (same rule as
+// the m0 gate reports).
+const kernelStatusPath = resolve(root,'kernel/evidence/status.json');
+if (existsSync(kernelStatusPath)) {
+  const ks = JSON.parse(readFileSync(kernelStatusPath,'utf8'));
+  for (const [id, rec] of Object.entries(ks.tasks || {})) {
+    const hashes = rec.sourceHashes || {};
+    const missingHashes = Object.keys(hashes).length === 0;
+    const mismatches = Object.entries(hashes).filter(([file,hash]) => !existsSync(resolve(root,file)) || createHash('sha256').update(readFileSync(resolve(root,file))).digest('hex') !== hash);
+    let status = rec.status, note = rec.note || '';
+    if (mismatches.length) {
+      status = 'blocked';
+      note = 'Evidence stale; rerun after source changes: ' + mismatches.map(([p]) => p).join(', ');
+      diagnostics.push(`${id}: kernel evidence source mismatch: ${mismatches.map(([p]) => p).join(', ')}`);
+    } else if (missingHashes && (status === 'verified' || status === 'implemented')) {
+      status = 'blocked';
+      note = 'No exact-source hashes recorded; implementation evidence not established.';
+      diagnostics.push(`${id}: no exact-source hashes recorded; implementation evidence not established`);
+    }
+    tasks[id] = { status, evidence: rec.evidence || [], note };
+  }
 }
 const manifest = {updatedAt:new Date().toISOString(),commit:revision,sourceSnapshot:'projectos-source-snapshot.json',sourceStats:{files:Object.keys(sources).length,source:Object.keys(sources).filter(f=>/\.(rs|ts|js|mjs|py|c|h|html|css)$/.test(f)).length,tests:Object.keys(sources).filter(f=>/test|spec/.test(f)).length},tasks,diagnostics};
 writeFileSync(resolve(root,'projectos-roadmap-status.json'),JSON.stringify(manifest,null,2)+'\n');

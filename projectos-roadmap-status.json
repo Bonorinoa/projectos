@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-10-10T01:15:56.598Z",
-  "commit": "sha256:b80049fe12aa48ce4c50e2bf9903ccf21ba3572d8093e268b82681f68d9ff327",
+  "updatedAt": "2026-10-10T03:32:02.240Z",
+  "commit": "sha256:01424d45a4a6e9cd5d8e62bf609afefa9399bce911ceac219dba4e6c131aaf61",
   "sourceSnapshot": "projectos-source-snapshot.json",
   "sourceStats": {
-    "files": 99,
-    "source": 41,
-    "tests": 10
+    "files": 143,
+    "source": 74,
+    "tests": 25
   },
   "tasks": {
     "m0.shell": {
@@ -43,6 +43,106 @@
         "evidence/gates/gate-e/report.json"
       ],
       "note": "Mock provider, PKCE callback and encrypted-vault contracts implemented. Native credential/egress boundary, OS keyring, live opt-in conformance and Linux remain open."
+    },
+    "m1.registry": {
+      "status": "verified",
+      "evidence": [
+        "kernel/INTERFACES.md",
+        "kernel/tests/sidecar_registration.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "note": "Project identity, .projectos sidecar, register/open/move, alias rejection and the writer lock; 8 contract tests + M1 acceptance A1/A3/A4."
+    },
+    "m1.graphs": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/graph.rs",
+        "kernel/tests/profile.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "note": "GraphEngine trait + in-memory adapter (byte-stable snapshots, cycle-safe lineage) and the profile split with sidecar-UUID authority; M1 acceptance A2."
+    },
+    "m1.capabilities": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/broker.rs",
+        "kernel/tests/adversarial.rs",
+        "kernel/tests/m2_adversarial.rs"
+      ],
+      "note": "Capability broker (component-relative resolution, realpath containment, symlink-write refusal) + WorkerHost trait; 6 contract + 18 adversarial tests."
+    },
+    "m1.mutation": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/journal.rs",
+        "kernel/tests/m1b_adversarial.rs",
+        "kernel/tests/m1_acceptance.rs"
+      ],
+      "note": "Append-only journal, quiesced checkpoints, replay and recorded stale-lock takeover; M1 acceptance A1/A4/A5."
+    },
+    "m1.trace": {
+      "status": "implemented",
+      "evidence": [
+        "kernel/tests/receipts.rs",
+        "app/ui/preview/trace.png"
+      ],
+      "note": "Durable redacted receipt facts + broker-denial ingestion verified by tests. The trace VIEWER is mock-bridged (native wiring is M2.1), so this stays 'implemented', not 'verified'."
+    },
+    "m1.offline": {
+      "status": "planned",
+      "evidence": [],
+      "note": "Central offline enforcement is not built (an M1 non-goal). Recorded, not claimed."
+    },
+    "m2.editor": {
+      "status": "verified",
+      "evidence": [
+        "kernel/INTERFACES-M2.md",
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "note": "Byte-range selection anchors; a stale selection fails safely (M2 acceptance A2)."
+    },
+    "m2.actions": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/actions.rs",
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "note": "Typed selection actions with declared contracts (Rephrase/Complete=Replacement, Explain/FactCheck=Annotation); stale anchors refused."
+    },
+    "m2.diff": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "note": "Proposal/diff/decision/revision loop: atomic apply, recoverable content-addressed before-image, journal + redacted receipt; reject mutates nothing (A2/A3)."
+    },
+    "m2.recipe": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/recipe.rs"
+      ],
+      "note": "Inspectable, bounded, cancellable publish-readiness recipe with a human approval gate."
+    },
+    "m2.context": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/lens.rs"
+      ],
+      "note": "One-hop / lineage / evidence lens rows (deterministic, table-equivalent)."
+    },
+    "m2.milestone": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/milestone.rs"
+      ],
+      "note": "Named milestones (quiesced checkpoints) + portable export (no secrets/.tmp)."
+    },
+    "m2.e2e": {
+      "status": "verified",
+      "evidence": [
+        "kernel/tests/m2_acceptance.rs"
+      ],
+      "note": "Offline end-to-end Substack golden path with a redacted, model-disclosing receipt (no live provider)."
     }
   },
   "diagnostics": [
