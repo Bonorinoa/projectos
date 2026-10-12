@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ProjectOS — Synodos Field</title>
+<title>ProjectOS — Draft workbench</title>
 <!-- Design tokens (locked single source) -->
 <link rel="stylesheet" href="tokens.css">
 <!-- Vendored fonts via RELATIVE paths — no CDN, no network. -->
 <style>
-@font-face{font-family:"Geist";src:url("../assets/fonts/geist/Geist[wght].ttf") format("truetype");font-weight:100 900;font-display:swap;}
-@font-face{font-family:"Space Mono";src:url("../assets/fonts/space-mono/SpaceMono-Regular.ttf") format("truetype");font-weight:400;font-display:swap;}
-@font-face{font-family:"Space Mono";src:url("../assets/fonts/space-mono/SpaceMono-Bold.ttf") format("truetype");font-weight:700;font-display:swap;}
+@font-face{font-family:"Geist";src:url("assets/fonts/geist/Geist[wght].ttf") format("truetype");font-weight:100 900;font-display:swap;}
+@font-face{font-family:"Space Mono";src:url("assets/fonts/space-mono/SpaceMono-Regular.ttf") format("truetype");font-weight:400;font-display:swap;}
+@font-face{font-family:"Space Mono";src:url("assets/fonts/space-mono/SpaceMono-Bold.ttf") format("truetype");font-weight:700;font-display:swap;}
 
 /* ---- Synodos Field component styles (uses tokens.css variables) ------- */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -122,25 +122,14 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
 </style>
+<link rel="stylesheet" href="editor.css">
 </head>
 <body>
 <div class="tokens">
-  <span class="brand">PROJECT<i>OS</i> · SYNODOS FIELD</span>
-  <span class="kicker">GRID 8 · SPRITES 12×12 · RADIUS 6</span>
-  <div class="ctl">
-    <label for="relkind" class="kicker">LINK</label>
-    <select id="relkind" aria-label="Relation kind for port-to-port links">
-      <option value="SUPPORTS">SUPPORTS</option>
-      <option value="CITES">CITES</option>
-      <option value="GOVERNED_BY">GOVERNED_BY</option>
-      <option value="EXECUTED">EXECUTED</option>
-      <option value="PRODUCED">PRODUCED</option>
-      <option value="PRODUCED_BY">PRODUCED_BY</option>
-      <option value="REVISION_OF">REVISION_OF</option>
-      <option value="APPLIED_TO">APPLIED_TO</option>
-      <option value="LINKS_TO" selected>LINKS_TO</option>
-    </select>
-  </div>
+  <span class="brand">PROJECT<i>OS</i></span>
+  <span id="workspace-name" class="kicker">No project open</span>
+  <div class="ctl"><button id="open-project">Open project</button><button id="register-project">New project</button><button id="close-project" disabled>Close</button></div>
+  <div class="ctl"><button id="editor-toggle" class="on" aria-pressed="true">Draft editor</button><button id="canvas-toggle" aria-pressed="false">Canvas</button></div>
   <div class="lens">
     <button class="on" data-l="all" aria-pressed="true">All</button>
     <button data-l="lineage" aria-pressed="false">Lineage</button>
@@ -149,12 +138,14 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   </div>
   <div class="sep"></div>
   <div class="ctl">
-    <button id="listtoggle" class="a11y" aria-pressed="false">List (A)</button>
-    <button id="tracetoggle" class="a11y" aria-pressed="false">Trace (T)</button>
+    <button id="listtoggle" class="a11y" aria-pressed="false">Artifacts</button>
+    <button id="tracetoggle" class="a11y" aria-pressed="false">Activity</button>
   </div>
+  <div class="ctl"><button id="provider-settings">OpenRouter settings</button><span id="provider-badge" class="kicker">Offline</span></div>
 </div>
 
-<div id="cv">
+<div id="cv" hidden>
+  <p id="empty-field">No saved artifacts yet. Open a project and create a draft to begin.</p>
   <svg id="svg" aria-hidden="true"></svg>
   <div id="world"></div>
 </div>
@@ -176,12 +167,12 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
     <div class="ctl tradefilter" aria-label="Filter receipts">
       <button class="on" data-trace-filter="all" aria-pressed="true">All</button>
       <button data-trace-filter="denied" aria-pressed="false">Denied</button>
-      <button data-trace-filter="unknown" aria-pressed="false">Outcome-unknown</button>
+      <button data-trace-filter="unknown" aria-pressed="false">Unknown outcome</button>
     </div>
     <span class="trace-count" id="tracecount" role="status" aria-live="polite"></span>
   </div>
   <table class="trace-table">
-    <caption>Redacted receipt facts — same facts as bridge.receipts()</caption>
+    <caption>Activity and costs — saved project records</caption>
     <thead>
       <tr><th scope="col">When</th><th scope="col">Op</th><th scope="col">Path</th><th scope="col">Outcome</th><th scope="col">Cost / Route</th></tr>
     </thead>
@@ -193,7 +184,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
 <div id="tracedetail" role="dialog" aria-label="Receipt detail" aria-hidden="true">
   <button class="close" id="tracedetailclose" aria-label="Close receipt detail">✕</button>
   <h3 id="td-op">—</h3>
-  <div class="typ" id="td-typ">REDACTED RECEIPT FACT</div>
+  <div class="typ" id="td-typ">Saved activity</div>
   <table class="td-fields"></table>
 </div>
 
@@ -202,16 +193,74 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   <div class="ihead"><span id="i-sprite"></span><div><h3 id="i-title">—</h3><div class="typ" id="i-type"></div></div></div>
   <table id="i-fields"></table>
   <div class="rels" id="i-rels"></div>
-  <div class="lrowkey" style="margin-top:12px">REL-FIELDS · REDACTED · TYPED</div>
+  <div class="lrowkey" style="margin-top:12px">Saved artifact relationships</div>
 </div>
 
 <div class="zoom">
+  <button id="fit-view" aria-label="Fit all artifacts">Fit</button>
   <button id="zout" aria-label="Zoom out">−</button>
   <button id="zin" aria-label="Zoom in">+</button>
 </div>
-<div class="hint">DRAG NODE · DRAG ■ OUT-PORT → IN-PORT TO LINK · 2×CLICK INSPECTOR · TAB+ARROWS NAV · ENTER INSPECT · ESC CLOSE · A = LIST · T = TRACE</div>
+<div class="hint">Drag a card to arrange your view · Double-click or press Enter for details · View layout is temporary</div>
+
+
+<main id="editor-panel" aria-label="Draft editor">
+  <aside class="draft-sidebar">
+    <h2>Drafts</h2>
+    <p id="folder-label">Open an existing project, or register a folder as a new project.</p>
+    <label for="draft-list">Project files</label>
+    <select id="draft-list" size="10" aria-label="Draft files" disabled></select>
+    <label for="draft-path">New file path</label>
+    <input id="draft-path" placeholder="draft.md" autocomplete="off" disabled>
+    <button id="create-draft" disabled>Create draft</button>
+    <button id="refresh-project" disabled>Refresh files and activity</button>
+    <hr>
+    <label for="milestone-name">Milestone name</label>
+    <input id="milestone-name" placeholder="First full draft" disabled>
+    <button id="save-milestone" disabled>Save milestone</button>
+    <button id="export-draft" disabled>Export saved draft…</button>
+  </aside>
+  <section class="writing-workspace">
+    <header class="draft-heading"><div><h1 id="draft-title">Your writing workbench</h1><p id="draft-state">Local editing works offline. AI requests require your approval.</p></div><div class="editor-buttons"><button id="save-draft" disabled>Save</button><button id="reload-draft" disabled>Reload from disk</button><button id="preview-toggle" aria-pressed="false" disabled>Preview</button></div></header>
+    <div class="writing-panes"><textarea id="draft-text" aria-label="Draft text" spellcheck="true" disabled placeholder="Open a project and choose or create a Markdown or text draft."></textarea><article id="draft-preview" hidden aria-label="Safe Markdown preview"></article></div>
+    <section class="action-bar" aria-label="AI actions">
+      <div><h2>Work on a passage</h2><p id="selection-state">Select text for an action, or review the entire saved draft.</p></div>
+      <div class="action-buttons"><button data-action="Rephrase" disabled>Rephrase</button><button data-action="Complete" disabled>Complete</button><button data-action="Explain" disabled>Explain</button><button data-action="FactCheck" disabled>Fact-check</button><button data-action="ReviewDraft" disabled>Review draft</button></div>
+      <p id="action-availability">Configure OpenRouter and turn online access on to prepare a request.</p>
+    </section>
+    <section id="proposal-panel" hidden aria-label="AI proposal">
+      <div class="proposal-heading"><h2 id="proposal-heading">AI proposal</h2><span id="proposal-facts"></span></div>
+      <div class="comparison"><div><h3>Original passage</h3><pre id="proposal-original"></pre></div><div><h3 id="proposed-label">Suggested replacement</h3><pre id="proposal-text"></pre></div></div>
+      <p id="proposal-warning"></p><div class="editor-buttons"><button id="accept-proposal" disabled>Accept replacement</button><button id="reject-proposal" disabled>Reject</button></div>
+    </section>
+  </section>
+</main>
+<div id="app-status" role="status" aria-live="polite">Connecting to native ProjectOS…</div>
+<dialog id="folder-dialog" aria-labelledby="folder-dialog-title">
+  <form id="folder-form"><h2 id="folder-dialog-title">Open project folder</h2>
+  <p id="folder-dialog-description">Choose an existing folder. You can paste its absolute path or browse on this computer.</p>
+  <label for="workspace-folder">Folder path</label><input id="workspace-folder" autocomplete="off" spellcheck="false" placeholder="Paste an absolute folder path" required>
+  <div class="editor-buttons"><button type="button" id="cancel-folder">Cancel</button><button type="button" id="browse-folder">Browse…</button><button type="submit" id="submit-folder">Open folder</button></div></form>
+</dialog>
+<dialog id="provider-dialog" aria-labelledby="provider-title">
+  <form id="provider-form"><h2 id="provider-title">OpenRouter</h2><p>Bring your own API key. Credentials are stored by the native app in your operating system credential store.</p>
+  <label for="api-key">API key</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Enter a new key to replace the stored key">
+  <p id="key-state">Checking credential storage…</p><div class="editor-buttons"><button type="button" id="store-key">Store key</button><button type="button" id="forget-key">Forget stored key</button></div>
+  <label for="provider-model">Exact OpenRouter model ID</label><input id="provider-model" autocomplete="off" spellcheck="false" placeholder="Copy a model ID from OpenRouter">
+  <div class="budget-fields"><label>Maximum output tokens<input id="max-tokens" type="number" min="1" max="8192" step="1" value="1024" required></label><label>Maximum request cost (USD)<input id="ceiling-usd" type="number" min="0" max="10" step="0.001" value="0.05" required></label></div>
+  <label class="online-control"><input id="online-toggle" type="checkbox">Allow online requests this session</label><p>Every request still needs a separate scope review and Send approval. Turning this off cancels in-flight work. Nothing is queued for later.</p>
+  <div class="editor-buttons"><button type="submit">Done</button></div></form>
+</dialog>
+<dialog id="approval-dialog" aria-labelledby="approval-title">
+  <h2 id="approval-title">Review before sending</h2><p id="approval-kind"></p><dl id="approval-facts"></dl><h3>Exact text being sent</h3><pre id="approval-text"></pre><p>The provider also receives a short instruction for the action above. Check the text, model, destination and budget before Send.</p><div class="editor-buttons"><button id="dismiss-approval">Cancel</button><button id="send-action">Send to OpenRouter</button></div>
+</dialog>
+<dialog id="unsaved-dialog" aria-labelledby="unsaved-title"><h2 id="unsaved-title">Unsaved changes</h2><p>Your draft has changes. Save them before continuing, discard them, or keep editing.</p><div class="editor-buttons"><button id="unsaved-cancel">Keep editing</button><button id="unsaved-discard">Discard changes</button><button id="unsaved-save">Save and continue</button></div></dialog>
+<dialog id="annotation-dialog" aria-labelledby="annotation-title"><h2 id="annotation-title">Saved annotation</h2><p>This annotation is linked to the source draft. It does not change your draft text. Check factual claims independently.</p><pre id="annotation-text"></pre><button id="close-annotation">Close</button></dialog>
+<div id="request-progress" hidden role="status"><span>Waiting for OpenRouter…</span><button id="cancel-action">Cancel request</button></div>
 
 <script src="bridge.js"></script>
+<script src="editor-state.js"></script>
 <script src="app.js"></script>
+<script src="editor.js"></script>
 </body>
 </html>

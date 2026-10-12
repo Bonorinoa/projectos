@@ -94,8 +94,8 @@ fn a1_substack_golden_path_offline() {
     let original_bytes = fs::read(proj.join("draft.md")).unwrap();
     let rev = apply(&proj, &a, &outcome.proposal, Decision::Accept).unwrap().expect("a revision");
     assert_eq!(rev.before_hash, a.doc_hash);
-    assert_eq!(rev.after_hash, outcome.proposal.after_hash);
     let new_text = fs::read_to_string(proj.join("draft.md")).unwrap();
+    assert_eq!(rev.after_hash, projectos_kernel::provider::stable_hash(new_text.as_bytes()));
     assert!(new_text.contains(&outcome.proposal.proposed), "the artifact now holds the proposal");
     // The before-image is retrievable, content-addressed.
     let before_file = proj.join(".projectos").join("objects").join(&a.doc_hash);

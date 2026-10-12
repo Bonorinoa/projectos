@@ -1,1 +1,1 @@
-{}
+{"main-window":{"identifier":"main-window","description":"Local editor window can receive its native provider progress events.","local":true,"windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten","core:window:allow-destroy"]}}

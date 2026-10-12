@@ -8,9 +8,10 @@
 //! entry, a redacted receipt, and a durable [`Revision`]. Rejection mutates
 //! nothing and records a `rejected` receipt.
 
+use crate::document::DocumentStore;
 use crate::error::{KernelError, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Whether a proposal rewrites the artifact bytes or only annotates them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -65,7 +66,7 @@ struct RevisionsFile {
 
 /// The durable revision timeline at `.projectos/revisions.toml`.
 pub struct RevisionLog {
-    path: PathBuf,
+    store: DocumentStore,
     revisions: Vec<Revision>,
 }
 
@@ -112,11 +113,8 @@ impl Proposal {
 
 impl RevisionLog {
     pub fn new(folder: &Path) -> Result<Self> {
-        let dir = folder.join(".projectos");
-        std::fs::create_dir_all(&dir)?;
-        let path = dir.join("revisions.toml");
-        let revisions = if path.exists() {
-            let text = std::fs::read_to_string(&path)?;
+        let store = DocumentStore::open(folder)?;
+        let revisions = if let Some(text) = store.read_metadata("revisions.toml")? {
             if text.trim().is_empty() {
                 Vec::new()
             } else {
@@ -128,7 +126,7 @@ impl RevisionLog {
         } else {
             Vec::new()
         };
-        Ok(RevisionLog { path, revisions })
+        Ok(RevisionLog { store, revisions })
     }
 
     pub fn revisions(&self) -> &[Revision] {
@@ -136,15 +134,15 @@ impl RevisionLog {
     }
 
     fn append(&mut self, r: Revision) -> Result<()> {
-        self.revisions.push(r);
+        let mut revisions = self.revisions.clone();
+        revisions.push(r);
         let f = RevisionsFile {
-            revisions: self.revisions.clone(),
+            revisions: revisions.clone(),
         };
         let text = toml::to_string(&f)
             .map_err(|e| KernelError::InvalidSidecar(format!("serialize revisions: {e}")))?;
-        let tmp = self.path.with_extension("tmp");
-        std::fs::write(&tmp, text)?;
-        std::fs::rename(&tmp, &self.path)?;
+        self.store.write_metadata("revisions.toml", &text)?;
+        self.revisions = revisions;
         Ok(())
     }
 }
@@ -161,82 +159,113 @@ pub fn apply(
     p: &Proposal,
     d: Decision,
 ) -> Result<Option<Revision>> {
-    match crate::selection::resolve(folder, anchor)? {
-        crate::selection::AnchorState::Fresh => {}
-        crate::selection::AnchorState::Stale(reason) => {
-            return Err(KernelError::InvalidSidecar(format!("stale selection: {reason}")));
-        }
-    }
+    let store = DocumentStore::open(folder)?;
+    crate::document::validate_document_path(&p.rel_path)?;
     if p.rel_path != anchor.rel_path {
-        return Err(KernelError::InvalidSidecar(
-            "proposal path does not match the anchor".to_string(),
-        ));
+        return Err(KernelError::InvalidSidecar("proposal path does not match the anchor".into()));
+    }
+    let expected = Proposal::new(&p.rel_path, p.kind.clone(), &p.original, &p.proposed, &p.before_hash);
+    if anchor.byte_start > anchor.byte_end
+        || anchor.byte_end - anchor.byte_start != p.original.len()
+        || p.before_hash != anchor.doc_hash
+        || crate::provider::stable_hash(p.original.as_bytes()) != anchor.text_hash
+        || p.after_hash != expected.after_hash || p.id != expected.id
+    {
+        return Err(KernelError::InvalidSidecar("malformed proposal or selection mismatch".into()));
+    }
+    // Rejection discards a native-owned proposal. It must remain possible after
+    // an external edit, deletion, or replacement of the original document.
+    if d == Decision::Reject {
+        let mut receipts: ApplyReceipts = read_records(&store, "receipts.toml")?;
+        let at = now();
+        receipts.receipts.push(crate::receipts::RedactedReceipt {
+            id: crate::provider::stable_hash(format!("{at}\u{1f}apply\u{1f}{}", p.rel_path).as_bytes()),
+            at, op: "apply".into(), rel_path: p.rel_path.clone(), outcome: "rejected".into(),
+            content_hash: Some(p.after_hash.clone()), route: None, cost: None,
+        });
+        store.write_metadata("receipts.toml", &serialize(&receipts)?)?;
+        return Ok(None);
+    }
+    let text = match store.read(&anchor.rel_path) {
+        Err(KernelError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(KernelError::InvalidSidecar("stale selection: document missing".into()));
+        }
+        result => result?,
+    };
+    if p.before_hash != anchor.doc_hash
+        || crate::provider::stable_hash(text.as_bytes()) != anchor.doc_hash
+    {
+        return Err(KernelError::InvalidSidecar("stale selection: document changed or proposal hash mismatched".into()));
+    }
+    if anchor.byte_start > anchor.byte_end || anchor.byte_end > text.len()
+        || !text.is_char_boundary(anchor.byte_start) || !text.is_char_boundary(anchor.byte_end)
+    {
+        return Err(KernelError::InvalidSidecar("anchor range out of bounds or not on UTF-8 boundaries".into()));
+    }
+    let selected = &text[anchor.byte_start..anchor.byte_end];
+    if p.original != selected || crate::provider::stable_hash(selected.as_bytes()) != anchor.text_hash
+    {
+        return Err(KernelError::InvalidSidecar("malformed proposal or selection mismatch".into()));
     }
 
-    if matches!(d, Decision::Reject) {
-        let mut w = crate::receipts::ReceiptWriter::new(folder)?;
-        w.append(crate::receipts::RedactedReceipt {
-            id: String::new(),
-            at: now(),
-            op: "apply".to_string(),
-            rel_path: p.rel_path.clone(),
-            outcome: "rejected".to_string(),
-            content_hash: Some(p.after_hash.clone()),
-            route: None,
-            cost: None,
-        })?;
+    // Parse all records before changing document bytes. The apply path uses
+    // descriptor-scoped persistence, rather than the legacy path-based writers.
+    let mut receipts: ApplyReceipts = read_records(&store, "receipts.toml")?;
+    let mut journal: ApplyJournal = read_records(&store, "journal.toml")?;
+    let mut revisions = RevisionLog::new(folder)?;
+    let at = now();
+    let (outcome, content_hash) = match p.kind {
+        ProposalKind::Annotation => ("accepted-annotation", p.after_hash.clone()),
+        ProposalKind::Replacement => ("accepted", String::new()),
+    };
+    let mut receipt = crate::receipts::RedactedReceipt {
+        id: crate::provider::stable_hash(format!("{at}\u{1f}apply\u{1f}{}", p.rel_path).as_bytes()),
+        at, op: "apply".into(), rel_path: p.rel_path.clone(), outcome: outcome.into(),
+        content_hash: Some(content_hash), route: None, cost: None,
+    };
+    if p.kind == ProposalKind::Annotation {
+        receipts.receipts.push(receipt);
+        store.write_metadata("receipts.toml", &serialize(&receipts)?)?;
+        // An annotation is linked evidence, never a replacement of draft bytes.
+        // The application persists the annotation artifact before accepting it.
         return Ok(None);
     }
 
-    let path = folder.join(&p.rel_path);
-    let bytes = std::fs::read(&path)?;
-    if anchor.byte_start > anchor.byte_end || anchor.byte_end > bytes.len() {
-        return Err(KernelError::InvalidSidecar("anchor range out of bounds".to_string()));
-    }
-
-    // Before-image: full previous bytes, content-addressed (no-op if present).
-    let objdir = folder.join(".projectos").join("objects");
-    std::fs::create_dir_all(&objdir)?;
-    let before_file = objdir.join(&p.before_hash);
-    if !before_file.exists() {
-        std::fs::write(&before_file, &bytes)?;
-    }
-
-    // Splice the anchored byte range, then replace atomically.
-    let mut new_bytes = Vec::with_capacity(bytes.len() + p.proposed.len());
-    new_bytes.extend_from_slice(&bytes[..anchor.byte_start]);
-    new_bytes.extend_from_slice(p.proposed.as_bytes());
-    new_bytes.extend_from_slice(&bytes[anchor.byte_end..]);
-    let tmp = path.with_extension("projectos-tmp");
-    std::fs::write(&tmp, &new_bytes)?;
-    std::fs::rename(&tmp, &path)?;
-
-    // Journal + redacted receipt + revision timeline.
-    let mut journal = crate::journal::Journal::open(folder)?;
-    journal.append(crate::journal::Record::Mutated {
-        object: p.rel_path.clone(),
-        at: now(),
-    })?;
-    let mut w = crate::receipts::ReceiptWriter::new(folder)?;
-    w.append(crate::receipts::RedactedReceipt {
-        id: String::new(),
-        at: now(),
-        op: "apply".to_string(),
-        rel_path: p.rel_path.clone(),
-        outcome: "accepted".to_string(),
-        content_hash: Some(p.after_hash.clone()),
-        route: None,
-        cost: None,
-    })?;
-    let at = now();
+    let new_text = format!("{}{}{}", &text[..anchor.byte_start], p.proposed, &text[anchor.byte_end..]);
+    let full_after_hash = crate::provider::stable_hash(new_text.as_bytes());
     let rev = Revision {
-        id: crate::provider::stable_hash(format!("{}\u{1f}{at}", p.id).as_bytes()),
-        proposal_id: p.id.clone(),
-        rel_path: p.rel_path.clone(),
-        before_hash: p.before_hash.clone(),
-        after_hash: p.after_hash.clone(),
-        at,
+        id: uuid::Uuid::new_v4().to_string(),
+        proposal_id: p.id.clone(), rel_path: p.rel_path.clone(),
+        before_hash: p.before_hash.clone(), after_hash: full_after_hash.clone(), at,
     };
-    RevisionLog::new(folder)?.append(rev.clone())?;
+    receipt.content_hash = Some(full_after_hash);
+    receipts.receipts.push(receipt);
+    journal.records.push(crate::journal::Record::Mutated { object: p.rel_path.clone(), at });
+    // Serialize before mutation as another preflight. The before-image survives
+    // a crash even if a later audit-record persistence step cannot complete.
+    let receipt_text = serialize(&receipts)?;
+    let journal_text = serialize(&journal)?;
+    store.preserve_before_image(&p.before_hash, &text)?;
+    store.save(&p.rel_path, &p.before_hash, &new_text)?;
+    store.write_metadata("journal.toml", &journal_text)?;
+    store.write_metadata("receipts.toml", &receipt_text)?;
+    revisions.append(rev.clone())?;
     Ok(Some(rev))
+}
+
+#[derive(Default, Serialize, Deserialize)]
+struct ApplyReceipts { receipts: Vec<crate::receipts::RedactedReceipt> }
+#[derive(Default, Serialize, Deserialize)]
+struct ApplyJournal { records: Vec<crate::journal::Record> }
+
+fn read_records<T: serde::de::DeserializeOwned + Default>(store: &DocumentStore, name: &str) -> Result<T> {
+    match store.read_metadata(name)? {
+        Some(text) if !text.trim().is_empty() => toml::from_str(&text)
+            .map_err(|e| KernelError::InvalidSidecar(format!("corrupt {name}: {e}"))),
+        _ => Ok(T::default()),
+    }
+}
+
+fn serialize<T: Serialize>(value: &T) -> Result<String> {
+    toml::to_string(value).map_err(|e| KernelError::InvalidSidecar(format!("cannot serialize audit record: {e}")))
 }

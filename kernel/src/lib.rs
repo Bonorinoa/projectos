@@ -11,6 +11,7 @@
 
 pub mod broker;
 pub mod error;
+pub mod document;
 pub mod graph;
 pub mod graph_memory;
 pub mod journal;

@@ -1,12 +1,12 @@
 /* ProjectOS — Synodos Field app shell.
  *
- * Canvas engine + a11y list-equivalent, driven by the mock bridge
+ * Canvas engine + a11y list-equivalent, driven by the native bridge
  * (window.projectos from bridge.js). No network, no CDN. Fonts load via
  * relative paths in index.html.
  *
  * Canvas (Synodos Field): typed artifact nodes rendered with the 12×12 pixel
  * sprites from design/sketches/007-canvas-synodos-field, dashed typed edges,
- * port-to-port linking (out-port ■ → in-port ■), lens filters
+ * native saved relationships, lens filters
  * (All/Lineage/Evidence/Workflow), zoom, drag, and a typed inspector.
  *
  * A11y list-equivalent: the SAME records as a semantic <table>, toggled by a
@@ -31,7 +31,7 @@ const SPRITES = {
   Revision:[[ "#2a3a38",2,4,2,2],["#2a3a38",5,4,2,2],["#2a3a38",8,4,1,2],["#2a3a38",3,8,2,2],["#2a3a38",6,8,2,2],["#8a6a3a",4,6,4,1],["#8a6a3a",7,5,1,3]]
 };
 function sprite(type, size) {
-  const parts = (SPRITES[type] || []).map(([c, x, y, w, h]) =>
+  const parts = (Array.isArray(SPRITES[type]) ? SPRITES[type] : []).map(([c, x, y, w, h]) =>
     `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`).join("");
   return `<svg width="${size}" height="${size}" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${parts}</svg>`;
 }
@@ -40,21 +40,23 @@ function sprite(type, size) {
 const bridge = window.projectos;
 let OBJECTS = [];
 let EDGES = [];
-const byId = {};
+const byId = Object.create(null);
 let NODES = [];            // {obj, el}
 let NODE_ORDER = [];       // ids in stable order (drives keyboard nav)
 
 const world = document.getElementById("world");
 const svg = document.getElementById("svg");
 const insp = document.getElementById("insp");
-let z = 1, sel = null, drag = null, linkC = null, lens = "all";
+let z = 1, sel = null, drag = null, lens = "all";
 let focusIdx = 0;
 
 /* ---- build the canvas -------------------------------------------------- */
 function build() {
   OBJECTS = bridge.objects();
+  document.getElementById("empty-field").hidden = OBJECTS.length > 0;
   EDGES = bridge.edges();
-  OBJECTS.forEach((n) => { byId[n.id] = n; });
+  Object.keys(byId).forEach(k => delete byId[k]);
+  OBJECTS.forEach((n, i) => { n.fields ||= {}; n.x = Number.isFinite(n.x) ? n.x : 170 + (i % 3) * 290; n.y = Number.isFinite(n.y) ? n.y : 150 + Math.floor(i / 3) * 170; byId[n.id] = n; });
 
   world.innerHTML = "";
   NODES = [];
@@ -73,10 +75,10 @@ function build() {
     const meta = firstField ? `${firstField[0]} = ${firstField[1]}` : "";
     el.innerHTML =
       `<div class="hd"><span class="sp">${sprite(n.kind, 16)}</span>` +
-      `<span class="badge">${n.kind.toUpperCase()}</span>` +
-      `<span class="sub">${(n.sub || "")}</span></div>` +
-      `<div class="tt">${n.label}</div>` +
-      `<div class="meta">${meta}</div>` +
+      `<span class="badge">${escapeHtml(String(n.kind).toUpperCase())}</span>` +
+      `<span class="sub">${escapeHtml(n.sub || "")}</span></div>` +
+      `<div class="tt">${escapeHtml(n.label)}</div>` +
+      `<div class="meta">${escapeHtml(meta)}</div>` +
       `<div class="ports"><span class="port p-in" title="in-port" aria-hidden="true"></span>` +
       `<span class="port p-out" title="out-port" aria-hidden="true"></span></div>`;
     world.appendChild(el);
@@ -88,26 +90,9 @@ function build() {
       if (ev.target.classList.contains("port")) return;
       sel = n.id; focusIdx = NODE_ORDER.indexOf(n.id);
       const r = el.getBoundingClientRect();
-      drag = { el, dx: ev.clientX - r.left, dy: ev.clientY - r.top, w: r.width / 2, h: r.height / 2 };
+      drag = { el, obj: n, dx: ev.clientX - r.left, dy: ev.clientY - r.top, w: r.width / 2, h: r.height / 2 };
     });
-    // port-to-port linking: out → in
-    el.querySelector(".p-out").addEventListener("mousedown", (ev) => {
-      ev.stopPropagation();
-      const r = el.getBoundingClientRect();
-      linkC = { f: n.id, ex: r.right - 6, ey: r.top + 16, rel: relKind() };
-      window.addEventListener("mousemove", lineMove);
-      window.addEventListener("mouseup", lineUp);
-    });
-    el.querySelector(".p-in").addEventListener("mouseup", (ev) => {
-      ev.stopPropagation();
-      if (linkC && linkC.f !== n.id) {
-        EDGES.push({ from: linkC.f, to: n.id, rel: linkC.rel });
-      }
-      linkC = null;
-      window.removeEventListener("mousemove", lineMove);
-      window.removeEventListener("mouseup", lineUp);
-      paint();
-    });
+    // Relationships come from saved native records; ports are decorative.
     el.addEventListener("dblclick", () => { sel = n.id; showInsp(); });
     el.addEventListener("focus", () => { focusIdx = NODE_ORDER.indexOf(n.id); });
     el.addEventListener("keydown", nodeKey);
@@ -142,15 +127,6 @@ function setFocus(i) {
 }
 
 /* ---- edge rendering ---------------------------------------------------- */
-function relKind() { return document.getElementById("relkind").value || "LINKS_TO"; }
-
-function lineMove(ev) {
-  const r = world.getBoundingClientRect();
-  svg.innerHTML = `<line x1="${linkC.ex}" y1="${linkC.ey}" x2="${ev.clientX - r.left}"` +
-    ` y2="${ev.clientY - r.top}" stroke-dasharray="2 3" stroke="#2a3a38"></line>`;
-}
-function lineUp() { linkC = null; svg.innerHTML = ""; paint(); }
-
 function relFor(id) { return EDGES.filter((r) => r.from === id || r.to === id); }
 
 function visible(id) {
@@ -184,7 +160,7 @@ function paintLines() {
     const bx = br.left - r.left, by = br.top - r.top + 16;
     svg.innerHTML +=
       `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"></line>` +
-      `<text class="rel" x="${(ax + bx) / 2}" y="${(ay + by) / 2}">${rel.rel}</text>`;
+      `<text class="rel" x="${(ax + bx) / 2}" y="${(ay + by) / 2}">${escapeHtml(rel.rel)}</text>`;
   });
 }
 
@@ -200,18 +176,27 @@ function showInsp() {
   insp.setAttribute("aria-hidden", "false");
   document.getElementById("i-sprite").innerHTML = sprite(n.kind, 34);
   document.getElementById("i-title").textContent = n.label;
-  document.getElementById("i-type").textContent = `${n.kind} · typed artifact`;
+  document.getElementById("i-type").textContent = `${n.kind} · saved artifact`;
   const f = document.getElementById("i-fields");
   f.innerHTML = "";
   Object.entries(n.fields).forEach(([k, v]) => {
-    f.insertAdjacentHTML("beforeend", `<tr><td class="k">${k}</td><td>${v}</td></tr>`);
+    f.insertAdjacentHTML("beforeend", `<tr><td class="k">${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`);
   });
+  insp.querySelector(".artifact-open")?.remove();
+  if (n.fields.annotation_id || (n.kind === "Draft" && n.fields.path)) {
+    const button = document.createElement("button"); button.className = "artifact-open";
+    button.textContent = n.fields.annotation_id ? "Read saved annotation" : "Open in draft editor";
+    button.addEventListener("click", () => window.dispatchEvent(new CustomEvent(n.fields.annotation_id ? "open-annotation-artifact" : "open-draft-artifact", {
+      detail: n.fields.annotation_id ? { id: n.fields.annotation_id, label: n.label } : n.fields.path
+    })));
+    insp.appendChild(button);
+  }
   const rels = relFor(sel);
   document.getElementById("i-rels").innerHTML =
     rels.length
       ? rels.map((r) => r.from === sel
-          ? `<span class="arrow">→</span> ${r.rel} · ${byId[r.to] ? byId[r.to].label : r.to}`
-          : `<span class="arrow">←</span> ${r.rel} · ${byId[r.from] ? byId[r.from].label : r.from}`).join("<br>")
+          ? `<span class="arrow">→</span> ${escapeHtml(r.rel)} · ${escapeHtml(byId[r.to] ? byId[r.to].label : r.to)}`
+          : `<span class="arrow">←</span> ${escapeHtml(r.rel)} · ${escapeHtml(byId[r.from] ? byId[r.from].label : r.from)}`).join("<br>")
       : "(no relations)";
 }
 function closeInsp() {
@@ -240,13 +225,14 @@ function zoom(delta) {
 document.getElementById("zin").addEventListener("click", () => zoom(1.15));
 document.getElementById("zout").addEventListener("click", () => zoom(1 / 1.15));
 
-/* canvas drag + link follow mouse */
+/* Temporary canvas arrangement; saved graph relationships are read-only here. */
 document.addEventListener("mouseup", () => { drag = null; });
 document.getElementById("cv").addEventListener("mousemove", (ev) => {
   if (drag) {
-    drag.el.style.left = (ev.clientX - drag.dx + drag.w) + "px";
-    drag.el.style.top = (ev.clientY - drag.dy + drag.h) + "px";
-    drag.obj.x = drag.el.style.left; drag.obj.y = drag.el.style.top;
+    const r = document.getElementById("cv").getBoundingClientRect();
+    drag.obj.x = (ev.clientX - r.left - drag.dx + drag.w) / z;
+    drag.obj.y = (ev.clientY - r.top - drag.dy + drag.h) / z;
+    drag.el.style.left = drag.obj.x + "px"; drag.el.style.top = drag.obj.y + "px";
   }
   paintLines();
 });
@@ -266,14 +252,14 @@ function buildList() {
     tr.dataset.id = n.id;
     tr.setAttribute("aria-label", `${n.kind} artifact: ${n.label}`);
     const rels = relFor(n.id).map((r) =>
-      r.from === n.id ? `<b>→</b> ${r.rel} → ${byId[r.to] ? byId[r.to].label : r.to}`
-                      : `<b>←</b> ${r.rel} ← ${byId[r.from] ? byId[r.from].label : r.from}`)
+      r.from === n.id ? `<b>→</b> ${escapeHtml(r.rel)} → ${escapeHtml(byId[r.to] ? byId[r.to].label : r.to)}`
+                      : `<b>←</b> ${escapeHtml(r.rel)} ← ${escapeHtml(byId[r.from] ? byId[r.from].label : r.from)}`)
       .join(" · ");
     const fieldsTxt = Object.entries(n.fields).map(([k, v]) => `${k}: ${v}`).join(" · ");
     tr.innerHTML =
-      `<td class="td-type">${n.kind}</td>` +
-      `<td class="td-kind"><span class="dot" style="background:${typeColor(n.kind)}"></span>${n.label}</td>` +
-      `<td class="lrowkey">${fieldsTxt}</td>` +
+      `<td class="td-type">${escapeHtml(n.kind)}</td>` +
+      `<td class="td-kind"><span class="dot" style="background:${typeColor(n.kind)}"></span>${escapeHtml(n.label)}</td>` +
+      `<td class="lrowkey">${escapeHtml(fieldsTxt)}</td>` +
       `<td class="td-rel">${rels || "<span class=\"lrowkey\">(no relations)</span>"}</td>`;
     tr.addEventListener("focus", () => { listFocus = listRows.indexOf(tr); });
     tr.addEventListener("keydown", listKey);
@@ -300,15 +286,24 @@ function listKey(ev) {
   }
 }
 function focusListRow(i) {
+  if (!listRows.length) return;
   listFocus = i;
   listRows[i].focus();
 }
 function openFromList(id) { sel = id; showInsp(); }
 
 /* toggle views: exactly one of canvas | list | trace is visible at a time */
-let view = "canvas";
+let view = "editor";
 function setView(v) {
   view = v;
+  document.getElementById("editor-panel").hidden = v !== "editor";
+  document.getElementById("editor-toggle").classList.toggle("on", v === "editor");
+  document.getElementById("editor-toggle").setAttribute("aria-pressed", String(v === "editor"));
+  document.getElementById("canvas-toggle").classList.toggle("on", v === "canvas");
+  document.getElementById("canvas-toggle").setAttribute("aria-pressed", String(v === "canvas"));
+  document.querySelector(".zoom").hidden = v !== "canvas";
+  document.querySelector(".hint").hidden = v !== "canvas";
+  if (v === "editor") { closeInsp(); closeTraceDetail(); }
   document.getElementById("cv").hidden = v !== "canvas";
   document.getElementById("listpanel").hidden = v !== "list";
   document.getElementById("tracepanel").hidden = v !== "trace";
@@ -320,7 +315,7 @@ function setView(v) {
   document.getElementById("tracetoggle").setAttribute("aria-pressed", String(traceOn));
   if (v === "list") focusListRow(0);
   else if (v === "trace") { closeTraceDetail(); focusTraceRow(0); }
-  else { closeInsp(); closeTraceDetail(); world.querySelectorAll(".node")[0] && world.querySelectorAll(".node")[0].focus(); }
+  else if (v === "canvas") { closeInsp(); closeTraceDetail(); world.querySelectorAll(".node")[0] && world.querySelectorAll(".node")[0].focus(); }
 }
 document.getElementById("listtoggle").addEventListener("click", () => setView(view === "list" ? "canvas" : "list"));
 document.getElementById("tracetoggle").addEventListener("click", () => setView(view === "trace" ? "canvas" : "trace"));
@@ -348,12 +343,12 @@ function fmtAt(secs) {
 function isDenied(r) { return /not granted/.test(r.outcome); }
 function traceShown(r) {
   if (traceFilter === "all") return true;
-  if (traceFilter === "unknown") return r.outcome === "outcome-unknown";
+  if (traceFilter === "unknown") return window.ProjectOSEditorState.needsReconciliation(r) || r.outcome === "outcome-unknown";
   return isDenied(r); // "denied"
 }
 function outcomeClass(r) {
   if (isDenied(r)) return "denied";
-  if (r.outcome === "outcome-unknown") return "unknown";
+  if (window.ProjectOSEditorState.needsReconciliation(r) || r.outcome === "outcome-unknown") return "unknown";
   return "ok";
 }
 function buildTrace() {
@@ -370,7 +365,7 @@ function renderTrace() {
     tr.tabIndex = 0;
     tr.dataset.id = r.id;
     tr.setAttribute("aria-label", `${r.op} on ${r.rel_path}: ${r.outcome}`);
-    const cr = [r.cost, r.route].filter(Boolean).join(" · ");
+    const cr = [r.requested_model || r.route, r.resolved_model ? "resolved: " + r.resolved_model : null, r.usage_tokens != null ? r.usage_tokens + " tokens" : null, r.provider_cost_usd != null ? "$" + r.provider_cost_usd + " provider cost" : null, r.billed_usd != null ? "$" + r.billed_usd + " billed" : "billed cost unknown", r.cost_state || r.cost].filter(Boolean).join(" · ");
     const path = `<span class="td-path">${escapeHtml(r.rel_path)}</span>` +
       (r.content_hash ? `<span class="td-hash"> · #${escapeHtml(r.content_hash)}</span>` : "");
     tr.innerHTML =
@@ -407,18 +402,15 @@ function focusTraceRow(i) {
 function openTraceDetail(r, tr) {
   if (!r) return;
   document.getElementById("td-op").textContent = `${r.op} · ${r.rel_path}`;
-  const fields = [
-    ["id", r.id],
-    ["at", `${r.at} (${fmtAt(r.at)})`],
-    ["op", r.op],
-    ["rel_path", r.rel_path],
-    ["outcome", r.outcome],
-    ["content_hash", r.content_hash || "(none)"],
-    ["route", r.route || "(none)"],
-    ["cost", r.cost || "(none)"]
-  ];
+  const fields = Object.entries(r).map(([k, v]) => [k.replaceAll("_", " "), v == null ? "Unknown / not recorded" : typeof v === "object" ? JSON.stringify(v) : v]);
   const t = document.querySelector(".td-fields");
   t.innerHTML = fields.map(([k, v]) => `<tr><td class="k">${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join("");
+  tracedetail.querySelector(".reconcile-button")?.remove();
+  if (window.ProjectOSEditorState.needsReconciliation(r) && r.attempt_id) {
+    const reconcile = document.createElement("button"); reconcile.className = "reconcile-button"; reconcile.textContent = "Acknowledge unresolved request / unknown billing";
+    reconcile.addEventListener("click", () => window.dispatchEvent(new CustomEvent("reconcile-attempt", { detail: r.attempt_id })));
+    tracedetail.appendChild(reconcile);
+  }
   tracedetail.classList.add("open");
   tracedetail.setAttribute("aria-hidden", "false");
   document.getElementById("tracedetailclose").focus();
@@ -443,9 +435,23 @@ document.getElementById("tracedetailclose").addEventListener("click", closeTrace
 
 /* global keyboard shortcuts (no text inputs run, so bare keys are safe) */
 document.addEventListener("keydown", (ev) => {
+  if (ev.target.closest("input, textarea, select, dialog") || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   if (ev.key === "a" || ev.key === "A") { ev.preventDefault(); setView(view === "list" ? "canvas" : "list"); }
   if (ev.key === "t" || ev.key === "T") { ev.preventDefault(); setView(view === "trace" ? "canvas" : "trace"); }
   if (ev.key === "Escape") { closeInsp(); closeTraceDetail(); }
 });
 
-build();
+function fitView() {
+  if (!OBJECTS.length) return;
+  const panel = document.getElementById("cv");
+  const maxX = Math.max(...OBJECTS.map(n => n.x + 160));
+  const maxY = Math.max(...OBJECTS.map(n => n.y + 100));
+  z = Math.max(.2, Math.min(1.5, (panel.clientWidth - 20) / maxX, (panel.clientHeight - 20) / maxY));
+  world.style.transform = `scale(${z})`; paintLines();
+}
+document.getElementById("fit-view").addEventListener("click", fitView);
+document.getElementById("editor-toggle").addEventListener("click", () => setView("editor"));
+document.getElementById("canvas-toggle").addEventListener("click", () => { setView("canvas"); fitView(); });
+window.addEventListener("workspace-changed", () => { closeInsp(); closeTraceDetail(); build(); if (view === "canvas") fitView(); });
+window.projectosViews = { setView };
+build(); setView("editor");

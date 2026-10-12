@@ -147,6 +147,7 @@ dependencies = [
 name = "projectos-kernel"
 version = "0.0.1"
 dependencies = [
+ "libc",
  "serde",
  "tempfile",
  "thiserror",
