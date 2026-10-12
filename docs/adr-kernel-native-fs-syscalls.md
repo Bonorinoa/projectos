@@ -1,6 +1,6 @@
 # ADR: native filesystem syscalls in the kernel document store
 
-**Status:** Proposed — pending owner approval
+**Status:** **Accepted** — owner-approved 2026-10-11
 **Date:** 2026-10-11
 **Amends:** the recorded decision **D-M2-c** ("no new crate dependencies"),
 for the kernel's document layer only.
@@ -52,6 +52,8 @@ to hold everywhere else in the kernel.
 
 ## Acceptance
 
-Owner approval is required before this ADR becomes `Accepted`. Until then, M3's
-kernel evidence for the symlink / race properties is **verified** (tests), while
-the dependency itself is a **recorded, unapproved deviation** from D-M2-c.
+Owner-approved on 2026-10-11. D-M2-c is amended for the kernel document layer
+only: `libc` is an accepted kernel dependency, confined to
+`kernel/src/document.rs`. M3's kernel evidence for the symlink / race properties
+is **verified** (tests); the dependency itself is now **approved**, recorded here
+and noted in the roadmap (`kernel/evidence/status.json`, task `m3.document`).
