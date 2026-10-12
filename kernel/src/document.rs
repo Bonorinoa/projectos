@@ -269,7 +269,11 @@ impl DocumentStore {
             if entry.is_null() { break; }
             let name = unsafe { CStr::from_ptr((*entry).d_name.as_ptr()) }.to_str().ok().map(str::to_string);
             *visited += 1;
-            if let Some(name) = name { if !name.starts_with('.') { names.push(name); } }
+            if let Some(name) = name
+                && !name.starts_with('.')
+            {
+                names.push(name);
+            }
             if *visited >= MAX_ENTRIES { break; }
         }
         names.sort();
@@ -281,10 +285,11 @@ impl DocumentStore {
             // entries do not make the entire project browser fail.
             if let Ok(child) = directory_at(dir, &name) {
                 self.walk(&child, &rel, depth + 1, visited, files)?;
-            } else if text_extension(&name) {
-                if let Ok(file) = open_at(dir, &name, libc::O_RDONLY | libc::O_NONBLOCK, 0) {
-                    if read_file(file, MAX_DOCUMENT_BYTES).is_ok() { files.push(rel); }
-                }
+            } else if text_extension(&name)
+                && let Ok(file) = open_at(dir, &name, libc::O_RDONLY | libc::O_NONBLOCK, 0)
+                && read_file(file, MAX_DOCUMENT_BYTES).is_ok()
+            {
+                files.push(rel);
             }
         }
         Ok(())
@@ -293,8 +298,13 @@ impl DocumentStore {
 
 fn metadata_path(rel: &str) -> Result<String> {
     // Only normal TOML descendants are exposed, never document paths or blobs.
-    parts(rel, true)?;
-    if rel.starts_with(".projectos") || Path::new(rel).extension().and_then(|e| e.to_str()) != Some("toml") {
+    // `objects/` holds content-addressed before-images: it is reserved and must
+    // never be reachable through the metadata seam (M3 review, finding 1).
+    let components = parts(rel, true)?;
+    if rel.starts_with(".projectos")
+        || Path::new(rel).extension().and_then(|e| e.to_str()) != Some("toml")
+        || components.iter().any(|c| c == "objects")
+    {
         return Err(invalid("metadata path must be relative to .projectos and end in .toml"));
     }
     Ok(format!(".projectos/{rel}"))
