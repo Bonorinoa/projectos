@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-12T01:15:45.977Z",
+  "updatedAt": "2026-10-12T01:17:57.433Z",
   "commit": "sha256:7d92688fa8ccfef3d9c1907f0e7ea2753ade8b3be5731e2aeaf33b50980ce3b4",
   "sourceSnapshot": "projectos-source-snapshot.json",
   "sourceStats": {
@@ -28,7 +28,7 @@
       "evidence": [
         "evidence/gates/gate-c/report.json"
       ],
-      "note": "Evidence is stale; rerun after source changes."
+      "note": "Native file broker and active symlink-swap tests pass. Supported production confinement, hard OS memory ceiling and signed cross-platform package remain blocked."
     },
     "m0.recovery": {
       "status": "implemented",
@@ -206,7 +206,5 @@
       "note": "Live OpenRouter conformance against a real account (priced/billed cost reporting) requires owner opt-in resources; deferred, not claimed."
     }
   },
-  "diagnostics": [
-    "worker: evidence source mismatch: docs/adr-worker-isolation.md"
-  ]
+  "diagnostics": []
 }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "C",
   "milestone": "M0",
-  "generatedAt": "2026-10-09T20:22:41.887Z",
+  "generatedAt": "2026-10-12T01:17:09.104Z",
   "decision": "fail",
   "recommendedRoadmapStatus": "blocked",
   "decisionBasis": [
@@ -18,7 +18,7 @@
     "nodeVersion": "v22.22.3",
     "nodePath": "/Users/bonorinoa/.hermes/node/bin/node",
     "swVers": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
-    "uname": "Darwin Mac.local.tld 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:17:26 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6041 arm64"
+    "uname": "Darwin Augustos-MacBook-Pro.local 25.6.0 Darwin Kernel Version 25.6.0: Fri Jul 31 19:17:26 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6041 arm64"
   },
   "hashes": {
     "nodeRuntimeSha256": "5d9d3872911e2340a43b707962e68143de8a4e8d54628845c0c4f2de1fb7cd5c",
@@ -47,7 +47,7 @@
     "spikes/gate-c/app-sandbox.entitlements.plist": "2029dc93bcf7d42441f95e6dfa64b98af67e71d4a168542fd208c6e84da6af17",
     "spikes/gate-c/app-sandbox.Info.plist": "c3e77af96893199b74f5213566a2b9b8f08ae838d3b93b86bb12e4f653d66ad7",
     "spikes/gate-c/run-app-sandbox.mjs": "42bbb47167598cbab0da2169e0106690721642425c725a7d209207bf9342651a",
-    "docs/adr-worker-isolation.md": "925e22cff50468db115744dc7876609ed3a8d42321776c8d78df2db8d0151938"
+    "docs/adr-worker-isolation.md": "82be606d78dbe827755c32779090afc2bd0cb2a418ee21d8955aecacc5d9ee8d"
   },
   "counts": {
     "pass": 24,
@@ -122,7 +122,7 @@
       "id": "C-SYMLINK-RACE",
       "label": "Adversarial symlink-swap race is denied",
       "status": "pass",
-      "evidence": "{\"attempts\":50000,\"allowed\":989,\"denied\":49011,\"escaped\":0}",
+      "evidence": "{\"attempts\":50000,\"allowed\":1131,\"denied\":48869,\"escaped\":0}",
       "blocker": null
     },
     {
@@ -213,7 +213,7 @@
       "id": "C-CPU-CEILING",
       "label": "CPU-time ceiling terminates worker",
       "status": "pass",
-      "evidence": "status=terminated; reason=worker-exit; code=152; elapsedMs=994",
+      "evidence": "status=terminated; reason=worker-exit; code=152; elapsedMs=1031",
       "blocker": null
     },
     {
@@ -227,14 +227,14 @@
       "id": "C-TREE-CANCEL",
       "label": "Cancellation kills full controlled process tree",
       "status": "pass",
-      "evidence": "{\"started\":true,\"controlledChildStarted\":true,\"workerAlive\":false,\"childStates\":[{\"pid\":54116,\"command\":\"/bin/sleep 300\",\"alive\":false}]}",
+      "evidence": "{\"started\":true,\"controlledChildStarted\":true,\"workerAlive\":false,\"childStates\":[{\"pid\":87405,\"command\":\"/bin/sleep 300\",\"alive\":false}]}",
       "blocker": null
     },
     {
       "id": "C-BACKPRESSURE",
       "label": "Output cap terminates flooding worker",
       "status": "pass",
-      "evidence": "status=terminated; reason=output-backpressure; elapsedMs=87",
+      "evidence": "status=terminated; reason=output-backpressure; elapsedMs=104",
       "blocker": null
     },
     {
