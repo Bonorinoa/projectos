@@ -7,14 +7,14 @@ for the kernel's document layer only.
 
 ## Context
 
-M3 introduced `kernel/src/document.rs`, a native `DocumentStore` that opens,
+M2b introduced `kernel/src/document.rs`, a native `DocumentStore` that opens,
 reads, atomically replaces, and enumerates files under a **pinned project root**
 without ever following a symlink — including per-descent
 (`openat(..., O_NOFOLLOW)`), with atomic `renameat`/`unlinkat` relative to a held
 directory descriptor. This is the enforcement mechanism for the invariant
 "ordinary project files remain authoritative for their bytes", and for the tested
 refusal of symlinked roots / directories / parents and the directory-swap race
-(`kernel/tests/document.rs`, `kernel/tests/m3_adversarial.rs`).
+(`kernel/tests/document.rs`, `kernel/tests/m2b_adversarial.rs`).
 
 `std::fs` cannot express this. It has no per-descent `O_NOFOLLOW`; its
 `canonicalize`-then-open is TOCTOU-prone (exactly the case the swap-race test
@@ -42,7 +42,7 @@ to hold everywhere else in the kernel.
 
 - The kernel dependency set grows by one foundational, ubiquitous crate.
 - The `unsafe` surface is localized to one module and was independently
-  code-reviewed as sound (see `kernel/REVIEW-m3-kernel.md`, Finding 2):
+  code-reviewed as sound (see `kernel/REVIEW-m2b-kernel.md`, Finding 2):
   `O_CLOEXEC | O_NOFOLLOW` on every open, `CString` NUL discipline, explicit
   `fdopendir`-failure handling (`close` on NULL, RAII `closedir` on success),
   `O_EXCL` temp sibling swapped with `renameat`, temp unlinked on error only when
@@ -54,6 +54,6 @@ to hold everywhere else in the kernel.
 
 Owner-approved on 2026-10-11. D-M2-c is amended for the kernel document layer
 only: `libc` is an accepted kernel dependency, confined to
-`kernel/src/document.rs`. M3's kernel evidence for the symlink / race properties
+`kernel/src/document.rs`. M2b's kernel evidence for the symlink / race properties
 is **verified** (tests); the dependency itself is now **approved**, recorded here
-and noted in the roadmap (`kernel/evidence/status.json`, task `m3.document`).
+and noted in the roadmap (`kernel/evidence/status.json`, task `m2.store`).

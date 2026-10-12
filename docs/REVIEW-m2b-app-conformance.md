@@ -1,4 +1,4 @@
-# M3 Native App Layer — Conformance Review
+# M2b Native App Layer — Conformance Review
 
 Audit target: `docs/EDITOR-PROVIDER-IPC.md` (the contract) vs the native Tauri
 layer and renderer. Read-only audit; one file written (this one).

@@ -1,16 +1,16 @@
-# M3 acceptance plan — owner-visible criteria (draft editor + live provider)
+# M2b acceptance plan — owner-visible criteria (draft editor + live provider)
 
 Author of the acceptance criteria: the reviewing lead (NOT the implementing
 agent — correlated-failure trap, see `REVIEW-m1-slice.md`).
 
 Source of truth: `docs/EDITOR-PROVIDER-IPC.md` (the app contract) and
-`docs/projectos-architecture-brief.md` §14/§18. Interface: `kernel/INTERFACES-M3.md`.
-Review evidence: `kernel/REVIEW-m3-kernel.md`, `docs/REVIEW-m3-app-conformance.md`.
+`docs/projectos-architecture-brief.md` §14/§18. Interface: `kernel/INTERFACES-M2b.md`.
+Review evidence: `kernel/REVIEW-m2b-kernel.md`, `docs/REVIEW-m2b-app-conformance.md`.
 
 Files: `kernel/tests/document.rs`, `kernel/tests/proposal_editor.rs`,
-`kernel/tests/m3_adversarial.rs`; `app/src-tauri/src/main.rs` (inline
+`kernel/tests/m2b_adversarial.rs`; `app/src-tauri/src/main.rs` (inline
 `mod integration_tests`); `app/ui/tests/editor-state.test.cjs`. Reproduce under
-the pinned toolchain — see `SPRINT-M3-REPORT.md`.
+the pinned toolchain — see `SPRINT-M2b-REPORT.md`.
 
 ## Scope of this pass
 
@@ -73,11 +73,11 @@ conservative upper bound (not a billed claim); billed cost is `null` when unknow
 
 - `cargo test --no-fail-fast` (kernel) → 121 passed / 0 failed on the lead's rerun.
 - `cargo test` (app) → 19 passed / 2 ignored; `node --test` (UI) → 9 passed.
-- M3 files clippy-clean; 11 pre-existing M1/M2 warnings recorded.
+- M2b files clippy-clean; 11 pre-existing M1/M2 warnings recorded.
 
 ## Recorded non-goals for this pass (stated, not hidden)
 
 Live OpenRouter conformance against a real account (priced/billed cost reporting),
 the OS-keyring round-trip (`PROJECTOS_TEST_KEYRING=1`), `tauri build`
 bundling/signing, the Linux matrix, the Helix `GraphEngine` adapter, Scope capture,
-and M0 Gate C (`m0.worker`). M3 is not human-accepted.
+and M0 Gate C (`m0.worker`). M2b is not human-accepted.

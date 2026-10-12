@@ -1,6 +1,6 @@
-//! M3 reviewer-owned adversarial suite (native DocumentStore + proposals).
+//! M2b reviewer-owned adversarial suite (native DocumentStore + proposals).
 //!
-//! The M3 slice pins every document operation to a project directory
+//! The M2b slice pins every document operation to a project directory
 //! descriptor: descendants are opened with `openat(O_NOFOLLOW)`, saves use a
 //! unique `O_EXCL` sibling plus `renameat`, and revisions keep a
 //! content-addressed before-image under `.projectos/objects/`.
@@ -10,7 +10,7 @@
 //! compiles against *public* API only, uses `tempfile::tempdir` for
 //! determinism, and never depends on timing or wall-clock ordering. Where a
 //! claim does NOT hold, the test is kept and the review note
-//! (`kernel/REVIEW-m3-kernel.md`) names the exact assertion that fails.
+//! (`kernel/REVIEW-m2b-kernel.md`) names the exact assertion that fails.
 //!
 //! The one deliberate failing assertion is `metadata_refuses_the_objects_subtree`:
 //! a `.toml` name under `objects/` is accepted by `write_metadata`/`read_metadata`.

@@ -1,23 +1,30 @@
-# M3 sprint report — draft editor + live provider integration (2026-10-11)
+# M2b sprint report — draft editor + live provider integration (2026-10-11)
 
-Author: reviewing lead. Method: M3 was carried by a Codex session that ran out of
+Author: reviewing lead. Method: M2b was carried by a Codex session that ran out of
 budget mid-sprint. Its work was snapshotted verbatim (`8347f90`), then
 **independently reviewed** in parallel by two subagents (kernel + app), and every
 claim below was re-run by the lead on the committed tree. Subagent reports were
 treated as claims, not facts.
 
-Acceptance plan: `ACCEPTANCE-M3.md`. Kernel review: `kernel/REVIEW-m3-kernel.md`.
-App conformance audit: `docs/REVIEW-m3-app-conformance.md`.
-Contract: `kernel/INTERFACES-M3.md` + `docs/EDITOR-PROVIDER-IPC.md`.
+Acceptance plan: `ACCEPTANCE-M2b.md`. Kernel review: `kernel/REVIEW-m2b-kernel.md`.
+App conformance audit: `docs/REVIEW-m2b-app-conformance.md`.
+Contract: `kernel/INTERFACES-M2b.md` + `docs/EDITOR-PROVIDER-IPC.md`.
+
+Milestone note: this slice was first labelled "M3" (commit `8347f90`). Per brief
+§18 the canonical **M3 is the Software vertical** (repository adapter, worktree
+workflow, patch review) — it has **no implementation** and remains unstarted. The
+label was corrected to **M2b** = M2.1 + M2.2; the `m3.*` task ids injected into
+the roadmap were renamed to `m2.*`, and the `m3.ui` id (which collided with the
+roadmap's own `m3.ui`, "constrained computer-use checks") was removed.
 
 ## What shipped
 
 | Commit | Contents |
 |---|---|
-| `8347f90` | M3 work-in-progress snapshot (Codex handoff): `document.rs`, revised `proposals.rs`, the whole `app/src-tauri/src/{provider_transport,credentials,workspace,main}.rs` layer, the native UI bridge/editor, vendored fonts, `docs/EDITOR-PROVIDER-IPC.md` |
+| `8347f90` | M2b work-in-progress snapshot (Codex handoff): `document.rs`, revised `proposals.rs`, the whole `app/src-tauri/src/{provider_transport,credentials,workspace,main}.rs` layer, the native UI bridge/editor, vendored fonts, `docs/EDITOR-PROVIDER-IPC.md` |
 | `5265d0e` | fix: refuse the `objects/` subtree in metadata paths (review Finding 1) + three clippy lints in `document.rs` |
-| `8052b94` | reviewer suite `kernel/tests/m3_adversarial.rs`, `REVIEW-m3-kernel.md`, `docs/REVIEW-m3-app-conformance.md`, `docs/adr-kernel-native-fs-syscalls.md` |
-| *(this commit)* | `INTERFACES-M3.md`, this report, `ACCEPTANCE-M3.md`, ADR ratified Accepted, `kernel/evidence/status.json` (m2 hashes refreshed + `m3.*` added), regenerated roadmap manifest |
+| `8052b94` | reviewer suite `kernel/tests/m2b_adversarial.rs`, `REVIEW-m2b-kernel.md`, `docs/REVIEW-m2b-app-conformance.md`, `docs/adr-kernel-native-fs-syscalls.md` |
+| *(this commit)* | `INTERFACES-M2b.md`, this report, `ACCEPTANCE-M2b.md`, ADR ratified Accepted, `kernel/evidence/status.json` (m2 hashes refreshed + `m2.*` added), regenerated roadmap manifest |
 
 ## Verification (lead reruns, pinned Rust 1.97.1)
 
@@ -28,7 +35,7 @@ Contract: `kernel/INTERFACES-M3.md` + `docs/EDITOR-PROVIDER-IPC.md`.
 | `actions` | 7 | M2 module |
 | `adversarial` | 9 | M1 reviewer |
 | `broker` | 6 | M1 contract |
-| `document` | 6 | **M3 module (new)** |
+| `document` | 6 | **M2b module (new)** |
 | `graph` | 6 | M1 module |
 | `journal` | 8 | M1 module |
 | `lens` | 5 | M2 module |
@@ -36,10 +43,10 @@ Contract: `kernel/INTERFACES-M3.md` + `docs/EDITOR-PROVIDER-IPC.md`.
 | `m1b_adversarial` | 5 | M1 reviewer round 2 |
 | `m2_acceptance` | 4 | M2 reviewer exit criteria |
 | `m2_adversarial` | 9 | M2 reviewer round |
-| `m3_adversarial` | 18 | **M3 reviewer round (new)** |
+| `m2b_adversarial` | 18 | **M2b reviewer round (new)** |
 | `milestone` | 4 | M2 module |
 | `profile` | 5 | M1 module |
-| `proposal_editor` | 5 | **M3 module (new)** |
+| `proposal_editor` | 5 | **M2b module (new)** |
 | `receipts` | 5 | M1 module |
 | `recipe` | 6 | M2 module |
 | `sidecar_registration` | 8 | M1 contract |
@@ -48,10 +55,10 @@ App crate `cargo test` → **19 passed · 2 ignored** (owner-opt-in: OS-keyring,
 network). UI `node --test` → **9 passed**.
 
 `cargo clippy` was previously recorded "unavailable"; it is installable under the
-pinned toolchain (`rustup component add clippy`). After the fix commit, **M3 files
+pinned toolchain (`rustup component add clippy`). After the fix commit, **M2b files
 are clippy-clean**; **11 pre-existing** warnings remain in M1/M2 files
 (`worker.rs`, `selection.rs`, `registration.rs`, `journal.rs`, three test files) —
-recorded, not part of M3.
+recorded, not part of M2b.
 
 ## The headline proof
 
@@ -94,13 +101,13 @@ before-image retained content-addressed.
 
 | Work | Model | Outcome |
 |---|---|---|
-| M3 implementation (`document.rs`, `proposals.rs` revision, whole app layer, UI) | Codex session | Substantial and largely correct; ran out of budget before the contract/report; introduced the `objects/` leak + `libc` deviation |
-| Kernel adversarial review + `REVIEW-m3-kernel.md` | `deepseek/deepseek-v4-flash-0731` (subagent) | 18 tests; found Finding 1; correctly judged F3; 1 real bug |
-| App conformance audit + `REVIEW-m3-app-conformance.md` | `deepseek/deepseek-v4-flash-0731` (subagent) | 9/9 checks PASS; all 17 commands PASS; 2 unproven areas named |
+| M2b implementation (`document.rs`, `proposals.rs` revision, whole app layer, UI) | Codex session | Substantial and largely correct; ran out of budget before the contract/report; introduced the `objects/` leak + `libc` deviation |
+| Kernel adversarial review + `REVIEW-m2b-kernel.md` | `deepseek/deepseek-v4-flash-0731` (subagent) | 18 tests; found Finding 1; correctly judged F3; 1 real bug |
+| App conformance audit + `REVIEW-m2b-app-conformance.md` | `deepseek/deepseek-v4-flash-0731` (subagent) | 9/9 checks PASS; all 17 commands PASS; 2 unproven areas named |
 | Fix, contract, report, acceptance plan, status.json, ADR, roadmap | lead | parent-owned |
 
 Driver policy: per the standing rule, the paid driver (`deepseek/deepseek-v4-flash-0731`)
-was selected for M3 (security-adjacent, multi-crate) and set with
+was selected for M2b (security-adjacent, multi-crate) and set with
 `hermes config set delegation.model`; a 1-token live call verified it before
 dispatch.
 
@@ -109,7 +116,7 @@ dispatch.
 Live OpenRouter conformance against a real account (priced/billed cost reporting),
 the OS-keyring round-trip under `PROJECTOS_TEST_KEYRING=1`, `tauri build`
 bundling/signing, the Linux matrix, the Helix `GraphEngine` adapter, Scope capture,
-and M0 Gate C (`m0.worker`) remain open or owner-gated. M3 is **not** human-accepted.
+and M0 Gate C (`m0.worker`) remain open or owner-gated. M2b is **not** human-accepted.
 
 ## Reproduction
 

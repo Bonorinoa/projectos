@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Kernel M1/M2/M3 task claims. Every 'verified'/'implemented' entry carries sourceHashes binding it to exact file bytes; scripts/update-roadmap.mjs recomputes and BLOCKS the task on mismatch. States are planned|detected|implemented|verified|blocked; 'accepted' is human-only. M3 (draft editor + live provider) added 2026-10-11; its one new kernel dependency (libc) is approved by docs/adr-kernel-native-fs-syscalls.md.",
+  "note": "Kernel M1/M2 task claims (M2 now includes the M2b app-side completion, M2.1 + M2.2, 2026-10-11). Every 'verified'/'implemented' entry carries sourceHashes binding it to exact file bytes; scripts/update-roadmap.mjs recomputes and BLOCKS the task on mismatch. States are planned|detected|implemented|verified|blocked; 'accepted' is human-only. M2b's one new kernel dependency (libc) is approved by docs/adr-kernel-native-fs-syscalls.md. NOTE: the canonical M3 (Software vertical) is unstarted and has no tasks here.",
   "tasks": {
     "m1.registry": {
       "status": "verified",
@@ -107,13 +107,17 @@
     "m2.diff": {
       "status": "verified",
       "evidence": [
-        "kernel/tests/m2_acceptance.rs"
+        "kernel/tests/m2_acceptance.rs",
+        "kernel/tests/proposal_editor.rs",
+        "docs/EDITOR-PROVIDER-IPC.md",
+        "kernel/INTERFACES-M2b.md"
       ],
       "sourceHashes": {
         "kernel/src/proposals.rs": "d84eb7988817755fb7dceda04f36ff3a334e7d3d2f6c5410b5957167fb02e7cb",
-        "kernel/tests/m2_acceptance.rs": "974a37a8f34c1843b07be96a25f90770ee34618feaec8ffa32b90acea6744447"
+        "kernel/tests/m2_acceptance.rs": "974a37a8f34c1843b07be96a25f90770ee34618feaec8ffa32b90acea6744447",
+        "kernel/tests/proposal_editor.rs": "a8fd8e4777bf95875db0ecfeeb0c9ad2c04c082806a5ead76c224e497a2c2056"
       },
-      "note": "Proposal/diff/decision/revision loop: atomic apply, recoverable content-addressed before-image, journal + redacted receipt; reject mutates nothing (A2/A3)."
+      "note": "Proposal/diff/decision/revision loop: atomic apply, recoverable content-addressed before-image, journal + redacted receipt; reject mutates nothing (A2/A3). M2b routed apply/RevisionLog through DocumentStore; a Replacement's revision after_hash is stable_hash(whole new document)."
     },
     "m2.recipe": {
       "status": "verified",
@@ -162,82 +166,70 @@
       },
       "note": "Offline end-to-end Substack golden path with a redacted, model-disclosing receipt (no live provider)."
     },
-    "m3.document": {
+    "m2.store": {
       "status": "verified",
       "evidence": [
-        "kernel/INTERFACES-M3.md",
+        "kernel/INTERFACES-M2b.md",
         "kernel/tests/document.rs",
-        "kernel/tests/m3_adversarial.rs",
+        "kernel/tests/m2b_adversarial.rs",
         "docs/adr-kernel-native-fs-syscalls.md"
       ],
       "sourceHashes": {
         "kernel/src/document.rs": "0e9aad5f369ab037733f1c6ad9dd2317d36e17066d0a4637855f3d403e69044b",
         "kernel/tests/document.rs": "dc97b27a66e709c3cdc4ce50f14b0d767869f01066fe99ee7a541abd17da4907",
-        "kernel/tests/m3_adversarial.rs": "88d28b4220fdbd7e1ce189c3bb0effe2615c25c0dc16046e4bb851c9dffff1f5"
+        "kernel/tests/m2b_adversarial.rs": "fd28d7b0b63974afc595911533b18771968e5c55a84fa623d17755c1e5436d4e"
       },
-      "note": "Native DocumentStore: pinned root, openat(O_NOFOLLOW) per descent, atomic replace with a stale-write guard and a retained content-addressed before-image, bounded discovery, refusal of lexical escapes / symlinks / .projectos / objects/. libc is confined here (ADR accepted 2026-10-11). 6 module tests + a reviewer 18-test adversarial suite; verified offline on macOS."
+      "note": "Native DocumentStore (M2.1): pinned root, openat(O_NOFOLLOW) per descent, atomic replace with a stale-write guard and a retained content-addressed before-image, bounded discovery, refusal of lexical escapes / symlinks / .projectos / objects. libc is confined here (ADR accepted 2026-10-11). 6 module tests + a reviewer 18-test adversarial suite; verified offline on macOS."
     },
-    "m3.revision": {
+    "m2.review": {
       "status": "verified",
       "evidence": [
-        "kernel/tests/proposal_editor.rs",
-        "kernel/tests/m2_acceptance.rs"
+        "kernel/tests/m2b_adversarial.rs",
+        "kernel/REVIEW-m2b-kernel.md"
       ],
       "sourceHashes": {
-        "kernel/src/proposals.rs": "d84eb7988817755fb7dceda04f36ff3a334e7d3d2f6c5410b5957167fb02e7cb",
-        "kernel/tests/proposal_editor.rs": "a8fd8e4777bf95875db0ecfeeb0c9ad2c04c082806a5ead76c224e497a2c2056"
+        "kernel/tests/m2b_adversarial.rs": "fd28d7b0b63974afc595911533b18771968e5c55a84fa623d17755c1e5436d4e",
+        "kernel/REVIEW-m2b-kernel.md": "4dcb125bdfd1c618f6501a0c3966389771112082451a41b2360089d75fd81614"
       },
-      "note": "proposals::apply and RevisionLog now route all byte/metadata I/O through DocumentStore: atomic apply, content-addressed before-image, revision log. A Replacement hashes the whole new document; an Annotation leaves draft bytes intact; Reject mutates nothing. 5 tests."
+      "note": "Independent reviewer adversarial suite (18 tests) + review note. Found one contained scope bug (metadata objects/ leak) - fixed; judged the m2_acceptance assertion edit a correction, not a weakening; the libc deviation is carried to an accepted ADR."
     },
-    "m3.review": {
-      "status": "verified",
-      "evidence": [
-        "kernel/tests/m3_adversarial.rs",
-        "kernel/REVIEW-m3-kernel.md"
-      ],
-      "sourceHashes": {
-        "kernel/tests/m3_adversarial.rs": "88d28b4220fdbd7e1ce189c3bb0effe2615c25c0dc16046e4bb851c9dffff1f5",
-        "kernel/REVIEW-m3-kernel.md": "4374f9abe077d303ca66f249322a1a0fc201631e2d781b36f8dacb60aad79d23"
-      },
-      "note": "Independent reviewer adversarial suite (18 tests) + review note. Found one contained scope bug (metadata objects/ leak) — fixed; judged the m2_acceptance assertion edit a correction, not a weakening; the libc deviation is carried to an accepted ADR."
-    },
-    "m3.transport": {
+    "m2.transport": {
       "status": "implemented",
       "evidence": [
         "app/src-tauri/src/provider_transport.rs",
-        "docs/REVIEW-m3-app-conformance.md"
+        "docs/REVIEW-m2b-app-conformance.md"
       ],
       "sourceHashes": {
         "app/src-tauri/src/provider_transport.rs": "fbcfe479bac8c56c3eb6d1e7db219601304650ed59774caa0e0a659501848ed3"
       },
-      "note": "Fixed-endpoint OpenRouter BYOK transport: endpoints pinned behind a Target enum (loopback is #[cfg(test)] only), price/model frozen at prepare, bounded wire/event/output sizes, secret redacted across SSE/UTF-8 splits, retries and fallbacks disabled. Exercised by synthetic local-HTTP tests only; live conformance is owner opt-in and unproven."
+      "note": "M2.2 fixed-endpoint OpenRouter BYOK transport: endpoints pinned behind a Target enum (loopback is #[cfg(test)] only), price/model frozen at prepare, bounded wire/event/output sizes, secret redacted across SSE/UTF-8 splits, retries and fallbacks disabled. Synthetic local-HTTP tests only; live conformance is owner opt in and unproven."
     },
-    "m3.credentials": {
+    "m2.credentials": {
       "status": "implemented",
       "evidence": [
         "app/src-tauri/src/credentials.rs",
-        "docs/REVIEW-m3-app-conformance.md"
+        "docs/REVIEW-m2b-app-conformance.md"
       ],
       "sourceHashes": {
         "app/src-tauri/src/credentials.rs": "7ec3bd98a9150bdc3239d258c78fbd7d9aef0c0e7a762ccd08eea86933cf03bf"
       },
-      "note": "OS-keyring credential boundary: macOS/Apple and Linux secret-service native backends enforced, no plaintext or in-memory fallback, zeroized values, no secret returned to the renderer. The isolated keyring conformance test is owner opt in (PROJECTOS_TEST_KEYRING=1) and unproven in this environment."
+      "note": "M2.2 OS-keyring credential boundary: macOS/Apple and Linux secret-service native backends enforced, no plaintext or in-memory fallback, zeroized values, no secret returned to the renderer. The isolated keyring conformance test is owner opt in (PROJECTOS_TEST_KEYRING=1) and unproven in this environment."
     },
-    "m3.app": {
+    "m2.app": {
       "status": "implemented",
       "evidence": [
         "app/src-tauri/src/main.rs",
         "app/src-tauri/src/workspace.rs",
-        "docs/REVIEW-m3-app-conformance.md",
+        "docs/REVIEW-m2b-app-conformance.md",
         "docs/EDITOR-PROVIDER-IPC.md"
       ],
       "sourceHashes": {
         "app/src-tauri/src/main.rs": "f5e09eb2e39fb66d2decf85810de7c1937406cec6cb0530e29fd12ec95492095",
         "app/src-tauri/src/workspace.rs": "dfdac8187ee6b5dc1db8d1bc06f8569363fe11a4b6ddc9493587ac1faf8686d9"
       },
-      "note": "Native command layer + single writer session implementing docs/EDITOR-PROVIDER-IPC.md: 17 commands, stale-write revalidation, execution gating (no silent retry/fallback), offline-by-default, budget ceilings, unknown-outcome reconciliation. Conformance audit 9/9 PASS; 19 embedded integration tests (+2 ignored). Live/keyring paths unproven."
+      "note": "M2.1 native command layer + single writer session implementing docs/EDITOR-PROVIDER-IPC.md: 17 commands, stale-write revalidation, execution gating (no silent retry/fallback), offline-by-default, budget ceilings, unknown-outcome reconciliation. Conformance audit 9/9 PASS; 19 embedded integration tests (+2 ignored). Live/keyring paths unproven."
     },
-    "m3.ui": {
+    "m2.surface": {
       "status": "implemented",
       "evidence": [
         "app/ui/bridge.js",
@@ -250,9 +242,9 @@
         "app/ui/editor.js": "b66fc9bb41654157a417ee15dea8d15ef59589ff84a905b19e9a89ded1bc2b51",
         "app/ui/tests/editor-state.test.cjs": "3cefca31096f16e8bce4cd9308c5e92445907197454d09a278ba22170e1ea32e"
       },
-      "note": "Native-only renderer bridge (the mock was removed; a browser preview cannot impersonate a project) + the editor surface. Byte-range / CRLF / UTF-16-to-UTF-8 mapping unit tests (9, node)."
+      "note": "M2.1 native-only renderer bridge (the mock was removed; a browser preview cannot impersonate a project) + the editor surface. Byte-range / CRLF / UTF-16-to-UTF-8 mapping unit tests (9, node)."
     },
-    "m3.live": {
+    "m2.live": {
       "status": "blocked",
       "evidence": [],
       "sourceHashes": {},

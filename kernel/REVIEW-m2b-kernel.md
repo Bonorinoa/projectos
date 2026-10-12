@@ -1,16 +1,16 @@
-# M3 Kernel Review — reviewer note
+# M2b Kernel Review — reviewer note
 
 Scope: `kernel/src/document.rs` (native `DocumentStore`) and
 `kernel/src/proposals.rs` (`apply`/`Decision`/`ProposalKind`/`RevisionLog`),
 reviewed against `docs/EDITOR-PROVIDER-IPC.md` and the recorded decisions
 (recorded decisions D-M2-c: **no new crate dependencies**; **hashing stays
 FNV-1a-64**, documented and non-cryptographic). This note accompanies the
-reviewer-owned suite `kernel/tests/m3_adversarial.rs`. No existing source or
+reviewer-owned suite `kernel/tests/m2b_adversarial.rs`. No existing source or
 test file was modified.
 
 ## Result summary
 
-The M3 claims held on every property **except one** (metadata scoping of the
+The M2b claims held on every property **except one** (metadata scoping of the
 `objects/` subtree). Full run of the reviewer suite: **17 of 18 tests pass;
 1 fails deliberately** (`metadata_refuses_the_objects_subtree`). The failing
 assertion is the concrete evidence behind Finding 1 below. All other suites
@@ -38,7 +38,7 @@ fn metadata_path(rel: &str) -> Result<String> {
 is "must end in `.toml`". Therefore a name such as `objects/probe.toml` is
 accepted and expands to `.projectos/objects/probe.toml`. `write_metadata` will
 create it (`create_at` with `mkdirat` for the `objects` dir) and
-`read_metadata` will read it. The M3 claim — "write_metadata/read_metadata
+`read_metadata` will read it. The M2b claim — "write_metadata/read_metadata
 ... refuse draft paths, **objects/**, escapes, and symlinked targets" — is
 false for TOML-named entries under `objects/`.
 
@@ -57,7 +57,7 @@ restrict metadata writes to a whitelist of the `.projectos` sub-trees).
 ### 2. The `libc` crate was added — deviation from the recorded decision
 
 D-M2-c says **no new crate dependencies**. `kernel/Cargo.toml` now lists
-`libc = "0.2"` (line 15). This is the only new build dependency the M3 diff
+`libc = "0.2"` (line 15). This is the only new build dependency the M2b diff
 introduced and it was not re-approved against the decision. Flag as a
 deviation; either re-open the decision or remove the dependency.
 
@@ -119,7 +119,7 @@ and the anchor's `original` are fully validated and the chosen `proposed` bytes
 are the only thing ever written, this is not an exploitable path; it is noted
 for anyone relying on a proposal `id` to distinguish kinds downstream.
 
-## Per-file provenance (m3_adversarial.rs → claim attacked)
+## Per-file provenance (m2b_adversarial.rs → claim attacked)
 
 | Test | Claim attacked |
 |---|---|
@@ -174,10 +174,10 @@ Finding 1 was fixed in `kernel/src/document.rs::metadata_path`: any path carryin
 an `objects` component is now refused, so `write_metadata`/`read_metadata` can no
 longer reach `.projectos/objects/`. `metadata_refuses_the_objects_subtree` now
 passes and the reviewer suite is **18/18 green** (kernel total **121/121**, 0
-warnings). Three M3 `collapsible_if` clippy lints in `document.rs` were also
-cleared — M3 files are clippy-clean; 11 pre-existing clippy warnings in M1/M2
+warnings). Three M2b `collapsible_if` clippy lints in `document.rs` were also
+cleared — M2b files are clippy-clean; 11 pre-existing clippy warnings in M1/M2
 files (`worker.rs`, `selection.rs`, `registration.rs`, `journal.rs`, and three
-test files) remain and are recorded as a separate cleanup, not part of M3.
+test files) remain and are recorded as a separate cleanup, not part of M2b.
 
 Finding 2 (the `libc` dependency, D-M2-c deviation) is carried to
 `docs/adr-kernel-native-fs-syscalls.md` as a **Proposed** ADR awaiting owner

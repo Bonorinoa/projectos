@@ -1,19 +1,20 @@
-# M3 kernel slice — interface contract (frozen for this pass)
+# M2b kernel slice — interface contract (frozen for this pass)
 
-M3 is **draft editor + live provider integration** (app contract:
-`docs/EDITOR-PROVIDER-IPC.md`). It completes the two pieces M2 named but did not
-build: the app-side editor surface (M2.1) and the live OpenRouter path (M2.2).
+M2b is the **app-side completion of M2** — draft editor + live provider
+integration (app contract: `docs/EDITOR-PROVIDER-IPC.md`). It builds the two
+pieces M2 named but deferred in `docs/M2-PLAN-REVIEW.md`: the app-side editor
+surface (**M2.1**) and the live OpenRouter path (**M2.2**).
 Ordinary UTF-8 Markdown/text files remain canonical; native commands hold the
 project writer session; renderer calls never supply API endpoints or receive
 stored credentials.
 
-This file is **recorded from the shipped implementation** — the M3 sprint was
+This file is **recorded from the shipped implementation** — the M2b sprint was
 carried by a Codex session that ran out of budget before freezing the contract.
-It documents the kernel surface M3 introduced; the app/UI surface is specified by
+It documents the kernel surface M2b introduced; the app/UI surface is specified by
 `docs/EDITOR-PROVIDER-IPC.md`.
 
 Read first: `docs/EDITOR-PROVIDER-IPC.md`, `docs/adr-kernel-native-fs-syscalls.md`
-(the accepted `libc` decision), and the M3 review `kernel/REVIEW-m3-kernel.md`.
+(the accepted `libc` decision), and the M2b review `kernel/REVIEW-m2b-kernel.md`.
 
 ## Crate layout (this slice)
 
@@ -81,7 +82,7 @@ Rules:
   (`.md` / `.markdown` / `.txt`). `create` uses `O_EXCL` (never overwrites).
 - Metadata paths are `.projectos`-relative, must end `.toml`, and must **not**
   contain an `objects` component (that subtree is reserved for content-addressed
-  before-images — M3 review Finding 1).
+  before-images — M2b review Finding 1).
 - `save` carries a stale-write guard: it writes a sibling temp `O_EXCL`, verifies
   the current bytes against `expected_hash` in the compare window, then `renameat`s
   atomically; the previous bytes are retained content-addressed under
@@ -110,7 +111,7 @@ Change from M2: `apply` and `RevisionLog` route **all** byte/metadata I/O throug
 
 Consequence: the M2 acceptance assertion in `m2_acceptance.rs` was corrected to
 compare `rev.after_hash` against `stable_hash(new_text)` — the documented
-property — which is a correction, not a weakening (`REVIEW-m3-kernel.md` F3).
+property — which is a correction, not a weakening (`REVIEW-m2b-kernel.md` F3).
 
 ## App surface
 
