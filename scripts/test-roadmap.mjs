@@ -108,6 +108,19 @@ test('reports without any source hashes cannot claim implemented evidence', () =
   try { repo.reports.e.sourceHashes={}; repo.save('e'); assert.notEqual(repo.run().tasks['m0.provider'].status,'implemented'); }
   finally { repo.cleanup(); }
 });
+test('M3 verification binds native app sources and blocks after source drift',()=>{
+  const repo=temporaryRepo();
+  try{
+    mkdirSync(join(repo.temp,'app/ui'),{recursive:true});mkdirSync(join(repo.temp,'evidence/m3'),{recursive:true});
+    const file='app/ui/bridge.js';writeFileSync(join(repo.temp,file),'export const native = true;\n');
+    const sourceHashes={[file]:createHash('sha256').update(readFileSync(join(repo.temp,file))).digest('hex')};
+    writeFileSync(join(repo.temp,'evidence/m3/status.json'),JSON.stringify({tasks:{'m3.patch':{status:'verified',sourceHashes,evidence:['fixture']},'m3.e2e':{status:'blocked',note:'Gate C'}}}));
+    const first=repo.run();assert.equal(first.tasks['m3.patch'].status,'verified');assert.equal(first.tasks['m3.e2e'].status,'blocked');
+    const snapshot=JSON.parse(readFileSync(join(repo.temp,'projectos-source-snapshot.json'),'utf8'));assert.ok(snapshot.files[file]);
+    writeFileSync(join(repo.temp,file),'export const native = false;\n');
+    const second=repo.run();assert.notEqual(first.commit,second.commit);assert.equal(second.tasks['m3.patch'].status,'blocked');
+  }finally{repo.cleanup();}
+});
 test('changed source changes revision and blocks stale source-hashed gate results', () => {
   const repo = temporaryRepo();
   try { const first=repo.run(); writeFileSync(join(repo.temp,repo.source),'export const fixture = 2;\n'); const second=repo.run();

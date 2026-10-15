@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Kernel M1/M2 task claims (M2 now includes the M2b app-side completion, M2.1 + M2.2, 2026-10-11). Every 'verified'/'implemented' entry carries sourceHashes binding it to exact file bytes; scripts/update-roadmap.mjs recomputes and BLOCKS the task on mismatch. States are planned|detected|implemented|verified|blocked; 'accepted' is human-only. M2b's one new kernel dependency (libc) is approved by docs/adr-kernel-native-fs-syscalls.md. NOTE: the canonical M3 (Software vertical) is unstarted and has no tasks here.",
+  "note": "Kernel M1/M2 task claims. Every verified/implemented entry carries sourceHashes; scripts/update-roadmap.mjs blocks source drift. Accepted is human-only. M2b libc is approved by docs/adr-kernel-native-fs-syscalls.md. October 15 app/surface implementation hashes are refreshed only after retained offline command/frontend checks; live/keyring conformance remains unproven. M3 foundation claims live separately in evidence/m3/status.json.",
   "tasks": {
     "m1.registry": {
       "status": "verified",
@@ -221,28 +221,32 @@
         "app/src-tauri/src/main.rs",
         "app/src-tauri/src/workspace.rs",
         "docs/REVIEW-m2b-app-conformance.md",
-        "docs/EDITOR-PROVIDER-IPC.md"
+        "docs/EDITOR-PROVIDER-IPC.md",
+        "evidence/m3/report.json",
+        "evidence/m3/native.txt"
       ],
       "sourceHashes": {
-        "app/src-tauri/src/main.rs": "f5e09eb2e39fb66d2decf85810de7c1937406cec6cb0530e29fd12ec95492095",
-        "app/src-tauri/src/workspace.rs": "dfdac8187ee6b5dc1db8d1bc06f8569363fe11a4b6ddc9493587ac1faf8686d9"
+        "app/src-tauri/src/main.rs": "e38ed82b3985731c0d718b8ae1566cdf994bd87a98e4aaa79c3b805c150e4fd1",
+        "app/src-tauri/src/workspace.rs": "8c05c54d184c9b9e015982432a8cac65875a3430261d0ad2c57c58e4328ad457"
       },
-      "note": "M2.1 native command layer + single writer session implementing docs/EDITOR-PROVIDER-IPC.md: 17 commands, stale-write revalidation, execution gating (no silent retry/fallback), offline-by-default, budget ceilings, unknown-outcome reconciliation. Conformance audit 9/9 PASS; 19 embedded integration tests (+2 ignored). Live/keyring paths unproven."
+      "note": "Native command layer and single writer session implementing docs/EDITOR-PROVIDER-IPC.md. October 15 offline regression: evidence/m3/report.json and native.txt, 42 native tests pass, 2 explicit live/keyring tests ignored. Type/refusal/partial-effect checks added; implementation-only status retained. Historical M2b audit remains historical; no live/keyring claim."
     },
     "m2.surface": {
       "status": "implemented",
       "evidence": [
         "app/ui/bridge.js",
         "app/ui/editor-state.js",
-        "app/ui/tests/editor-state.test.cjs"
+        "app/ui/tests/editor-state.test.cjs",
+        "evidence/m3/report.json",
+        "evidence/m3/node.txt"
       ],
       "sourceHashes": {
-        "app/ui/bridge.js": "6c35ad1b00cec5d19626ff20e0ce366b54b36fb7517f61d8c5bff4999ee7d012",
+        "app/ui/bridge.js": "8a162ce68bcad9e6eea6ccd6149e438aa855ce5d2b5d34b51f9043247d1438a6",
         "app/ui/editor-state.js": "fb5d7ae40c5b38fa343df020bf960345c3e54f3cd258455bbdb645b2f90fa11e",
-        "app/ui/editor.js": "b66fc9bb41654157a417ee15dea8d15ef59589ff84a905b19e9a89ded1bc2b51",
-        "app/ui/tests/editor-state.test.cjs": "3cefca31096f16e8bce4cd9308c5e92445907197454d09a278ba22170e1ea32e"
+        "app/ui/editor.js": "c1f37c3029a2dd532c299bb349e108e8756720d05fcd715dbd47036056657f3b",
+        "app/ui/tests/editor-state.test.cjs": "0196e8b91df218eafc6b32f9de6e08ef210e796754e42478f15c5f45812eb695"
       },
-      "note": "M2.1 native-only renderer bridge (the mock was removed; a browser preview cannot impersonate a project) + the editor surface. Byte-range / CRLF / UTF-16-to-UTF-8 mapping unit tests (9, node)."
+      "note": "Native-only bridge and editor surface; October 15 offline regression retained in evidence/m3/report.json and node.txt, including byte-range, CRLF and UTF-16/UTF-8 tests. Modal error accessibility refined; implementation-only status retained, not full UI acceptance."
     },
     "m2.live": {
       "status": "blocked",

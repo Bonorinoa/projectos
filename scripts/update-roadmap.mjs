@@ -16,8 +16,9 @@ function walk(dir) {
 walk(resolve(root,'spikes'));
 walk(resolve(root,'scripts'));
 if (existsSync(resolve(root,'kernel'))) walk(resolve(root,'kernel'));
+if (existsSync(resolve(root,'app'))) walk(resolve(root,'app'));
 const revision = 'sha256:' + createHash('sha256').update(JSON.stringify(Object.entries(sources).sort())).digest('hex');
-const snapshot = {schemaVersion:1, revision, scope:'All non-generated spike and script files; excludes reports, docs, design, build/runtime outputs and caches.', files:sources};
+const snapshot = {schemaVersion:1, revision, scope:'All non-generated app, kernel, spike and script files; excludes reports, docs, design, build/runtime outputs and caches.', files:sources};
 writeFileSync(resolve(root,'projectos-source-snapshot.json'), JSON.stringify(snapshot,null,2)+'\n');
 const tasks = {}, diagnostics = [];
 for (const [letter,id] of [['a','shell'],['b','graph'],['c','worker'],['d','recovery'],['e','provider']]) {
@@ -63,6 +64,22 @@ if (existsSync(kernelStatusPath)) {
       diagnostics.push(`${id}: no exact-source hashes recorded; implementation evidence not established`);
     }
     tasks[id] = { status, evidence: rec.evidence || [], note };
+  }
+}
+// M3 foundation evidence follows the same source-binding rule. Full Software
+// UI/effects/e2e claims stay open even when this bounded foundation passes.
+const m3StatusPath=resolve(root,'evidence/m3/status.json');
+if(existsSync(m3StatusPath)){
+  const record=JSON.parse(readFileSync(m3StatusPath,'utf8'));
+  for(const [id,rec] of Object.entries(record.tasks||{})){
+    const hashes=rec.sourceHashes||{};
+    const mismatches=Object.entries(hashes).filter(([file,hash])=>!existsSync(resolve(root,file))||createHash('sha256').update(readFileSync(resolve(root,file))).digest('hex')!==hash);
+    let status=rec.status,note=rec.note||'';
+    if(['verified','implemented'].includes(status)&&(!Object.keys(hashes).length||mismatches.length)){
+      status='blocked';note='M3 evidence is stale or missing exact-source hashes; rerun checkpoint verification.';
+      diagnostics.push(`${id}: M3 evidence source mismatch or missing hashes`);
+    }
+    tasks[id]={status,evidence:rec.evidence||[],note};
   }
 }
 const manifest = {updatedAt:new Date().toISOString(),commit:revision,sourceSnapshot:'projectos-source-snapshot.json',sourceStats:{files:Object.keys(sources).length,source:Object.keys(sources).filter(f=>/\.(rs|ts|js|mjs|py|c|h|html|css)$/.test(f)).length,tests:Object.keys(sources).filter(f=>/test|spec/.test(f)).length},tasks,diagnostics};

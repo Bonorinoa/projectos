@@ -1,0 +1,242 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test contracts_are_frozen ... ok
+test rephrase_yields_replacement_proposal_with_original_selection ... ok
+test complete_yields_replacement ... ok
+test outcome_records_route_resolved_model_and_usage ... ok
+test deleted_file_is_stale ... ok
+test stale_anchor_is_refused ... ok
+test annotation_actions_yield_annotation_proposal ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test dangling_symlink_write_does_not_escape_root ... ok
+test symlinked_directory_write_does_not_escape_root ... ok
+test symlink_chain_write_does_not_escape_root ... ok
+test receipt_rel_path_is_never_absolute_or_root_leaking ... ok
+test symlink_to_existing_outside_file_write_denied ... ok
+test stale_lock_file_is_not_recovered_yet ... ok
+test open_by_canonical_path_after_register_is_same_project ... ok
+test case_insensitive_alias_is_rejected ... ok
+test writer_lock_is_released_on_drop ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 6 tests
+test granted_but_missing_file_is_io_error ... ok
+test receipts_are_redacted_no_absolute_paths_no_bytes ... ok
+test granted_read_returns_bytes_ungranted_is_denied_with_receipt ... ok
+test in_process_worker_routes_through_broker ... ok
+test granted_write_lands_bytes_ungranted_denied ... ok
+test escape_attempts_denied_and_outside_file_not_read ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test lexical_paths_and_symlinks_are_refused_for_every_operation ... ok
+test pinned_store_refuses_a_replaced_root_and_swapped_directory ... ok
+test create_read_save_utf8_and_refuse_stale_or_overwrite ... ok
+test metadata_scoped_atomic_and_symlink_safe ... ok
+test discovery_is_bounded_and_skips_generated_hidden_links_and_invalid_text ... ok
+test directory_swap_race_never_follows_outside_target ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 6 tests
+test upsert_get_delete ... ok
+test edge_to_missing_object_errors ... ok
+test delete_removes_incident_edges ... ok
+test deterministic_ordering ... ok
+test lineage_is_transitive_and_cycle_safe ... ok
+test snapshot_round_trip_is_byte_identical ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+test graph_helpers_are_available ... ok
+test recover_without_journal_is_error ... ok
+test journal_persists_across_open ... ok
+test append_read_round_trip ... ok
+test checkpoint_writes_snapshot_and_returns_id ... ok
+test takeover_stale_lock_releases_lock_file ... ok
+test takeover_also_uses_snapshot_for_replay ... ok
+test replay_after_checkpoint_reports_right_count ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+test unknown_id_yields_empty_rows_not_error ... ok
+test rows_are_deterministically_ordered ... ok
+test lineage_is_transitive_and_cycle_safe ... ok
+test one_hop_finds_both_directions ... ok
+test evidence_lens_filters_to_support_relations ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+test a3_alias_rejected_but_open_is_spelling_agnostic ... ok
+test a5_outcome_unknown_recorded_once_no_silent_retry ... ok
+test a4_second_writer_block_and_explicit_stale_lock_takeover ... ok
+test a2_profile_restore_into_clean_app_data_dir_and_uuid_authority ... ok
+test a1_open_move_recover_restores_project_graph ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+test adv_identical_receipts_share_an_id_but_both_are_stored ... ok
+test adv_graph_lineage_cycle_safe_and_snapshot_byte_stable ... ok
+test adv_missing_snapshot_is_an_error ... ok
+test adv_recovery_does_not_claim_takeover_without_a_lock ... ok
+test adv_receipt_redaction_survives_absolute_and_traversal_inputs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 4 tests
+test a4_contracts_are_typed ... ok
+test a2_stale_selection_is_never_silently_applied ... ok
+test a3_rejected_proposal_mutates_nothing ... ok
+test a1_substack_golden_path_offline ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 9 tests
+test adv_write_traversal_denied_and_nothing_escapes ... ok
+test adv_write_absolute_path_denied_and_nothing_written ... ok
+test adv_in_root_symlink_write_target_is_refused ... ok
+test adv_content_root_dot_and_absolute_are_invalid ... ok
+test adv_content_root_symlink_escaping_folder_is_invalid ... ok
+test adv_read_through_symlinked_directory_denied ... ok
+test adv_case_insensitive_alias_duplicate ... ok
+test adv_concurrent_second_writer_race_has_exactly_one_winner ... ok
+test adv_alias_through_symlinked_parent_is_rejected ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 18 tests
+test metadata_refuses_the_objects_subtree ... ok
+test malformed_proposals_are_refused_before_mutation_for_accept_and_reject ... ok
+test invalid_utf8_document_is_refused_and_never_partially_overwritten ... ok
+test open_refuses_a_symlinked_root ... ok
+test lexical_rejections_cover_slashes_dots_windows_and_hidden_names ... ok
+test rejection_mutates_nothing_and_records_a_rejected_receipt ... ok
+test annotation_acceptance_keeps_draft_unchanged_and_requires_a_fresh_document ... ok
+test extensions_are_case_insensitive_and_only_text_extensions_are_accepted ... ok
+test metadata_paths_are_scoped_and_escape_and_symlinked_targets_are_refused ... ok
+test failed_saves_leave_original_bytes_and_never_leak_a_temp_sibling ... ok
+test save_with_wrong_expected_hash_is_refused_and_bytes_untouched ... ok
+test root_swapped_for_symlink_fails_closed_and_touches_nothing_outside ... ok
+test size_bounds_refuse_over_limit_and_exactly_the_limit_is_writable ... ok
+test subdirectory_swapped_for_symlink_is_refused_for_read ... ok
+test corrupt_before_image_at_the_exact_hash_fails_before_any_mutation ... ok
+test an_accepted_replacement_cannot_be_reapplied_to_a_now_stale_document ... ok
+test replacement_after_hash_is_the_hash_of_the_whole_new_document ... ok
+test before_images_are_retained_deduped_and_only_the_exact_hash_is_verified ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+
+running 4 tests
+test empty_name_is_rejected ... ok
+test export_without_snapshot_still_succeeds ... ok
+test create_persists_and_reopens ... ok
+test export_copies_milestones_receipts_and_manifest ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+test save_open_round_trip_preserves_entries ... ok
+test missing_folders_land_in_restore_missing ... ok
+test uuid_authority_sidecar_wins ... ok
+test deterministic_ordering_across_opens ... ok
+test export_restore_reproduces_entries_and_rebinds_paths ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+test malformed_proposal_anchor_and_corrupt_before_image_fail_before_mutation ... ok
+test annotation_acceptance_keeps_draft_unchanged_and_records_no_revision ... ok
+test stale_and_deleted_proposals_can_be_rejected_without_touching_document ... ok
+test subsection_revision_hashes_complete_document_and_preserves_before_image ... ok
+test old_fixed_temp_symlink_is_not_used_and_sidecar_symlink_is_denied ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+
+running 5 tests
+test ingest_broker_receipts_denials_written_and_no_secrets_on_disk ... ok
+test append_read_roundtrip ... ok
+test persisted_file_has_no_absolute_path ... ok
+test append_leaves_no_tmp_file_behind ... ok
+test ids_are_deterministic_across_two_identical_runs ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 6 tests
+test publish_readiness_has_a_human_approval_gate ... ok
+test inspect_rejects_empty_and_duplicate ... ok
+test run_pauses_at_gate_and_approve_resumes ... ok
+test cancel_is_terminal_and_idempotent ... ok
+test inspect_lists_blocks_in_order ... ok
+test full_run_completes_blocks_in_order ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 8 tests
+test open_on_folder_without_sidecar_is_not_registered ... ok
+test content_root_with_parent_escape_is_invalid_sidecar ... ok
+test future_schema_version_is_unsupported_schema ... ok
+test reregistering_same_folder_is_idempotent ... ok
+test symlink_alias_of_registered_folder_is_alias_path ... ok
+test register_creates_sidecar_and_uuid_is_stable_across_reopen ... ok
+test second_open_while_locked_is_project_locked ... ok
+test move_project_preserves_uuid_and_old_path_no_longer_opens ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running unittests src/lib.rs (target/debug/deps/projectos_kernel-3f1ee2dbfbc2fa7d)
+     Running tests/actions.rs (target/debug/deps/actions-a7db42b1aca0950a)
+     Running tests/adversarial.rs (target/debug/deps/adversarial-c7c21fd71d20edac)
+     Running tests/broker.rs (target/debug/deps/broker-69f91ad81b895fd2)
+     Running tests/document.rs (target/debug/deps/document-6d50eff13dee0482)
+     Running tests/graph.rs (target/debug/deps/graph-551d26c5b3cfe2af)
+     Running tests/journal.rs (target/debug/deps/journal-2d597cb04eaf7a05)
+     Running tests/lens.rs (target/debug/deps/lens-16a80569c5be6e52)
+     Running tests/m1_acceptance.rs (target/debug/deps/m1_acceptance-91d3c4c70f28003b)
+     Running tests/m1b_adversarial.rs (target/debug/deps/m1b_adversarial-877158da6029954b)
+     Running tests/m2_acceptance.rs (target/debug/deps/m2_acceptance-4782a014c4862fd2)
+     Running tests/m2_adversarial.rs (target/debug/deps/m2_adversarial-d099d62ea74ea693)
+     Running tests/m2b_adversarial.rs (target/debug/deps/m2b_adversarial-e24ea62e9f1266fa)
+     Running tests/milestone.rs (target/debug/deps/milestone-43061f7e3b2608ae)
+     Running tests/profile.rs (target/debug/deps/profile-681e0ef880b96d4d)
+     Running tests/proposal_editor.rs (target/debug/deps/proposal_editor-e3ae6da1a6e18d37)
+     Running tests/receipts.rs (target/debug/deps/receipts-e7037d29014b4bce)
+     Running tests/recipe.rs (target/debug/deps/recipe-8c01c0ea3415fe32)
+     Running tests/sidecar_registration.rs (target/debug/deps/sidecar_registration-0214fde142fe5f2e)
+   Doc-tests projectos_kernel

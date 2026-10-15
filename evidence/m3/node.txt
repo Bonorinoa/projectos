@@ -1,0 +1,44 @@
+✔ textarea UTF-16 ranges become exact UTF-8 byte scopes (1.972917ms)
+✔ empty or split-surrogate scopes fail instead of sending altered text (1.082167ms)
+✔ acceptance requires exact original document path, saved hash and clean text (0.128667ms)
+✔ the native provider limits are enforced, including explicit free-route budgets (0.22075ms)
+✔ pending document operations protect editor bytes while live requests permit editing (0.089208ms)
+✔ CRLF files remain clean and save with their original ending style (0.176708ms)
+✔ textarea scopes map through CRLF and multibyte characters to exact raw bytes (0.152375ms)
+✔ mixed line endings are retained byte-for-byte unless edited, then use a disclosed predominant style (0.264875ms)
+✔ clean paid output still protects window closure, and unresolved receipt states are actionable (0.151792ms)
+✔ native app quit and window close share one unsaved gate; Keep editing preserves bytes (6.338292ms)
+✔ app quit Save writes the exact draft before native exit confirmation (1.215375ms)
+✔ app quit Discard keeps disk bytes unchanged and confirms exactly once (1.251792ms)
+✔ a clean native window close confirms exit without clearing the document (1.108333ms)
+✔ native exit refusal retains the editor and allows a subsequent close request (1.448542ms)
+✔ paid proposals and active file operations cannot be bypassed through app quit (2.247583ms)
+✔ app quit refuses an in-flight provider request and a native busy session (1.910417ms)
+✔ bridge sends Tauri camelCase Software bindings (2.495125ms)
+✔ opening only inspects; create, review and export each require explicit action (1.899292ms)
+✔ editor guard prevents opening and prevents every backend action after opening (0.842167ms)
+✔ workspace change suppresses stale inspect results and disables staging (2.505292ms)
+✔ duplicate creation is suppressed and modal cannot close during mutation (0.622125ms)
+✔ a refresh invalidates review, and a stale export error requires a fresh review (0.639584ms)
+✔ review rejects a different worktree or base, and malicious patch text stays inert (0.411125ms)
+✔ browser preview and a closed project cannot invoke native Git (0.1665ms)
+✔ publication projects keep the Software surface inert (0.175542ms)
+✔ inline JavaScript compiles and literal element references exist (5.587375ms)
+✔ malicious imported notes and evidence stay escaped text (33.977917ms)
+✔ agent manifests cannot mark human tasks accepted or verified (2.335459ms)
+✔ manual acceptance persists only for the same fully verified candidate (5.348792ms)
+✔ new source revision clears acceptance and inherited nonbaseline verification (2.312666ms)
+✔ served snapshot mismatch does not apply an unbound manifest (1.053792ms)
+✔ fresh failing gate results block roadmap promotion (47.512084ms)
+✔ reports without any source hashes cannot claim implemented evidence (45.290084ms)
+✔ M3 verification binds native app sources and blocks after source drift (88.553417ms)
+✔ changed source changes revision and blocks stale source-hashed gate results (86.617084ms)
+✔ server refresh fingerprints code and evidence without a network socket (90.039ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 491.16075

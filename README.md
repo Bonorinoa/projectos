@@ -16,7 +16,7 @@ It targets four project types (Academic, Software, Substack, Learning), with Sub
 
 **In-development.** The Rust kernel and the offline Substack golden path are implemented and verified by tests; the Software (M3) vertical and production packaging are in progress. `app` version is 0.0.1; this is not a released or packaged product yet.
 
-Recorded milestone progress (see [`projectos-roadmap-status.json`](projectos-roadmap-status.json), updated 2026-10-12):
+Recorded milestone progress (see [`projectos-roadmap-status.json`](projectos-roadmap-status.json), updated 2026-10-15):
 
 | Area | Status |
 |---|---|
@@ -25,7 +25,7 @@ Recorded milestone progress (see [`projectos-roadmap-status.json`](projectos-roa
 | M2 Substack golden path (editor, selection actions, diff/revision loop, recipes, receipts) | Implemented/verified **offline on macOS** |
 | M2.1/M2.2 (native DocumentStore, OpenRouter transport, OS-keyring credentials) | Implemented; live provider + keyring conformance is owner-opt-in and **unproven** |
 | Live provider calls (priced/billed) | **Blocked/not claimed** (owner opt-in) |
-| M3 Software vertical (repo, worktree, patch-review) | Foundation slice in progress; acceptance criteria set, **no passing evidence yet** |
+| M3 Software vertical (repo, worktree, patch-review) | Local foundation verified on macOS; full UI/effects/e2e remain open |
 | Gate C worker isolation | **On hold** — needs a signing/notarization identity and a Linux environment |
 
 **Gate C is on hold.** The worker-isolation core (hard memory ceiling, macOS production confinement, packaging) is parked pending owner resources, and the constrained-computer-use criteria remain part of Gate C (see [`docs/DECISION-gate-c-scope.md`](docs/DECISION-gate-c-scope.md)). No code work is in flight on that slice by decision.
@@ -35,14 +35,14 @@ Recorded milestone progress (see [`projectos-roadmap-status.json`](projectos-roa
 The app requires the **Tauri v2** toolchain with a pinned Rust compiler (1.97.1) and a Node runtime for the UI.
 
 ```bash
-# kernel tests: 121 passed / 0 failed at M2b close (recorded)
-cd kernel && cargo +1.97.1 test --no-fail-fast
+# all authorized offline checks, source hashes, logs, and debug build
+# activate Rust 1.97.1 and Node first; fixture tests need loopback access
+node scripts/verify-checkpoint.mjs
 
-# app command layer: 19 passed, 2 owner-opt-in ignored (recorded at M2b close)
-cd app/src-tauri && cargo test
-
-# renderer bridge + editor surface unit tests: 9 passed (node)
-cd app/ui && node --test
+# individual locked suites, from the repository root
+cargo +1.97.1 test --locked --manifest-path kernel/Cargo.toml
+cargo +1.97.1 test --locked --manifest-path app/src-tauri/Cargo.toml
+node --test app/ui/tests/*.test.cjs scripts/test-roadmap.mjs
 
 # run the desktop app in dev mode (no installer is built yet: bundle is inactive)
 cd app/src-tauri && cargo tauri dev
@@ -52,7 +52,9 @@ There is **no packaged installer** at this point (`bundle.active` is false) — 
 
 ## How do I know it works?
 
-Run the three suites above; all pass on a clean checkout with the pinned toolchain. The offline end-to-end Substack golden path (edit → typed action → diff → approval → revision → redacted receipt) is covered by `kernel/tests/m2_acceptance.rs` — `cargo test --no-fail-fast` in `kernel/` verifies it. Live provider behavior is deliberately not claimed: network calls against a real account require explicit owner opt-in and are not part of the default test run.
+The October 15 checkpoint records 121 kernel, 42 native and 36 frontend/roadmap tests passing, plus syntax, whitespace and debug-build checks. Two native live/keyring tests are explicitly opt-in and ignored. The actual native app was exercised with two repositories, stale review refusal, patch export, keyboard focus and guarded quit. See the [checkpoint and resume guide](docs/CHECKPOINT-2026-10-15.md) for limitations and evidence. This is not signed-release or full M3 acceptance.
+
+After Dark Phoenix is the first permanent Software project. Its sourced article remains an exported proposal, not a canonical edit. The approved Phoenix-only keyword correction is externally capacity-blocked; national metrics are labeled national. No remote was created for that project.
 
 ## Deeper documentation
 
@@ -61,6 +63,8 @@ Run the three suites above; all pass on a clean checkout with the pinned toolcha
 | [`docs/projectos-architecture-brief.md`](docs/projectos-architecture-brief.md) | Product thesis, six surfaces, four project types, locked decisions & ADR rules, feasibility gates A–E (**start here**) |
 | [`docs/DECISION-gate-c-scope.md`](docs/DECISION-gate-c-scope.md) | Gate C scope and current hold |
 | [`docs/M3-ACCEPTANCE.md`](docs/M3-ACCEPTANCE.md) | Software-vertical acceptance criteria (foundation slice) |
+| [`docs/CHECKPOINT-2026-10-15.md`](docs/CHECKPOINT-2026-10-15.md) | Verified checkpoint, research blocker and month-pause resume instructions |
+| [`docs/ProjectOS-M3-First-Project-System-Design.docx`](docs/ProjectOS-M3-First-Project-System-Design.docx) | Template-preserving System Design proposal |
 | `kernel/` | Interfaces and acceptance notes per milestone (`INTERFACES*.md`, `ACCEPTANCE-M1/M2/M2b.md`, `SPRINT-*.md`, `REVIEW-*.md`) |
 | [`design/projectos-live-mvp-roadmap.html`](design/projectos-live-mvp-roadmap.html) | Live milestone roadmap (M0→M4) |
 | [`projectos-roadmap-status.json`](projectos-roadmap-status.json) · `projectos-source-snapshot.json` | Machine-readable roadmap/source state |

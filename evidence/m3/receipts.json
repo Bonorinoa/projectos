@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-15T21:39:12.894742+00:00",
+  "absolutePathLeakage": false,
+  "records": [
+    {
+      "id": "software-d311dfa0-eeb3-4d76-b2f4-94856b4de833",
+      "at": 1792099947,
+      "operation": "ReviewPatch",
+      "project_uuid": "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4",
+      "run_id": "0f69954f-9759-44d1-9de9-f34dfcc67825",
+      "base_head": "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39",
+      "review_hash": "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2",
+      "changed_paths": [
+        "drafts/01-heat-after-sunset.md",
+        "outline.md",
+        "research/source-ledger.md",
+        "research/treg-keywords-phoenix-attempt.json"
+      ],
+      "capability_scope": [
+        "staged.read",
+        "diff.generate",
+        "hash.bind"
+      ],
+      "outcome": "reviewed"
+    },
+    {
+      "id": "software-614432db-7a02-4e0e-b5a7-49775c6cbed1",
+      "at": 1792099958,
+      "operation": "ExportPatch",
+      "project_uuid": "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4",
+      "run_id": "0f69954f-9759-44d1-9de9-f34dfcc67825",
+      "base_head": "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39",
+      "review_hash": "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2",
+      "changed_paths": [
+        "drafts/01-heat-after-sunset.md",
+        "outline.md",
+        "research/source-ledger.md",
+        "research/treg-keywords-phoenix-attempt.json"
+      ],
+      "capability_scope": [
+        "review.revalidate",
+        "patch.export"
+      ],
+      "outcome": "exported"
+    },
+    {
+      "id": "software-a584f949-9039-4e28-ae08-550aeea1a192",
+      "at": 1792100156,
+      "operation": "ReviewPatch",
+      "project_uuid": "487f227e-6b71-4427-903f-fe5f4ed83155",
+      "run_id": "7bb5632a-10c2-4450-b998-607b7965f1a5",
+      "base_head": "5a0848ff32ccfdaa8aa463a6f09e5d6d61ebe5aa",
+      "review_hash": "dcae30bf443f6027237aac25208dd459c1b4de30ece0b84476fb948c815efcc8",
+      "changed_paths": [
+        "draft.md"
+      ],
+      "capability_scope": [
+        "staged.read",
+        "diff.generate",
+        "hash.bind"
+      ],
+      "outcome": "reviewed"
+    },
+    {
+      "id": "software-0ed730d7-744a-4eaf-9cdf-c056e60d60a1",
+      "at": 1792100163,
+      "operation": "ExportPatch",
+      "project_uuid": "487f227e-6b71-4427-903f-fe5f4ed83155",
+      "run_id": "7bb5632a-10c2-4450-b998-607b7965f1a5",
+      "base_head": "5a0848ff32ccfdaa8aa463a6f09e5d6d61ebe5aa",
+      "review_hash": "dcae30bf443f6027237aac25208dd459c1b4de30ece0b84476fb948c815efcc8",
+      "changed_paths": [
+        "draft.md"
+      ],
+      "capability_scope": [
+        "review.revalidate",
+        "patch.export"
+      ],
+      "outcome": "refused",
+      "failure": "review revalidation refused"
+    },
+    {
+      "id": "software-67fe2cd1-afd0-4d44-a1f3-945f4b4e75d8",
+      "at": 1792100179,
+      "operation": "ReviewPatch",
+      "project_uuid": "487f227e-6b71-4427-903f-fe5f4ed83155",
+      "run_id": "7bb5632a-10c2-4450-b998-607b7965f1a5",
+      "base_head": "5a0848ff32ccfdaa8aa463a6f09e5d6d61ebe5aa",
+      "review_hash": "dcae30bf443f6027237aac25208dd459c1b4de30ece0b84476fb948c815efcc8",
+      "changed_paths": [
+        "draft.md"
+      ],
+      "capability_scope": [
+        "staged.read",
+        "diff.generate",
+        "hash.bind"
+      ],
+      "outcome": "reviewed"
+    },
+    {
+      "id": "software-7c22ea29-a11c-4287-88fb-031c93b4c782",
+      "at": 1792100192,
+      "operation": "ExportPatch",
+      "project_uuid": "487f227e-6b71-4427-903f-fe5f4ed83155",
+      "run_id": "7bb5632a-10c2-4450-b998-607b7965f1a5",
+      "base_head": "5a0848ff32ccfdaa8aa463a6f09e5d6d61ebe5aa",
+      "review_hash": "dcae30bf443f6027237aac25208dd459c1b4de30ece0b84476fb948c815efcc8",
+      "changed_paths": [
+        "draft.md"
+      ],
+      "capability_scope": [
+        "review.revalidate",
+        "patch.export"
+      ],
+      "outcome": "exported"
+    }
+  ],
+  "note": "Portable operation records only; native UI screenshots may display locally chosen folders."
+}

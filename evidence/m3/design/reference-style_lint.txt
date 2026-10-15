@@ -1,0 +1,14 @@
+[style_lint] direct run-formatting runs: 200
+[style_lint] direct paragraph-formatting paragraphs: 218
+[style_lint] top fonts by char count: Helvetica Neue(8535), Arial(39), Helvetica Neue Light(11)
+[style_lint] heading-like paragraphs not using Heading styles (first 10):
+  - #98: style='normal' text='Authors'
+  - #100: style='normal' text='Reviewers'
+  - #102: style='normal' text='Related docs'
+  - #104: style='normal' text='Scope'
+  - #106: style='normal' text='Goals'
+  - #107: style='normal' text='Non-goals'
+  - #116: style='normal' text='Component'
+  - #117: style='normal' text='Responsibility'
+  - #118: style='normal' text='Primary storage'
+  - #119: style='normal' text='Failure behavior'

@@ -1,0 +1,5 @@
+IMAGE KINDS
+- inline: 1
+
+ROWS (part | kind | size | target)
+- word/document.xml | inline | 6.70 x 3.43 | media/image1.png

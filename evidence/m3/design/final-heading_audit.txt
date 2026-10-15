@@ -1,0 +1,32 @@
+HEADING STYLE COUNTS
+- Heading 1: 21
+- Heading 3: 3
+
+POTENTIAL HEADING LEVEL JUMPS (review)
+- p#28: Heading 1 → Heading 3: 'Core components'
+- p#42: Heading 1 → Heading 3: 'Primary data contract'
+
+NUMBERING WITHOUT HEADING STYLE (common TOC issue)
+- p#33: style='normal' text='Choose Substack or Software before registration. workspace_open(folder, create, '
+- p#34: style='normal' text='Open only the selected repository root. Validate metadata, bounds and type befor'
+- p#35: style='normal' text='On explicit create, bind project UUID, run ID and base HEAD. Git creates a detac'
+- p#36: style='normal' text='Populate the managed worktree with the article and outline update. Review bounde'
+- p#37: style='normal' text='Persist create, review, refusal and export outcomes through Workspace. If an eff'
+- p#38: style='normal' text='Export revalidates HEAD and all touched bytes before and after the destination d'
+- p#39: style='normal' text='Save the export receipt, expose it in Activity, compare review/export fingerprin'
+- p#47: style='normal' text='workspace_open, software_status, software_create_worktree, software_review and s'
+- p#48: style='normal' text='Renderer arguments use projectType, worktreeId, reviewId and contentHash. Native'
+- p#49: style='normal' text='WorkspaceView exposes declared_type and software_receipts. Persist receipts in s'
+- p#50: style='normal' text='Receipt evidence describes observed file review and export. It does not establis'
+- p#60: style='normal' text='Bind each Software operation to the active manifest UUID. A publication project '
+- p#61: style='normal' text='Receipts contain relative changed paths and static failure descriptions. Exclude'
+- p#62: style='normal' text='Treg authentication uses its login flow, without provider API keys. Existing Ope'
+- p#63: style='normal' text='Discard ambient GIT variables. Disable hooks, fsmonitor, credential helpers, ext'
+- p#64: style='normal' text='Keep raw research responses and claim provenance locally. GitHub README blobs ar'
+- p#74: style='normal' text='No unresolved design questions remain for this foundation sprint. The approved b'
+- p#75: style='normal' text='External blockers: Linux and signing resources gate Gate C. Treg capacity blocks'
+- p#76: style='normal' text='External prerequisite: owner opt in is required for live OpenRouter and OS-keyri'
+- p#77: style='normal' text='Acceptance gate: the owner reviews the patch and workflow. m3.ui, m3.effects and'
+
+REMINDER
+- TOC relies on Heading styles (Heading 1/2/3...). Avoid manual numbering + direct formatting for headings.

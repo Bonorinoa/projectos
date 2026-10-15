@@ -1,0 +1,49 @@
+{
+  "retrieved_at": "2026-10-15T21:27:26Z",
+  "purpose": "Owner-approved Phoenix keyword geography correction",
+  "authorized_additional_cost_usd": 0.09,
+  "total_authorized_research_cost_usd": 0.182,
+  "idempotency_key": "eb00b5017d640eb574a12c3f3fae0b471cd4b907b0b520cd4e69752671fa8d90",
+  "parameters": [
+    {
+      "keywords": [
+        "Phoenix overnight heat",
+        "urban heat island Phoenix",
+        "Phoenix heat inequity",
+        "nighttime heat Phoenix",
+        "Phoenix cooling centers"
+      ],
+      "language_code": "en",
+      "location_name": "Phoenix,Arizona,United States"
+    }
+  ],
+  "response": {
+    "call_id": "6c10ed59fe3f40d2a5105728b82149b0",
+    "status": 503,
+    "retry_after": null,
+    "endpoint_id": "dataforseo.google.keywords.volume",
+    "replayed": null,
+    "body": {
+      "detail": {
+        "error": "provider_capacity_unavailable",
+        "provider": "dataforseo",
+        "endpoint_id": "dataforseo.google.keywords.volume",
+        "resets_at": "2026-10-15T22:04:31.923633Z",
+        "alternatives": [
+          "serpstat.google.keywords.volume  ~$0.0005/call  (callable now on treg's key)",
+          "seranking.google.keywords.volume  ~$0.00179/call  (callable now on treg's key)",
+          "google-ads.google.keywords.volume  free  (needs your own google-ads credential)"
+        ],
+        "message": "treg's own dataforseo account is out of capacity right now — dataforseo.google.keywords.volume can't be served on treg's key until about 2026-10-15 22:04 UTC; nothing about your plan or balance changed and nothing was charged\n  treg retries the vendor about once a minute and lifts this as soon as it answers, so a retry later may succeed\nanother provider serves google.keywords.volume:\n  serpstat.google.keywords.volume  ~$0.0005/call  (callable now on treg's key)\n  seranking.google.keywords.volume  ~$0.00179/call  (callable now on treg's key)\n  google-ads.google.keywords.volume  free  (needs your own google-ads credential)\n  or use your own key: treg secret add dataforseo --env-var DATAFORSEO_API_KEY  (own keys are never affected)"
+      }
+    },
+    "cost_usd": null,
+    "served_via": null,
+    "whose_error": "treg",
+    "hint": null,
+    "did_you_mean": null,
+    "error": null,
+    "detail": null
+  },
+  "outcome": "Blocked; no charge. Original national data is not Phoenix evidence. No provider fallback matches city and English requirements."
+}

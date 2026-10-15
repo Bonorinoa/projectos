@@ -1,0 +1,4 @@
+[document.xml] footnoteReferences=1 ids=[0]
+[document.xml] endnoteReferences=0 ids=[]
+[word/footnotes.xml] defined_footnotes=0 ids=[]
+[word/endnotes.xml] MISSING

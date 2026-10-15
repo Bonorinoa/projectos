@@ -1,0 +1,74 @@
+
+running 44 tests
+test credentials::tests::native_isolated_keyring_conformance ... ignored, explicit OS Keychain opt-in: PROJECTOS_TEST_KEYRING=1
+test credentials::tests::invalid_credentials_fail_before_native_vault_access ... ok
+test provider_transport::tests::absent_output_capacity_uses_context_and_local_cap_with_parameter_enforcement ... ok
+test provider_transport::tests::actual_http_stream_records_usage_and_disables_fallback ... ok
+test provider_transport::tests::costs_include_system_framing_request_and_maximum_output ... ok
+test provider_transport::tests::actual_http_redacts_secret_split_across_events_and_utf8_chunks ... ok
+test provider_transport::tests::actual_http_rejections_and_ambiguous_stream_failures_are_static ... ok
+test provider_transport::tests::live_public_catalog ... ignored, requires network; set PROJECTOS_PUBLIC_TEST_MODEL to an exact catalog model ID
+test provider_transport::tests::metadata_rejects_unknown_prices_bad_limits_and_router_aliases ... ok
+test provider_transport::tests::length_finish_is_a_flagged_partial_completion ... ok
+test provider_transport::tests::frozen_catalog_alias_is_accepted_and_unrelated_model_is_rejected ... ok
+test provider_transport::tests::redaction_protects_metadata_and_every_secret_event_split ... ok
+test provider_transport::tests::public_price_http_never_receives_key ... ok
+test provider_transport::tests::parser_bounded_frames_and_redaction_hold_for_every_byte_boundary ... ok
+test provider_transport::tests::redirect_cannot_receive_credentials ... ok
+test command_tests::dispatcher_confirms_exit_only_after_requests_and_proposals_are_reviewed ... ok
+test command_tests::dispatcher_requires_and_binds_camel_case_project_type ... ok
+test provider_transport::tests::actual_http_cancellation_and_timeout_do_not_retry ... ok
+test integration_tests::saved_unicode_selection_http_provider_review_and_reopen ... ok
+test command_tests::dispatcher_binds_editor_arguments_and_releases_the_writer_session ... ok
+test command_tests::dispatcher_reviews_native_proposals_and_can_reject_a_stale_result ... ok
+test software::tests::ambient_git_environment_is_discarded ... ok
+test software::tests::dropped_session_retains_dirty_stage_and_canonical_bytes ... ok
+test software::tests::hooks_are_never_executed_during_worktree_creation ... ok
+test software::tests::nested_repositories_and_control_character_filenames_are_refused ... ok
+test command_tests::created_worktree_receipt_failure_reports_partial_effect_and_blocks_retry ... ok
+test software::tests::symlinked_git_metadata_is_refused_before_git_runs ... ok
+test workspace::tests::real_editor_save_reopen_stale_and_annotation ... ok
+test workspace::tests::receipts_track_external_new_drafts_and_survive_reopening ... ok
+test workspace::tests::registration_and_milestones_ignore_preplanted_legacy_temp_symlinks ... ok
+test workspace::tests::software_receipt_persistence_failure_is_reported_and_paths_are_rejected ... ok
+test software::tests::empty_and_executable_patch_export_preserves_bytes_and_modes ... ok
+test workspace::tests::session_really_holds_writer_lock_and_receipts_are_real ... ok
+test workspace::tests::software_receipts_round_trip_without_absolute_machine_paths ... ok
+test workspace::tests::typed_registration_is_authoritative_and_mismatches_are_refused ... ok
+test software::tests::stale_worktree_and_canonical_files_refuse_export ... ok
+test software::tests::isolated_stage_and_export_bind_exact_bytes_without_canonical_writes ... ok
+test software::tests::stale_head_oversized_changes_and_unusual_names_are_bounded ... ok
+test software::tests::symlinks_and_changed_worktree_identity_are_refused ... ok
+test software::tests::unsupported_attributes_binary_and_capability_escape_are_refused ... ok
+test command_tests::software_dispatch_records_refusal_and_preserves_project_isolation ... ok
+test software::tests::tracked_projectos_metadata_is_not_copied_into_execution_stage ... ok
+test command_tests::export_revalidates_and_receipts_post_dialog_refusals_and_partial_success ... ok
+test software::tests::local_hooks_filters_includes_fsmonitor_and_external_diff_fail_closed ... ok
+
+test result: ok. 42 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 2.97s
+
+   Compiling projectos-app v0.0.1 (<PROJECTOS>/app/src-tauri)
+warning: fields `path`, `before`, and `after` are never read
+  --> src/software.rs:23:31
+   |
+23 | pub struct ReviewedFile { pub path: String, pub before: Option<Vec<u8>>, pub after: Option<Vec<u8>> }
+   |            ------------       ^^^^              ^^^^^^                       ^^^^^
+   |            |
+   |            fields in this struct
+   |
+   = note: `ReviewedFile` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `base_head`, `content_hash`, and `files` are never read
+  --> src/software.rs:25:32
+   |
+25 | pub struct ReviewedPatch { pub base_head: String, pub content_hash: String, pub files: Vec<ReviewedFile> }
+   |            -------------       ^^^^^^^^^              ^^^^^^^^^^^^              ^^^^^
+   |            |
+   |            fields in this struct
+   |
+   = note: `ReviewedPatch` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: `projectos-app` (bin "projectos-app" test) generated 2 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.08s
+     Running unittests src/main.rs (target/debug/deps/projectos_app-bb259884b0148c24)

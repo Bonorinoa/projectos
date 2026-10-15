@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-10-12T01:17:57.433Z",
-  "commit": "sha256:7d92688fa8ccfef3d9c1907f0e7ea2753ade8b3be5731e2aeaf33b50980ce3b4",
+  "updatedAt": "2026-10-15T21:39:13.383Z",
+  "commit": "sha256:1a432ecca058c785a6c644d2835f65cfa62a27181a11ce488dc41a2f9aed6410",
   "sourceSnapshot": "projectos-source-snapshot.json",
   "sourceStats": {
-    "files": 151,
-    "source": 78,
-    "tests": 28
+    "files": 197,
+    "source": 96,
+    "tests": 31
   },
   "tasks": {
     "m0.shell": {
@@ -187,23 +187,78 @@
         "app/src-tauri/src/main.rs",
         "app/src-tauri/src/workspace.rs",
         "docs/REVIEW-m2b-app-conformance.md",
-        "docs/EDITOR-PROVIDER-IPC.md"
+        "docs/EDITOR-PROVIDER-IPC.md",
+        "evidence/m3/report.json",
+        "evidence/m3/native.txt"
       ],
-      "note": "M2.1 native command layer + single writer session implementing docs/EDITOR-PROVIDER-IPC.md: 17 commands, stale-write revalidation, execution gating (no silent retry/fallback), offline-by-default, budget ceilings, unknown-outcome reconciliation. Conformance audit 9/9 PASS; 19 embedded integration tests (+2 ignored). Live/keyring paths unproven."
+      "note": "Native command layer and single writer session implementing docs/EDITOR-PROVIDER-IPC.md. October 15 offline regression: evidence/m3/report.json and native.txt, 42 native tests pass, 2 explicit live/keyring tests ignored. Type/refusal/partial-effect checks added; implementation-only status retained. Historical M2b audit remains historical; no live/keyring claim."
     },
     "m2.surface": {
       "status": "implemented",
       "evidence": [
         "app/ui/bridge.js",
         "app/ui/editor-state.js",
-        "app/ui/tests/editor-state.test.cjs"
+        "app/ui/tests/editor-state.test.cjs",
+        "evidence/m3/report.json",
+        "evidence/m3/node.txt"
       ],
-      "note": "M2.1 native-only renderer bridge (the mock was removed; a browser preview cannot impersonate a project) + the editor surface. Byte-range / CRLF / UTF-16-to-UTF-8 mapping unit tests (9, node)."
+      "note": "Native-only bridge and editor surface; October 15 offline regression retained in evidence/m3/report.json and node.txt, including byte-range, CRLF and UTF-16/UTF-8 tests. Modal error accessibility refined; implementation-only status retained, not full UI acceptance."
     },
     "m2.live": {
       "status": "blocked",
       "evidence": [],
       "note": "Live OpenRouter conformance against a real account (priced/billed cost reporting) requires owner opt-in resources; deferred, not claimed."
+    },
+    "m3.git": {
+      "status": "verified",
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Exact-root Git inspection and inert execution boundary pass offline/adversarial tests on macOS; no network or commit command exposed."
+    },
+    "m3.worktree": {
+      "status": "verified",
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Native-created detached inert staging isolates two repositories. Canonical content is unchanged. Removal/cancellation lifecycle is not claimed."
+    },
+    "m3.patch": {
+      "status": "verified",
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Content-bound review/export passes stale and partial-effect receipt checks, native walkthrough and strict apply check. Canonical apply is unavailable."
+    },
+    "m3.ui": {
+      "status": "planned",
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Bounded native foundation inspected; complete Software recipe/acceptance UI awaits remaining M3 work."
+    },
+    "m3.effects": {
+      "status": "blocked",
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Gate C resources and enforceable worker/computer-use isolation are outstanding."
+    },
+    "m3.e2e": {
+      "status": "blocked",
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Full golden path, canonical recovery integration, Linux and owner acceptance remain open."
     }
   },
   "diagnostics": []

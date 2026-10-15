@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-15T21:39:12.894742+00:00",
+  "bootstrap": "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39",
+  "canonicalTrackedBytesMatchBootstrap": true,
+  "trackedFileSHA256": {
+    ".gitignore": "83450cce205ea2a6f1f5a7e682cf15e8d9f313cb33f9a2a38059f031eb4ff9ad",
+    ".projectos/project.toml": "0e4725d25564c20a6edafdc95f5a917a24ed2f6b12a01a3147bb0a998cc3c7ce",
+    "README.md": "57fca052af29763da5a7c56f11ffa2706ed16b8a4a3b9bd6838f1c360e4c3d90",
+    "outline.md": "a60d31b2532cdd0742056cdc50fc85905d99e7c472ed5e6da948fd29ec9dea77",
+    "project-brief.md": "998c37bfe8c7afa6eef8b100694f26bc654cc8ffff927e4ecfb16271c0b8e01c",
+    "research/source-ledger.md": "91561dfa2a49eedc8a64ce9b9d29c6138840ba51f8b94952cf1d5d3d884f1309",
+    "research/treg-keywords.json": "a093de81f10cd1a2717a0847947c03bae295eb01d12bb06c2763906725fddd13",
+    "research/treg-serp.json": "b59b720547a0e4d267be70749e65010b81366f800967996bdb6b85ff341cdb0a"
+  },
+  "remoteCreated": false,
+  "writerLocksReleased": true,
+  "reviewHash": "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2",
+  "exportReceiptReviewHash": "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2",
+  "exportedPatchSHA256": "2cff69a7af39902b054ea5acfb9dcbb4a7a6b05f1e149c1ecea51479e75ccd9c",
+  "patchCheck": "git apply --check --whitespace=error passed; no canonical application",
+  "articleWords": 1305,
+  "changedPaths": [
+    "drafts/01-heat-after-sunset.md",
+    "outline.md",
+    "research/source-ledger.md",
+    "research/treg-keywords-phoenix-attempt.json"
+  ],
+  "researchSettledUSD": 0.092,
+  "researchAuthorizedCeilingUSD": 0.182,
+  "phoenixKeywordCorrection": "Blocked: provider_capacity_unavailable, no charge; original national metrics explicitly labeled national."
+}

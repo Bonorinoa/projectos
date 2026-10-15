@@ -1,0 +1,32 @@
+HEADING STYLE COUNTS
+- Heading 1: 21
+- Heading 3: 3
+
+POTENTIAL HEADING LEVEL JUMPS (review)
+- p#36: Heading 1 → Heading 3: 'Core components'
+- p#50: Heading 1 → Heading 3: 'Primary data contract'
+
+NUMBERING WITHOUT HEADING STYLE (common TOC issue)
+- p#41: style='normal' text='[Describe how a request, event, or job enters the system and identify the requir'
+- p#42: style='normal' text='[Describe validation, authentication, authorization, and normalization at the sy'
+- p#43: style='normal' text='[Describe which configuration, policy, state, or dependency data is loaded befor'
+- p#44: style='normal' text='[Describe the primary decision or processing step and the output it produces.]'
+- p#45: style='normal' text='[Describe which durable state must be written before side effects or downstream '
+- p#46: style='normal' text='[Describe downstream calls, retries, timeouts, budget limits, and terminal condi'
+- p#47: style='normal' text='[Describe final state updates, the response or output, and the metrics, logs, an'
+- p#55: style='normal' text='[State the ordering, durability, or validation guarantee that must hold before e'
+- p#56: style='normal' text='[State how writes, attempts, or events are identified and ordered.]'
+- p#57: style='normal' text='[State which versions, identifiers, or inputs must be captured for audit and rep'
+- p#58: style='normal' text='[State what this data is and is not a source of truth for.]'
+- p#68: style='normal' text='[Describe authentication, authorization, and tenant or data-boundary requirement'
+- p#69: style='normal' text='[Describe data minimization, sensitive payload handling, and logging restriction'
+- p#70: style='normal' text='[Describe credential, secret, key, and certificate storage and access requiremen'
+- p#71: style='normal' text='[Describe safe defaults for administrative, replay, migration, and debugging too'
+- p#72: style='normal' text='[Describe retention, deletion, residency, privacy, and audit requirements.]'
+- p#82: style='normal' text='[Open question 1: identify a decision that requires reviewer input before implem'
+- p#83: style='normal' text='[Open question 2: identify an unresolved product, policy, or operational constra'
+- p#84: style='normal' text='[Open question 3: identify a scale, deployment, or regional design choice.]'
+- p#85: style='normal' text='[Open question 4: identify an ownership, access-control, or tooling decision.]'
+
+REMINDER
+- TOC relies on Heading styles (Heading 1/2/3...). Avoid manual numbering + direct formatting for headings.

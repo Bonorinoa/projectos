@@ -1,6 +1,8 @@
 # M3 Software acceptance criteria
 
-Date: 2026-10-13. Status: review criteria; this document records no passing evidence.
+Date: 2026-10-15. Status: foundation evidence retained; full M3 is not complete. See [checkpoint](CHECKPOINT-2026-10-15.md), [automated report](../evidence/m3/report.json), [native walkthrough](../evidence/m3/native-walkthrough.json), and [source-bound task claims](../evidence/m3/status.json).
+
+The verified scope stops at repository inspection, inert managed-worktree creation, content-bound review and export. Canonical acceptance below remains a future exit criterion, not a command available today. Changed staging is retained; cancellation/removal lifecycle is not implemented and is not claimed. The first project's Phoenix-specific keyword correction is externally blocked despite owner-approved funding; the national dataset is not silently relabeled.
 
 The current authorized slice is the local repository, managed-worktree and patch-review foundation. A usable foundation is progress on M3, not completion of its Software golden path. [The Gate C owner decision](DECISION-gate-c-scope.md) still holds worker isolation and constrained computer use pending signing/notarization resources and a Linux environment. Running user-repository test commands or enabling automated desktop control is outside this slice. Tests of the trusted broker against disposable fixtures are permitted verification.
 

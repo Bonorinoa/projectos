@@ -1,0 +1,35 @@
+{
+  "referenceSha256": "13504f6c221a42c1726460a9e865e563355539ff97d702d6c9b2267b4b261d76",
+  "finalSha256": "c45a49de96cb336926dc422074f1b5cbc2a7dde49cead04a36d9976ea8bc1714",
+  "changedParts": [
+    "word/footer1.xml",
+    "word/footnotes.xml",
+    "word/document.xml",
+    "word/_rels/document.xml.rels",
+    "word/media/image1.png"
+  ],
+  "preservedParts": [
+    "word/header1.xml",
+    "word/header2.xml",
+    "word/footer2.xml",
+    "word/numbering.xml",
+    "word/settings.xml",
+    "word/fontTable.xml",
+    "word/_rels/fontTable.xml.rels",
+    "word/styles.xml",
+    "_rels/.rels",
+    "word/fonts/HelveticaNeueLight-regular.ttf",
+    "word/fonts/HelveticaNeueLight-bold.ttf",
+    "word/fonts/HelveticaNeue-bold.ttf",
+    "word/fonts/HelveticaNeue-regular.ttf",
+    "word/theme/theme1.xml",
+    "word/fonts/HelveticaNeueLight-italic.ttf",
+    "word/fonts/HelveticaNeue-boldItalic.ttf",
+    "word/fonts/HelveticaNeueLight-boldItalic.ttf",
+    "word/fonts/HelveticaNeue-italic.ttf",
+    "[Content_Types].xml"
+  ],
+  "sectionAndStyleAndTablePropertiesUnchangedExceptDeclaredCoverFlow": true,
+  "relationshipException": "Only rId9 hyperlink target updated from example.com placeholder to the public source contract; IDs and all other relationship attributes preserved.",
+  "fields": []
+}

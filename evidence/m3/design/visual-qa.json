@@ -1,0 +1,43 @@
+{
+  "verifiedAt": "2026-10-15T21:39:12.894742+00:00",
+  "pagesRendered": 7,
+  "pagesInspected": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "referencePagesInspected": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "finalRender": "fidelity-final",
+  "layout": "Pass: no clipped body text, overlaps, broken tables or stray pages; source repeating elements retained. Final render pixels identical to the inspected fidelity-4 pages after hyperlink-target-only correction.",
+  "grayscaleFigure": "Pass: direct labels and arrows readable without color.",
+  "declaredFlowExceptions": [
+    "Removed eight empty cover spacers",
+    "Added pageBreakBefore to Abstract to retain cover-only first page"
+  ],
+  "hyperlinkException": "Existing rId9 target replaces example.com placeholder with the public source contract; identities preserved.",
+  "referenceUnchanged": true,
+  "finalSHA256": "c45a49de96cb336926dc422074f1b5cbc2a7dde49cead04a36d9976ea8bc1714",
+  "referenceSHA256": "13504f6c221a42c1726460a9e865e563355539ff97d702d6c9b2267b4b261d76",
+  "featureAudits": [
+    "sections",
+    "styles",
+    "headings",
+    "images",
+    "fields",
+    "footnotes",
+    "content controls"
+  ],
+  "result": "pass"
+}

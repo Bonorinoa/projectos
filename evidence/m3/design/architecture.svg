@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill="#2f6b9a"/></marker></defs>
+<rect width="1400" height="720" fill="#f5faff"/>
+<rect width="1400" height="100" fill="#082a4a"/>
+<g font-family="Helvetica Neue,Arial,sans-serif" fill="#233447" font-size="23">
+<text x="34" y="44" fill="white" font-size="28" font-weight="600">ProjectOS M3 Software Foundation</text>
+<text x="34" y="80" fill="#cfe2f3">Explicit local operations produce a reviewed export</text>
+<g stroke="#2f6b9a" stroke-width="2" fill="white">
+<rect x="34" y="160" width="245" height="132" rx="5"/>
+<rect x="342" y="160" width="285" height="132" rx="5"/>
+<rect x="690" y="160" width="305" height="132" rx="5"/>
+<rect x="1058" y="160" width="308" height="132" rx="5"/>
+<rect x="34" y="454" width="245" height="140" fill="#e6f0f8" rx="5"/>
+<rect x="342" y="454" width="285" height="140" fill="#e6f0f8" rx="5"/>
+<rect x="690" y="454" width="305" height="140" fill="#e6f0f8" rx="5"/>
+<rect x="1058" y="454" width="308" height="140" fill="#e6f0f8" rx="5"/>
+</g>
+<g font-weight="600">
+<text x="52" y="199">ProjectOS UI</text><text x="360" y="199">Tauri commands</text>
+<text x="708" y="199">SoftwareBroker</text><text x="1076" y="199">Git</text>
+<text x="52" y="493">Treg ingestion</text><text x="360" y="493">Workspace</text>
+<text x="708" y="493">Graph and receipts</text><text x="1076" y="493">Exported patch</text>
+</g>
+<text x="52" y="238">Review and approve</text><text x="52" y="269">Create and export</text>
+<text x="360" y="238">Type and session checks</text><text x="360" y="269">Native owned IDs</text>
+<text x="708" y="238">Bound files and HEAD</text><text x="708" y="269">Revalidate export</text>
+<text x="1076" y="238">Fixed local arguments</text><text x="1076" y="269">Create inert staging</text>
+<text x="52" y="534">Budgeted retrieval</text><text x="52" y="569">Raw data and ledger</text>
+<text x="360" y="534">DocumentStore</text><text x="360" y="569">Manifest and files</text>
+<text x="708" y="534">Persist outcomes</text><text x="708" y="569">Activity trace</text>
+<text x="1076" y="534">Exact reviewed diff bytes</text><text x="1076" y="569">Owner reviews separately</text>
+<g fill="none" stroke="#2f6b9a" stroke-width="3" marker-end="url(#arrow)">
+<path d="M279 226 H334"/><path d="M627 226 H682"/><path d="M995 226 H1050"/>
+<path d="M485 292 V446"/><path d="M279 524 H334"/><path d="M627 524 H682"/>
+<path d="M842 292 V355 H1212 V446"/>
+</g>
+<text x="500" y="383" font-size="22">Read files and save metadata</text>
+<text x="968" y="336" font-size="22">Review and export</text>
+<text x="34" y="660" font-size="23">Canonical source files stay at bootstrap. Receipts update only local metadata.</text>
+<text x="34" y="696" font-size="22">Gate C holds workers, repository tests and application control.</text>
+</g></svg>

@@ -1,0 +1,33 @@
+   Compiling projectos-app v0.0.1 (<PROJECTOS>/app/src-tauri)
+warning: associated function `open` is never used
+  --> src/workspace.rs:72:12
+   |
+71 | impl Workspace {
+   | -------------- associated function in this implementation
+72 |     pub fn open(folder: &Path, create: bool) -> Result<Self,String> {
+   |            ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `path`, `before`, and `after` are never read
+  --> src/software.rs:23:31
+   |
+23 | pub struct ReviewedFile { pub path: String, pub before: Option<Vec<u8>>, pub after: Option<Vec<u8>> }
+   |            ------------       ^^^^              ^^^^^^                       ^^^^^
+   |            |
+   |            fields in this struct
+   |
+   = note: `ReviewedFile` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `base_head`, `content_hash`, and `files` are never read
+  --> src/software.rs:25:32
+   |
+25 | pub struct ReviewedPatch { pub base_head: String, pub content_hash: String, pub files: Vec<ReviewedFile> }
+   |            -------------       ^^^^^^^^^              ^^^^^^^^^^^^              ^^^^^
+   |            |
+   |            fields in this struct
+   |
+   = note: `ReviewedPatch` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: `projectos-app` (bin "projectos-app") generated 3 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.61s

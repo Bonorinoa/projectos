@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-15T21:39:12.894742+00:00",
+  "commit": "sha256:1c14415d505c437b65f5d30e41b55c75a8a981ac152e42c7b413047a607dcb7e",
+  "note": "Foundation only; no agent-written accepted state. Source drift invalidates verified claims.",
+  "tasks": {
+    "m3.git": {
+      "status": "verified",
+      "sourceHashes": {
+        "app/src-tauri/build.rs": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f",
+        "app/src-tauri/Cargo.lock": "f676501e76eb8b8e65848b27aacefada6b43fd430a3d206db0cb50ba130a7e67",
+        "app/src-tauri/Cargo.toml": "ce085936f08276ba10a121412000aaedfd6a173118925776129638c1752757c4",
+        "app/src-tauri/src/command_tests.rs": "b3f2bba7f5a8ba47ae29c63feb1220f8c8b8e87735e070dc7d4201883a1b05cd",
+        "app/src-tauri/src/credentials.rs": "7ec3bd98a9150bdc3239d258c78fbd7d9aef0c0e7a762ccd08eea86933cf03bf",
+        "app/src-tauri/src/main.rs": "e38ed82b3985731c0d718b8ae1566cdf994bd87a98e4aaa79c3b805c150e4fd1",
+        "app/src-tauri/src/provider_transport.rs": "fbcfe479bac8c56c3eb6d1e7db219601304650ed59774caa0e0a659501848ed3",
+        "app/src-tauri/src/software_commands.rs": "07a6579f1e3a49b42daf7539da4450cd304f734c12be1803b4a2f2dd192e6d85",
+        "app/src-tauri/src/software.rs": "60f6c7ff3b487cd1c4d7767512261f60c64727dc7200f46fa284d1a5f12a1aeb",
+        "app/src-tauri/src/workspace.rs": "8c05c54d184c9b9e015982432a8cac65875a3430261d0ad2c57c58e4328ad457",
+        "app/ui/app.js": "ffc92a7f160482888d2032b9a9d1c6b59328f8c734d93241002e1a61c2cdb9da",
+        "app/ui/bridge.js": "8a162ce68bcad9e6eea6ccd6149e438aa855ce5d2b5d34b51f9043247d1438a6",
+        "app/ui/editor-state.js": "fb5d7ae40c5b38fa343df020bf960345c3e54f3cd258455bbdb645b2f90fa11e",
+        "app/ui/editor.css": "9a5b000d2b32ac6bfb71ba05914c1018f5ee8e5e40d6601bf9dbf13ae135dad4",
+        "app/ui/editor.js": "c1f37c3029a2dd532c299bb349e108e8756720d05fcd715dbd47036056657f3b",
+        "app/ui/index.html": "ad4a877f656bba0665cdca4928afe4108e556f4d5266c7d4bb63ca56fdac4e81",
+        "app/ui/software.css": "c1eb3b04851ef5d1e7208213cd517895cfb748aa8f1dfb839b8fd2871c6c55ff",
+        "app/ui/software.js": "f93e500dfa86fae0e9805eb1d8173228b472a86db5b8fb683c0cdc8dc1d289c4",
+        "app/ui/tests/editor-state.test.cjs": "0196e8b91df218eafc6b32f9de6e08ef210e796754e42478f15c5f45812eb695",
+        "app/ui/tests/software-state.test.cjs": "24227b6e438ab38fa25bde0cdeecf1bc83cb5148b70458f7863a274c2de15e35",
+        "app/ui/tokens.css": "727f55165fa25f510131413e8c965e349b3dc8e0c278d4c472bcfc56befe8f14",
+        "scripts/test-roadmap.mjs": "675a67447308e1632b4c325115f414213d86620f5b9026efcf119219e9e2638b",
+        "scripts/update-roadmap.mjs": "df9ff50e1cf7300c5c4ba29a2e5b34a62de60c33de4284b98bac707ab99a4370",
+        "scripts/verify-checkpoint.mjs": "cb57c4e9b365dccac710883e715c02e2d190feb844d88599c98386f18e723b87",
+        "evidence/m3/report.json": "d2478d93ea96b2052404ac7fdf3c2e13e9ff6f603c2dd30ed343abff033a1acc",
+        "evidence/m3/native-walkthrough.json": "efd146fc3b80d1f4997d4407bfd083392f982231ea5466a97d69d3a09c9cde3b"
+      },
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Exact-root Git inspection and inert execution boundary pass offline/adversarial tests on macOS; no network or commit command exposed."
+    },
+    "m3.worktree": {
+      "status": "verified",
+      "sourceHashes": {
+        "app/src-tauri/build.rs": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f",
+        "app/src-tauri/Cargo.lock": "f676501e76eb8b8e65848b27aacefada6b43fd430a3d206db0cb50ba130a7e67",
+        "app/src-tauri/Cargo.toml": "ce085936f08276ba10a121412000aaedfd6a173118925776129638c1752757c4",
+        "app/src-tauri/src/command_tests.rs": "b3f2bba7f5a8ba47ae29c63feb1220f8c8b8e87735e070dc7d4201883a1b05cd",
+        "app/src-tauri/src/credentials.rs": "7ec3bd98a9150bdc3239d258c78fbd7d9aef0c0e7a762ccd08eea86933cf03bf",
+        "app/src-tauri/src/main.rs": "e38ed82b3985731c0d718b8ae1566cdf994bd87a98e4aaa79c3b805c150e4fd1",
+        "app/src-tauri/src/provider_transport.rs": "fbcfe479bac8c56c3eb6d1e7db219601304650ed59774caa0e0a659501848ed3",
+        "app/src-tauri/src/software_commands.rs": "07a6579f1e3a49b42daf7539da4450cd304f734c12be1803b4a2f2dd192e6d85",
+        "app/src-tauri/src/software.rs": "60f6c7ff3b487cd1c4d7767512261f60c64727dc7200f46fa284d1a5f12a1aeb",
+        "app/src-tauri/src/workspace.rs": "8c05c54d184c9b9e015982432a8cac65875a3430261d0ad2c57c58e4328ad457",
+        "app/ui/app.js": "ffc92a7f160482888d2032b9a9d1c6b59328f8c734d93241002e1a61c2cdb9da",
+        "app/ui/bridge.js": "8a162ce68bcad9e6eea6ccd6149e438aa855ce5d2b5d34b51f9043247d1438a6",
+        "app/ui/editor-state.js": "fb5d7ae40c5b38fa343df020bf960345c3e54f3cd258455bbdb645b2f90fa11e",
+        "app/ui/editor.css": "9a5b000d2b32ac6bfb71ba05914c1018f5ee8e5e40d6601bf9dbf13ae135dad4",
+        "app/ui/editor.js": "c1f37c3029a2dd532c299bb349e108e8756720d05fcd715dbd47036056657f3b",
+        "app/ui/index.html": "ad4a877f656bba0665cdca4928afe4108e556f4d5266c7d4bb63ca56fdac4e81",
+        "app/ui/software.css": "c1eb3b04851ef5d1e7208213cd517895cfb748aa8f1dfb839b8fd2871c6c55ff",
+        "app/ui/software.js": "f93e500dfa86fae0e9805eb1d8173228b472a86db5b8fb683c0cdc8dc1d289c4",
+        "app/ui/tests/editor-state.test.cjs": "0196e8b91df218eafc6b32f9de6e08ef210e796754e42478f15c5f45812eb695",
+        "app/ui/tests/software-state.test.cjs": "24227b6e438ab38fa25bde0cdeecf1bc83cb5148b70458f7863a274c2de15e35",
+        "app/ui/tokens.css": "727f55165fa25f510131413e8c965e349b3dc8e0c278d4c472bcfc56befe8f14",
+        "scripts/test-roadmap.mjs": "675a67447308e1632b4c325115f414213d86620f5b9026efcf119219e9e2638b",
+        "scripts/update-roadmap.mjs": "df9ff50e1cf7300c5c4ba29a2e5b34a62de60c33de4284b98bac707ab99a4370",
+        "scripts/verify-checkpoint.mjs": "cb57c4e9b365dccac710883e715c02e2d190feb844d88599c98386f18e723b87",
+        "evidence/m3/report.json": "d2478d93ea96b2052404ac7fdf3c2e13e9ff6f603c2dd30ed343abff033a1acc",
+        "evidence/m3/native-walkthrough.json": "efd146fc3b80d1f4997d4407bfd083392f982231ea5466a97d69d3a09c9cde3b"
+      },
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Native-created detached inert staging isolates two repositories. Canonical content is unchanged. Removal/cancellation lifecycle is not claimed."
+    },
+    "m3.patch": {
+      "status": "verified",
+      "sourceHashes": {
+        "app/src-tauri/build.rs": "487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f",
+        "app/src-tauri/Cargo.lock": "f676501e76eb8b8e65848b27aacefada6b43fd430a3d206db0cb50ba130a7e67",
+        "app/src-tauri/Cargo.toml": "ce085936f08276ba10a121412000aaedfd6a173118925776129638c1752757c4",
+        "app/src-tauri/src/command_tests.rs": "b3f2bba7f5a8ba47ae29c63feb1220f8c8b8e87735e070dc7d4201883a1b05cd",
+        "app/src-tauri/src/credentials.rs": "7ec3bd98a9150bdc3239d258c78fbd7d9aef0c0e7a762ccd08eea86933cf03bf",
+        "app/src-tauri/src/main.rs": "e38ed82b3985731c0d718b8ae1566cdf994bd87a98e4aaa79c3b805c150e4fd1",
+        "app/src-tauri/src/provider_transport.rs": "fbcfe479bac8c56c3eb6d1e7db219601304650ed59774caa0e0a659501848ed3",
+        "app/src-tauri/src/software_commands.rs": "07a6579f1e3a49b42daf7539da4450cd304f734c12be1803b4a2f2dd192e6d85",
+        "app/src-tauri/src/software.rs": "60f6c7ff3b487cd1c4d7767512261f60c64727dc7200f46fa284d1a5f12a1aeb",
+        "app/src-tauri/src/workspace.rs": "8c05c54d184c9b9e015982432a8cac65875a3430261d0ad2c57c58e4328ad457",
+        "app/ui/app.js": "ffc92a7f160482888d2032b9a9d1c6b59328f8c734d93241002e1a61c2cdb9da",
+        "app/ui/bridge.js": "8a162ce68bcad9e6eea6ccd6149e438aa855ce5d2b5d34b51f9043247d1438a6",
+        "app/ui/editor-state.js": "fb5d7ae40c5b38fa343df020bf960345c3e54f3cd258455bbdb645b2f90fa11e",
+        "app/ui/editor.css": "9a5b000d2b32ac6bfb71ba05914c1018f5ee8e5e40d6601bf9dbf13ae135dad4",
+        "app/ui/editor.js": "c1f37c3029a2dd532c299bb349e108e8756720d05fcd715dbd47036056657f3b",
+        "app/ui/index.html": "ad4a877f656bba0665cdca4928afe4108e556f4d5266c7d4bb63ca56fdac4e81",
+        "app/ui/software.css": "c1eb3b04851ef5d1e7208213cd517895cfb748aa8f1dfb839b8fd2871c6c55ff",
+        "app/ui/software.js": "f93e500dfa86fae0e9805eb1d8173228b472a86db5b8fb683c0cdc8dc1d289c4",
+        "app/ui/tests/editor-state.test.cjs": "0196e8b91df218eafc6b32f9de6e08ef210e796754e42478f15c5f45812eb695",
+        "app/ui/tests/software-state.test.cjs": "24227b6e438ab38fa25bde0cdeecf1bc83cb5148b70458f7863a274c2de15e35",
+        "app/ui/tokens.css": "727f55165fa25f510131413e8c965e349b3dc8e0c278d4c472bcfc56befe8f14",
+        "scripts/test-roadmap.mjs": "675a67447308e1632b4c325115f414213d86620f5b9026efcf119219e9e2638b",
+        "scripts/update-roadmap.mjs": "df9ff50e1cf7300c5c4ba29a2e5b34a62de60c33de4284b98bac707ab99a4370",
+        "scripts/verify-checkpoint.mjs": "cb57c4e9b365dccac710883e715c02e2d190feb844d88599c98386f18e723b87",
+        "evidence/m3/report.json": "d2478d93ea96b2052404ac7fdf3c2e13e9ff6f603c2dd30ed343abff033a1acc",
+        "evidence/m3/native-walkthrough.json": "efd146fc3b80d1f4997d4407bfd083392f982231ea5466a97d69d3a09c9cde3b"
+      },
+      "evidence": [
+        "evidence/m3/report.json",
+        "evidence/m3/native-walkthrough.json",
+        "evidence/m3/receipts.json",
+        "evidence/m3/first-project-integrity.json"
+      ],
+      "note": "Content-bound review/export passes stale and partial-effect receipt checks, native walkthrough and strict apply check. Canonical apply is unavailable."
+    },
+    "m3.ui": {
+      "status": "planned",
+      "sourceHashes": {},
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Bounded native foundation inspected; complete Software recipe/acceptance UI awaits remaining M3 work."
+    },
+    "m3.effects": {
+      "status": "blocked",
+      "sourceHashes": {},
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Gate C resources and enforceable worker/computer-use isolation are outstanding."
+    },
+    "m3.e2e": {
+      "status": "blocked",
+      "sourceHashes": {},
+      "evidence": [
+        "docs/M3-ACCEPTANCE.md"
+      ],
+      "note": "Full golden path, canonical recovery integration, Linux and owner acceptance remain open."
+    }
+  }
+}
