@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "Local editor window can receive its native provider progress events.",
+  "description": "Local editor window can receive provider progress and guarded quit events.",
   "windows": ["main"],
-  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten", "core:window:allow-destroy"]
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
 }

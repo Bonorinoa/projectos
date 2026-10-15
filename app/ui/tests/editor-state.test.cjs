@@ -81,3 +81,145 @@ test('clean paid output still protects window closure, and unresolved receipt st
   }
   assert.equal(needsReconciliation({ outcome: 'reconciled', requires_reconciliation: false }), false);
 });
+
+// Execute the actual controller against a minimal DOM/native bridge. These
+// tests exercise both lifecycle listeners and their real save/approval gate.
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+async function lifecycleHarness() {
+  const elements = new Map(), windowEvents = new Map();
+  function node(id) {
+    if (elements.has(id)) return elements.get(id);
+    const n = {
+      id, value: '', textContent: '', disabled: false, hidden: false, open: false, modalShows: 0,
+      selectionStart: 0, selectionEnd: 0, dataset: {}, listeners: new Map(),
+      classList: { toggle() {} },
+      setAttribute() {}, replaceChildren() {}, append() {}, appendChild() {}, focus() {},
+      closest() { return null; }, querySelector() { return node(id + '-child'); },
+      addEventListener(event, callback) { this.listeners.set(event, callback); },
+      showModal() { this.open = true; this.modalShows++; }, close() { this.open = false; }
+    };
+    elements.set(id, n); return n;
+  }
+  const review = node('review-test-button'); review.dataset.action = 'ReviewDraft';
+  const workspace = { name: 'Test project', folder: '/test', uuid: 'test', documents: ['draft.md'], objects: [], edges: [], receipts: [] };
+  const native = { calls: [], doc: { rel_path: 'draft.md', text: 'saved', hash: 'original' }, status: { configured: true, online: true, busy: false, unresolved: false }, rejectExit: false };
+  const bridge = {
+    native: true,
+    async listenClose(callback) { native.close = callback; },
+    async listenProgress() {},
+    async invoke(command, args) {
+      native.calls.push({ command, args });
+      if (native.customInvoke) { const value = await native.customInvoke(command, args); if (value !== undefined) return value; }
+      if (command === 'provider_status') return native.status;
+      if (command === 'draft_create' || command === 'draft_open') return { ...native.doc };
+      if (command === 'draft_save') { native.doc = { rel_path: args.relPath, text: args.text, hash: 'saved-hash' }; return { ...native.doc }; }
+      if (command === 'workspace_refresh') return workspace;
+      if (command === 'action_prepare') return { id: 'prepared', action: 'ReviewDraft', rel_path: 'draft.md', selected_text: native.doc.text, requested_model: 'provider/model', endpoint: 'https://openrouter.ai', max_tokens: 1024, ceiling_usd: .05, estimated_upper_usd: .01, annotation: false };
+      if (command === 'action_execute') return { id: 'paid-output', action: 'ReviewDraft', rel_path: 'draft.md', original: native.doc.text, proposed: 'suggestion', annotation: false, requested_model: 'provider/model', cost_state: 'reported' };
+      if (command === 'app_confirm_exit') { if (native.rejectExit) throw new Error('Native exit refused'); return; }
+      throw new Error('Unexpected test command: ' + command);
+    }
+  };
+  const window = {
+    projectos: bridge, ProjectOSEditorState: require('../editor-state.js'), projectosViews: { setView() {} },
+    __TAURI__: { window: { getCurrentWindow() { return { async onCloseRequested(callback) { native.windowClose = callback; } }; } } },
+    addEventListener(event, callback) { windowEvents.set(event, callback); }
+  };
+  const document = { getElementById: node, createElement: name => node('created-' + name), createTextNode: value => ({ textContent: value }), addEventListener() {}, querySelectorAll: selector => selector === '[data-action]' ? [review] : [] };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../editor.js'), 'utf8'), { window, document, CustomEvent: class {}, TextEncoder });
+  await new Promise(resolve => setImmediate(resolve));
+  windowEvents.get('workspace-changed')({ detail: workspace });
+  node('draft-path').value = 'draft.md';
+  await node('create-draft').onclick();
+  native.calls.length = 0;
+  return { node, native, review, windowEvents };
+}
+function confirmCalls(native) { return native.calls.filter(call => call.command === 'app_confirm_exit').length; }
+test('native app quit and window close share one unsaved gate; Keep editing preserves bytes', async () => {
+  const { node, native, windowEvents } = await lifecycleHarness();
+  node('draft-text').value = 'unsaved work';
+  const quit = native.close();
+  assert.equal(node('unsaved-dialog').open, true);
+  let prevented = false;
+  await native.windowClose({ preventDefault() { prevented = true; } });
+  await native.close();
+  assert.equal(prevented, true);
+  assert.equal(node('unsaved-dialog').modalShows, 1);
+  assert.equal(confirmCalls(native), 0);
+  const unload = { preventDefault() { this.prevented = true; } };
+  windowEvents.get('beforeunload')(unload);
+  assert.equal(unload.prevented, true);
+  node('unsaved-cancel').onclick(); await quit;
+  assert.equal(confirmCalls(native), 0);
+  assert.equal(node('draft-text').value, 'unsaved work');
+});
+test('app quit Save writes the exact draft before native exit confirmation', async () => {
+  const { node, native } = await lifecycleHarness();
+  node('draft-text').value = 'saved on quit';
+  const quit = native.close(); node('unsaved-save').onclick(); await quit;
+  assert.equal(native.doc.text, 'saved on quit');
+  const commands = native.calls.map(call => call.command);
+  assert.ok(commands.indexOf('draft_save') < commands.indexOf('app_confirm_exit'));
+  assert.equal(confirmCalls(native), 1);
+  assert.equal(node('draft-text').value, 'saved on quit');
+});
+test('app quit Discard keeps disk bytes unchanged and confirms exactly once', async () => {
+  const { node, native } = await lifecycleHarness();
+  node('draft-text').value = 'discard this';
+  const quit = native.close(); node('unsaved-discard').onclick(); await quit;
+  assert.equal(native.doc.text, 'saved');
+  assert.equal(node('draft-text').value, 'saved');
+  assert.equal(native.calls.some(call => call.command === 'draft_save'), false);
+  assert.equal(confirmCalls(native), 1);
+});
+test('a clean native window close confirms exit without clearing the document', async () => {
+  const { node, native } = await lifecycleHarness();
+  let prevented = false;
+  await native.windowClose({ preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(node('unsaved-dialog').modalShows, 0);
+  assert.equal(confirmCalls(native), 1);
+  assert.equal(node('draft-text').value, 'saved');
+});
+test('native exit refusal retains the editor and allows a subsequent close request', async () => {
+  const { node, native } = await lifecycleHarness(); native.rejectExit = true;
+  await native.close();
+  assert.equal(node('draft-text').value, 'saved');
+  assert.equal(node('app-status').textContent, 'Native exit refused');
+  native.rejectExit = false; await native.close();
+  assert.equal(confirmCalls(native), 2);
+});
+test('paid proposals and active file operations cannot be bypassed through app quit', async () => {
+  const { node, native, review } = await lifecycleHarness();
+  node('provider-model').value = 'provider/model'; node('max-tokens').value = '1024'; node('ceiling-usd').value = '.05';
+  await review.onclick(); await node('send-action').onclick(); await native.close();
+  assert.equal(confirmCalls(native), 0);
+  assert.equal(node('proposal-text').textContent, 'suggestion');
+  assert.match(node('app-status').textContent, /Accept or reject/);
+  const second = await lifecycleHarness(); let finish;
+  second.native.customInvoke = command => command === 'workspace_refresh' ? new Promise(resolve => { finish = resolve; }) : undefined;
+  const operation = second.node('refresh-project').onclick();
+  await second.native.close();
+  assert.equal(confirmCalls(second.native), 0);
+  assert.match(second.node('app-status').textContent, /Finish.*operation/);
+  finish({ name: 'Test', folder: '/test', documents: [] }); await operation;
+});
+test('app quit refuses an in-flight provider request and a native busy session', async () => {
+  const { node, native, review } = await lifecycleHarness();
+  node('provider-model').value = 'provider/model'; node('max-tokens').value = '1024'; node('ceiling-usd').value = '.05';
+  await review.onclick();
+  let finish;
+  native.customInvoke = command => command === 'action_execute' ? new Promise(resolve => { finish = resolve; }) : undefined;
+  const execution = node('send-action').onclick();
+  await native.close();
+  assert.equal(confirmCalls(native), 0);
+  assert.match(node('app-status').textContent, /Cancel or finish/);
+  finish({ id: 'paid-output', action: 'ReviewDraft', rel_path: 'draft.md', original: 'saved', proposed: 'suggestion', annotation: false, requested_model: 'provider/model' });
+  await execution;
+  const second = await lifecycleHarness(); second.native.status.busy = true;
+  await second.native.close();
+  assert.equal(confirmCalls(second.native), 0);
+  assert.match(second.node('app-status').textContent, /Cancel or finish/);
+});

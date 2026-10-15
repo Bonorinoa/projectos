@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-13",
+  "base_commit": "e8f1eb9",
+  "owner_accepted": false,
+  "paid_inference_tested": false,
+  "source_sha256": {
+    "app/src-tauri/Cargo.toml": "53cfed96d7c44e380750c3f8e0b6d2f763edb510709a408dbff6629b3359562e",
+    "app/src-tauri/Cargo.lock": "6f5869f609b471f9a412eb623d5bfc82c641f519d055097a598de6fa0bd24bc2",
+    "app/src-tauri/capabilities/main.json": "eab218ba87ee9dfd0c48374ae93959ef6d4d9226caa5a5c6d309d869e5612176",
+    "app/src-tauri/src/main.rs": "8a40d94d1d24ac716340a78298a60bc8511691d6b863f38cd18bf926396d6d91",
+    "app/src-tauri/src/command_tests.rs": "aaf982cb706d8612427d8988bed1cb9496c9e134d5ccc9852f0732df609de0a3",
+    "app/src-tauri/src/workspace.rs": "dfdac8187ee6b5dc1db8d1bc06f8569363fe11a4b6ddc9493587ac1faf8686d9",
+    "app/src-tauri/src/provider_transport.rs": "fbcfe479bac8c56c3eb6d1e7db219601304650ed59774caa0e0a659501848ed3",
+    "app/src-tauri/src/credentials.rs": "7ec3bd98a9150bdc3239d258c78fbd7d9aef0c0e7a762ccd08eea86933cf03bf",
+    "app/ui/index.html": "4b345190e9f24932431363b519823ab749fc86bd2e9aced9636c8632e227b598",
+    "app/ui/app.js": "1757f254c16d875863ff72cdb658b2903cdc28f132da49569b90e0c7346fb740",
+    "app/ui/bridge.js": "7f421431d348b80655898a5a394d2eb89946f89d7c24154dab5910db65a076dc",
+    "app/ui/editor.js": "5997c8c878835b0aab5b2f3f8fec43efa926dc6afd20fed3524abd92647305a9",
+    "app/ui/editor-state.js": "fb5d7ae40c5b38fa343df020bf960345c3e54f3cd258455bbdb645b2f90fa11e",
+    "app/ui/editor.css": "6ab765019eb3a905e1e85c54d8206b3f638a10b3b00e081e1d0eb4d96de9ad47",
+    "app/ui/tests/editor-state.test.cjs": "0196e8b91df218eafc6b32f9de6e08ef210e796754e42478f15c5f45812eb695",
+    "kernel/src/document.rs": "0e9aad5f369ab037733f1c6ad9dd2317d36e17066d0a4637855f3d403e69044b",
+    "kernel/src/proposals.rs": "d84eb7988817755fb7dceda04f36ff3a334e7d3d2f6c5410b5957167fb02e7cb",
+    "docs/EDITOR-PROVIDER-IPC.md": "c519780f8adac954001ec6e8bb2984bad6bca0e365aac95d9ac5596bc7207b71"
+  }
+}

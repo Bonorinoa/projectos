@@ -6,6 +6,7 @@
 <title>ProjectOS — Draft workbench</title>
 <!-- Design tokens (locked single source) -->
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="software.css">
 <!-- Vendored fonts via RELATIVE paths — no CDN, no network. -->
 <style>
 @font-face{font-family:"Geist";src:url("assets/fonts/geist/Geist[wght].ttf") format("truetype");font-weight:100 900;font-display:swap;}
@@ -129,7 +130,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   <span class="brand">PROJECT<i>OS</i></span>
   <span id="workspace-name" class="kicker">No project open</span>
   <div class="ctl"><button id="open-project">Open project</button><button id="register-project">New project</button><button id="close-project" disabled>Close</button></div>
-  <div class="ctl"><button id="editor-toggle" class="on" aria-pressed="true">Draft editor</button><button id="canvas-toggle" aria-pressed="false">Canvas</button></div>
+  <div class="ctl"><button id="editor-toggle" class="on" aria-pressed="true">Draft editor</button><button id="canvas-toggle" aria-pressed="false">Canvas</button><button id="software-toggle">Software</button></div>
   <div class="lens">
     <button class="on" data-l="all" aria-pressed="true">All</button>
     <button data-l="lineage" aria-pressed="false">Lineage</button>
@@ -236,6 +237,11 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   </section>
 </main>
 <div id="app-status" role="status" aria-live="polite">Connecting to native ProjectOS…</div>
+<dialog id="project-type-dialog" aria-labelledby="project-type-title">
+  <h2 id="project-type-title">Choose project type</h2>
+  <p>The registration type is permanent for this project. Existing projects always keep their manifest type.</p>
+  <div class="editor-buttons"><button type="button" id="cancel-project-type">Cancel</button><button type="button" id="project-type-substack">Substack</button><button type="button" id="project-type-software">Software</button></div>
+</dialog>
 <dialog id="folder-dialog" aria-labelledby="folder-dialog-title">
   <form id="folder-form"><h2 id="folder-dialog-title">Open project folder</h2>
   <p id="folder-dialog-description">Choose an existing folder. You can paste its absolute path or browse on this computer.</p>
@@ -261,6 +267,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
 <script src="bridge.js"></script>
 <script src="editor-state.js"></script>
 <script src="app.js"></script>
+<script src="software.js"></script>
 <script src="editor.js"></script>
 </body>
 </html>

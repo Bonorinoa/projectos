@@ -20,6 +20,14 @@ window.projectos = (() => {
     objects: () => workspace?.objects || [],
     edges: () => workspace?.edges || [],
     receipts: () => workspace?.receipts || [],
+    softwareStatus: () => invoke("software_status"),
+    softwareCreateWorktree: confirmed => invoke("software_create_worktree", { confirmed }),
+    softwareReview: worktreeId => invoke("software_review", { worktreeId }),
+    softwareExportReview: (reviewId, contentHash) => invoke("software_export_review", { reviewId, contentHash }),
+    async listenClose(callback) {
+      if (native && window.__TAURI__?.event?.listen) return window.__TAURI__.event.listen("app-close-requested", callback);
+      return () => {};
+    },
     async listenProgress(callback) {
       if (native && window.__TAURI__?.event?.listen) return window.__TAURI__.event.listen("provider-progress", e => callback(e.payload));
       return () => {};

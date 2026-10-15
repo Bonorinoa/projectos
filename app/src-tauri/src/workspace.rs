@@ -20,7 +20,17 @@ pub struct CanvasEdge { pub from: String, pub to: String, pub rel: String }
 #[derive(Serialize)]
 pub struct WorkspaceView { pub name: String, pub folder: String, pub uuid: String,
     pub documents: Vec<String>, pub objects: Vec<CanvasObject>, pub edges: Vec<CanvasEdge>,
-    pub receipts: Vec<serde_json::Value> }
+    pub receipts: Vec<serde_json::Value>, pub declared_type: String,
+    pub software_receipts: Vec<SoftwareReceipt> }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SoftwareReceipt {
+    pub id: String, pub at: u64, pub operation: String, pub project_uuid: String,
+    pub run_id: String, pub base_head: String, pub review_hash: Option<String>,
+    #[serde(default)] pub changed_paths: Vec<String>,
+    #[serde(default)] pub capability_scope: Vec<String>,
+    pub outcome: String, pub failure: Option<String>,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Attempt {
@@ -35,6 +45,8 @@ pub struct Attempt {
 }
 #[derive(Default, Serialize, Deserialize)]
 struct Attempts { #[serde(default)] attempts: Vec<Attempt> }
+#[derive(Default, Serialize, Deserialize)]
+struct SoftwareReceipts { #[serde(default)] receipts: Vec<SoftwareReceipt> }
 #[derive(Serialize, Deserialize)]
 struct Snapshot { objects: BTreeMap<String,Object>, edges: Vec<Edge> }
 #[derive(Default, Serialize, Deserialize)]
@@ -54,23 +66,41 @@ pub struct Workspace {
     pub files: DocumentStore,
     pub graph: InMemoryGraphEngine,
     pub attempts: Vec<Attempt>,
+    pub software_receipts: Vec<SoftwareReceipt>,
 }
 impl Workspace {
     pub fn open(folder: &Path, create: bool) -> Result<Self,String> {
+        Self::open_typed(folder, create, if create { Some("publication") } else { None })
+    }
+    pub fn open_typed(folder: &Path, create: bool, project_type: Option<&str>) -> Result<Self,String> {
         let root = std::fs::canonicalize(folder).map_err(err)?;
         // Refuse a malicious sidecar before invoking the legacy registry.
         let files = DocumentStore::open(&root).map_err(err)?;
         let manifest=files.read_metadata("project.toml").map_err(err)?;
+        let supplied = match project_type {
+            Some(value @ ("publication" | "software")) => Some(value),
+            Some(_) => return Err("Choose either Substack or Software as the project type.".into()),
+            None => None,
+        };
+        let existing = manifest.as_ref().map(|text| toml::from_str::<projectos_kernel::sidecar::SidecarEnvelope>(text)
+            .map_err(|_| "Project registration is unreadable; repair it before opening.".to_string())).transpose()?;
+        if let (Some(envelope), Some(requested)) = (&existing, supplied) {
+            if envelope.declared_type != requested {
+                return Err(format!("This project is registered as {}; reopen it without changing its type.", envelope.declared_type));
+            }
+        }
         if create {
             if manifest.is_none() {
+                let declared_type=supplied.ok_or("Choose Substack or Software before registering a new project.")?;
                 let envelope=projectos_kernel::sidecar::SidecarEnvelope {
-                    project_uuid:uuid::Uuid::new_v4(),declared_type:"publication".into(),content_roots:vec![],
+                    project_uuid:uuid::Uuid::new_v4(),declared_type:declared_type.into(),content_roots:vec![],
                     schema_version:projectos_kernel::sidecar::SCHEMA_VERSION,engine_version:"0.0.1".into(),export_version:"0.0.1".into(),checkpoint:None,
                 };
                 files.write_metadata("project.toml",&toml::to_string(&envelope).map_err(err)?).map_err(err)?;
             }
             // Existing-manifest registration only reads. The unsafe legacy new-manifest writer is bypassed.
-            registration::register(&root, "publication", vec![]).map_err(err)?;
+            let declared_type=existing.as_ref().map(|e|e.declared_type.as_str()).or(supplied).ok_or("Project type is unavailable.")?;
+            registration::register(&root, declared_type, vec![]).map_err(err)?;
         }
         let project = registration::open(&root).map_err(err)?;
         let mut graph = InMemoryGraphEngine::new();
@@ -83,7 +113,11 @@ impl Workspace {
             Some(text) => toml::from_str::<Attempts>(&text).map_err(|_| "Provider receipts are unreadable; repair them before sending.".to_string())?.attempts,
             None => vec![],
         };
-        let mut workspace = Self { project, files, graph, attempts };
+        let software_receipts = match files.read_metadata("software-receipts.toml").map_err(err)? {
+            Some(text) => toml::from_str::<SoftwareReceipts>(&text).map_err(|_| "Software receipts are unreadable; repair them before continuing.".to_string())?.receipts,
+            None => vec![],
+        };
+        let mut workspace = Self { project, files, graph, attempts, software_receipts };
         for path in workspace.files.list_text_files().map_err(err)? { workspace.track_draft(&path)?; }
         workspace.persist_graph()?;
         Ok(workspace)
@@ -104,11 +138,13 @@ impl Workspace {
             None => vec![],
         };
         for attempt in &self.attempts { receipts.push(serde_json::to_value(attempt).map_err(err)?); }
+        for receipt in &self.software_receipts { receipts.push(serde_json::to_value(receipt).map_err(err)?); }
         receipts.sort_by_key(|r|r["at"].as_u64().unwrap_or_default());
         Ok(WorkspaceView {
             name: self.project.folder.file_name().unwrap_or_default().to_string_lossy().into(),
             folder:self.project.folder.to_string_lossy().into(), uuid:self.project.envelope.project_uuid.to_string(),
             documents:self.files.list_text_files().map_err(err)?, objects,edges,receipts,
+            declared_type:self.project.envelope.declared_type.clone(), software_receipts:self.software_receipts.clone(),
         })
     }
     pub fn read(&self, rel: &str) -> Result<Document,String> {
@@ -192,6 +228,26 @@ impl Workspace {
         self.graph.add_edge(Edge {from:draft_id(&r.rel_path),to:r.id.clone(),rel:Relation::Produced}).map_err(err)?;
         self.persist_graph()
     }
+    pub fn record_software_receipt(&mut self, mut receipt: SoftwareReceipt) -> Result<(),String> {
+        if receipt.project_uuid != self.project.envelope.project_uuid.to_string() { return Err("Software receipt project mismatch.".into()); }
+        if receipt.changed_paths.iter().any(|path| Path::new(path).is_absolute() || path.contains("..") || path.contains('\\')) {
+            return Err("Software receipt contains a non-relative changed path.".into());
+        }
+        if receipt.failure.as_deref().is_some_and(|failure| failure.contains('/') || failure.contains('\\')) {
+            return Err("Software receipt failure text may not contain machine paths.".into());
+        }
+        receipt.changed_paths.sort(); receipt.changed_paths.dedup();
+        let id=receipt.id.clone();
+        if let Some(old)=self.software_receipts.iter_mut().find(|r|r.id==id) { *old=receipt; } else { self.software_receipts.push(receipt); }
+        self.files.write_metadata("software-receipts.toml", &toml::to_string(&SoftwareReceipts { receipts:self.software_receipts.clone() }).map_err(err)?).map_err(err)?;
+        let saved=self.software_receipts.iter().find(|r|r.id==id).ok_or("No Software receipt recorded.")?;
+        self.graph.upsert_object(Object { id:saved.id.clone(), kind:"Receipt".into(), label:format!("{} · {}",saved.operation,saved.outcome), fields:BTreeMap::from([
+            ("operation".into(),saved.operation.clone()), ("outcome".into(),saved.outcome.clone()),
+            ("base_head".into(),saved.base_head.clone()), ("review_hash".into(),saved.review_hash.clone().unwrap_or_default()),
+            ("changed_paths".into(),saved.changed_paths.join(", ")),
+        ])}).map_err(err)?;
+        self.persist_graph()
+    }
     pub fn milestone(&mut self,name:&str) -> Result<String,String> {
         if name.trim().is_empty() || name.len()>200 { return Err("Name the milestone (up to 200 characters).".into()); }
         let mut milestones:Milestones=match self.files.read_metadata("milestones.toml").map_err(err)? {
@@ -229,6 +285,12 @@ fn relation_label(r:Relation)-> &'static str { match r {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn software_receipt(project_uuid:String) -> SoftwareReceipt {
+        SoftwareReceipt { id:"software-receipt-test".into(), at:now(), operation:"ReviewPatch".into(), project_uuid,
+            run_id:"run-test".into(), base_head:"0123456789012345678901234567890123456789".into(), review_hash:Some("review-hash".into()),
+            changed_paths:vec!["drafts/change.md".into()], capability_scope:vec!["staged.read".into(),"diff.generate".into()],
+            outcome:"reviewed".into(), failure:None }
+    }
     #[test]
     fn real_editor_save_reopen_stale_and_annotation() {
         let dir=tempfile::tempdir().unwrap();
@@ -281,5 +343,37 @@ mod tests {
         assert!(w.view().unwrap().objects.iter().any(|o|o.kind=="Draft"&&o.label=="new.md"));
         drop(w);let reopened=Workspace::open(dir.path(),false).unwrap();assert!(reopened.unresolved());
         let json=serde_json::to_string(&reopened.view().unwrap().receipts).unwrap();assert!(!json.contains(dir.path().to_str().unwrap()));
+    }
+    #[test]
+    fn typed_registration_is_authoritative_and_mismatches_are_refused() {
+        let dir=tempfile::tempdir().unwrap();
+        let w=Workspace::open_typed(dir.path(),true,Some("software")).unwrap();
+        assert_eq!(w.view().unwrap().declared_type,"software");
+        drop(w);
+        assert!(Workspace::open_typed(dir.path(),false,Some("publication")).err().unwrap().contains("registered as software"));
+        let reopened=Workspace::open_typed(dir.path(),false,None).unwrap();
+        assert_eq!(reopened.project.envelope.declared_type,"software");
+    }
+    #[test]
+    fn software_receipts_round_trip_without_absolute_machine_paths() {
+        let dir=tempfile::tempdir().unwrap();let mut w=Workspace::open_typed(dir.path(),true,Some("software")).unwrap();
+        let receipt=software_receipt(w.project.envelope.project_uuid.to_string());
+        w.record_software_receipt(receipt).unwrap();
+        let serialized=w.files.read_metadata("software-receipts.toml").unwrap().unwrap();
+        assert!(!serialized.contains(dir.path().to_str().unwrap()));
+        assert!(serialized.contains("drafts/change.md"));
+        drop(w);let reopened=Workspace::open_typed(dir.path(),false,None).unwrap();
+        assert_eq!(reopened.view().unwrap().software_receipts.len(),1);
+        assert!(reopened.view().unwrap().receipts.iter().any(|value|value["operation"]=="ReviewPatch"));
+    }
+    #[test]
+    fn software_receipt_persistence_failure_is_reported_and_paths_are_rejected() {
+        let dir=tempfile::tempdir().unwrap();let mut w=Workspace::open_typed(dir.path(),true,Some("software")).unwrap();
+        let mut leaking=software_receipt(w.project.envelope.project_uuid.to_string());
+        leaking.changed_paths=vec![dir.path().join("secret").to_string_lossy().into_owned()];
+        assert!(w.record_software_receipt(leaking).unwrap_err().contains("non-relative"));
+        std::fs::create_dir(dir.path().join(".projectos/software-receipts.toml")).unwrap();
+        let receipt=software_receipt(w.project.envelope.project_uuid.to_string());
+        assert!(w.record_software_receipt(receipt).is_err());
     }
 }

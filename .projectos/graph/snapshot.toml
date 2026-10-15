@@ -1,0 +1,739 @@
+edges = []
+
+[objects.draft-014ca6bdf93744de]
+id = "draft-014ca6bdf93744de"
+kind = "Draft"
+label = "docs/projectos-architecture-brief.md"
+
+[objects.draft-014ca6bdf93744de.fields]
+path = "docs/projectos-architecture-brief.md"
+state = "saved draft"
+
+[objects.draft-01c3488a68567d40]
+id = "draft-01c3488a68567d40"
+kind = "Draft"
+label = "design/DECISION-canvas-visual-language.md"
+
+[objects.draft-01c3488a68567d40.fields]
+path = "design/DECISION-canvas-visual-language.md"
+state = "saved draft"
+
+[objects.draft-0253b61df3afe4f8]
+id = "draft-0253b61df3afe4f8"
+kind = "Draft"
+label = "design/sketches/004-canvas-oxblood-study/README.md"
+
+[objects.draft-0253b61df3afe4f8.fields]
+path = "design/sketches/004-canvas-oxblood-study/README.md"
+state = "saved draft"
+
+[objects.draft-038435909330c2ab]
+id = "draft-038435909330c2ab"
+kind = "Draft"
+label = "docs/M2-SESSION-INSTRUCTION.md"
+
+[objects.draft-038435909330c2ab.fields]
+path = "docs/M2-SESSION-INSTRUCTION.md"
+state = "saved draft"
+
+[objects.draft-0398860e343ed6ee]
+id = "draft-0398860e343ed6ee"
+kind = "Draft"
+label = "docs/M2-PLAN-REVIEW.md"
+
+[objects.draft-0398860e343ed6ee.fields]
+path = "docs/M2-PLAN-REVIEW.md"
+state = "saved draft"
+
+[objects.draft-0489dbbac5f3816f]
+id = "draft-0489dbbac5f3816f"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/cargo-test.txt"
+
+[objects.draft-0489dbbac5f3816f.fields]
+path = "evidence/gates/gate-a/logs/cargo-test.txt"
+state = "saved draft"
+
+[objects.draft-0829d5035060d1dc]
+id = "draft-0829d5035060d1dc"
+kind = "Draft"
+label = "spikes/gate-c/build/race-root/slot/data.txt"
+
+[objects.draft-0829d5035060d1dc.fields]
+path = "spikes/gate-c/build/race-root/slot/data.txt"
+state = "saved draft"
+
+[objects.draft-0a4e8bd1f452e6de]
+id = "draft-0a4e8bd1f452e6de"
+kind = "Draft"
+label = "kernel/ACCEPTANCE-M1.md"
+
+[objects.draft-0a4e8bd1f452e6de.fields]
+path = "kernel/ACCEPTANCE-M1.md"
+state = "saved draft"
+
+[objects.draft-0d39ba96f99751de]
+id = "draft-0d39ba96f99751de"
+kind = "Draft"
+label = "spikes/gate-a/fixtures/hostile/active-content.md"
+
+[objects.draft-0d39ba96f99751de.fields]
+path = "spikes/gate-a/fixtures/hostile/active-content.md"
+state = "saved draft"
+
+[objects.draft-0fbf732a5233c05a]
+id = "draft-0fbf732a5233c05a"
+kind = "Draft"
+label = "evidence/gates/gate-b/sources/helix-readme-main.md"
+
+[objects.draft-0fbf732a5233c05a.fields]
+path = "evidence/gates/gate-b/sources/helix-readme-main.md"
+state = "saved draft"
+
+[objects.draft-12e3d8b44941454f]
+id = "draft-12e3d8b44941454f"
+kind = "Draft"
+label = "kernel/SPRINT-M2-REPORT.md"
+
+[objects.draft-12e3d8b44941454f.fields]
+path = "kernel/SPRINT-M2-REPORT.md"
+state = "saved draft"
+
+[objects.draft-146ac635c38c0174]
+id = "draft-146ac635c38c0174"
+kind = "Draft"
+label = "docs/hermes-start-prompt.md"
+
+[objects.draft-146ac635c38c0174.fields]
+path = "docs/hermes-start-prompt.md"
+state = "saved draft"
+
+[objects.draft-17f1fec7726f2bbe]
+id = "draft-17f1fec7726f2bbe"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/toolchain-inventory.txt"
+
+[objects.draft-17f1fec7726f2bbe.fields]
+path = "evidence/gates/gate-a/logs/toolchain-inventory.txt"
+state = "saved draft"
+
+[objects.draft-1eb5120a724f1b68]
+id = "draft-1eb5120a724f1b68"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/npm-test.txt"
+
+[objects.draft-1eb5120a724f1b68.fields]
+path = "evidence/gates/gate-a/logs/npm-test.txt"
+state = "saved draft"
+
+[objects.draft-20872c8286239311]
+id = "draft-20872c8286239311"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/npm-run-verify.txt"
+
+[objects.draft-20872c8286239311.fields]
+path = "evidence/gates/gate-a/logs/npm-run-verify.txt"
+state = "saved draft"
+
+[objects.draft-2116a72bdf15341a]
+id = "draft-2116a72bdf15341a"
+kind = "Draft"
+label = "docs/REVIEW-m2b-app-conformance.md"
+
+[objects.draft-2116a72bdf15341a.fields]
+path = "docs/REVIEW-m2b-app-conformance.md"
+state = "saved draft"
+
+[objects.draft-23421fa89d27d296]
+id = "draft-23421fa89d27d296"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/strip-types-delta.txt"
+
+[objects.draft-23421fa89d27d296.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/strip-types-delta.txt"
+state = "saved draft"
+
+[objects.draft-23984f336508b615]
+id = "draft-23984f336508b615"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/cargo-check.txt"
+
+[objects.draft-23984f336508b615.fields]
+path = "evidence/gates/gate-a/logs/cargo-check.txt"
+state = "saved draft"
+
+[objects.draft-28efffb352f985cf]
+id = "draft-28efffb352f985cf"
+kind = "Draft"
+label = "kernel/INTERFACES-M1b.md"
+
+[objects.draft-28efffb352f985cf.fields]
+path = "kernel/INTERFACES-M1b.md"
+state = "saved draft"
+
+[objects.draft-2bfc59fd37800b05]
+id = "draft-2bfc59fd37800b05"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/imports-clean.txt"
+
+[objects.draft-2bfc59fd37800b05.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/imports-clean.txt"
+state = "saved draft"
+
+[objects.draft-2ed5caedbc2c1422]
+id = "draft-2ed5caedbc2c1422"
+kind = "Draft"
+label = "evidence/gates/gate-a/logs/native-build.txt"
+
+[objects.draft-2ed5caedbc2c1422.fields]
+path = "evidence/gates/gate-a/logs/native-build.txt"
+state = "saved draft"
+
+[objects.draft-2f813d2a7e4ecf1c]
+id = "draft-2f813d2a7e4ecf1c"
+kind = "Draft"
+label = "evidence/gates/gate-b/logs/rust-rust-tests.txt"
+
+[objects.draft-2f813d2a7e4ecf1c.fields]
+path = "evidence/gates/gate-b/logs/rust-rust-tests.txt"
+state = "saved draft"
+
+[objects.draft-3081d5b9d375fe0a]
+id = "draft-3081d5b9d375fe0a"
+kind = "Draft"
+label = "design/sketches/008-canvas-pixel-night/README.md"
+
+[objects.draft-3081d5b9d375fe0a.fields]
+path = "design/sketches/008-canvas-pixel-night/README.md"
+state = "saved draft"
+
+[objects.draft-3635fcef805aab30]
+id = "draft-3635fcef805aab30"
+kind = "Draft"
+label = "spikes/gate-a/README.md"
+
+[objects.draft-3635fcef805aab30.fields]
+path = "spikes/gate-a/README.md"
+state = "saved draft"
+
+[objects.draft-3765fe8e56e62f62]
+id = "draft-3765fe8e56e62f62"
+kind = "Draft"
+label = "app/assets/fonts/space-mono/OFL.txt"
+
+[objects.draft-3765fe8e56e62f62.fields]
+path = "app/assets/fonts/space-mono/OFL.txt"
+state = "saved draft"
+
+[objects.draft-3fffa726c331f5f6]
+id = "draft-3fffa726c331f5f6"
+kind = "Draft"
+label = "spikes/gate-a/fixtures/hostile/extracted-pdf-text.txt"
+
+[objects.draft-3fffa726c331f5f6.fields]
+path = "spikes/gate-a/fixtures/hostile/extracted-pdf-text.txt"
+state = "saved draft"
+
+[objects.draft-44d262bc1186bd99]
+id = "draft-44d262bc1186bd99"
+kind = "Draft"
+label = "app/ui/assets/fonts/geist/OFL.txt"
+
+[objects.draft-44d262bc1186bd99.fields]
+path = "app/ui/assets/fonts/geist/OFL.txt"
+state = "saved draft"
+
+[objects.draft-45863bf04224162b]
+id = "draft-45863bf04224162b"
+kind = "Draft"
+label = "docs/adr-worker-isolation.md"
+
+[objects.draft-45863bf04224162b.fields]
+path = "docs/adr-worker-isolation.md"
+state = "saved draft"
+
+[objects.draft-468882e733f58907]
+id = "draft-468882e733f58907"
+kind = "Draft"
+label = "evidence/gates/gate-b/sources/ladybug-readme-v0.21.1.md"
+
+[objects.draft-468882e733f58907.fields]
+path = "evidence/gates/gate-b/sources/ladybug-readme-v0.21.1.md"
+state = "saved draft"
+
+[objects.draft-4a69ab19dea21559]
+id = "draft-4a69ab19dea21559"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/work-wasm-sha256.txt"
+
+[objects.draft-4a69ab19dea21559.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/work-wasm-sha256.txt"
+state = "saved draft"
+
+[objects.draft-53da794eb0bba0da]
+id = "draft-53da794eb0bba0da"
+kind = "Draft"
+label = "evidence/gates/gate-b/REPORT.md"
+
+[objects.draft-53da794eb0bba0da.fields]
+path = "evidence/gates/gate-b/REPORT.md"
+state = "saved draft"
+
+[objects.draft-5533c7361d4dad1d]
+id = "draft-5533c7361d4dad1d"
+kind = "Draft"
+label = "evidence/gates/gate-c/README.md"
+
+[objects.draft-5533c7361d4dad1d.fields]
+path = "evidence/gates/gate-c/README.md"
+state = "saved draft"
+
+[objects.draft-5de5a923e2bd797c]
+id = "draft-5de5a923e2bd797c"
+kind = "Draft"
+label = "spikes/gate-c2/decision-matrix.md"
+
+[objects.draft-5de5a923e2bd797c.fields]
+path = "spikes/gate-c2/decision-matrix.md"
+state = "saved draft"
+
+[objects.draft-6ad2e174906b89a9]
+id = "draft-6ad2e174906b89a9"
+kind = "Draft"
+label = "evidence/gates/gate-b/sources/ladybug-license-v0.21.1.txt"
+
+[objects.draft-6ad2e174906b89a9.fields]
+path = "evidence/gates/gate-b/sources/ladybug-license-v0.21.1.txt"
+state = "saved draft"
+
+[objects.draft-6bb32f02da386b4e]
+id = "draft-6bb32f02da386b4e"
+kind = "Draft"
+label = "kernel/INTERFACES-M2.md"
+
+[objects.draft-6bb32f02da386b4e.fields]
+path = "kernel/INTERFACES-M2.md"
+state = "saved draft"
+
+[objects.draft-6c9f1a80c792f590]
+id = "draft-6c9f1a80c792f590"
+kind = "Draft"
+label = "evidence/gates/gate-b/logs/rust-contract.txt"
+
+[objects.draft-6c9f1a80c792f590.fields]
+path = "evidence/gates/gate-b/logs/rust-contract.txt"
+state = "saved draft"
+
+[objects.draft-6f9d553c95b5aef1]
+id = "draft-6f9d553c95b5aef1"
+kind = "Draft"
+label = "app/ui/assets/fonts/space-mono/OFL.txt"
+
+[objects.draft-6f9d553c95b5aef1.fields]
+path = "app/ui/assets/fonts/space-mono/OFL.txt"
+state = "saved draft"
+
+[objects.draft-776e38f05be95895]
+id = "draft-776e38f05be95895"
+kind = "Draft"
+label = "docs/DECISION-gate-c-scope.md"
+
+[objects.draft-776e38f05be95895.fields]
+path = "docs/DECISION-gate-c-scope.md"
+state = "saved draft"
+
+[objects.draft-7921a1cde97a49e6]
+id = "draft-7921a1cde97a49e6"
+kind = "Draft"
+label = "kernel/SPRINT-M1-REPORT.md"
+
+[objects.draft-7921a1cde97a49e6.fields]
+path = "kernel/SPRINT-M1-REPORT.md"
+state = "saved draft"
+
+[objects.draft-7dcbeea3aef07976]
+id = "draft-7dcbeea3aef07976"
+kind = "Draft"
+label = "spikes/gate-a/manual-test-protocol.md"
+
+[objects.draft-7dcbeea3aef07976.fields]
+path = "spikes/gate-a/manual-test-protocol.md"
+state = "saved draft"
+
+[objects.draft-8517a479d4bb64e8]
+id = "draft-8517a479d4bb64e8"
+kind = "Draft"
+label = "spikes/gate-c/fixtures/capability-root/allowed.txt"
+
+[objects.draft-8517a479d4bb64e8.fields]
+path = "spikes/gate-c/fixtures/capability-root/allowed.txt"
+state = "saved draft"
+
+[objects.draft-8851340429c74b8f]
+id = "draft-8851340429c74b8f"
+kind = "Draft"
+label = "app/assets/fonts/README.md"
+
+[objects.draft-8851340429c74b8f.fields]
+path = "app/assets/fonts/README.md"
+state = "saved draft"
+
+[objects.draft-88e32dbf5669c092]
+id = "draft-88e32dbf5669c092"
+kind = "Draft"
+label = "app/ui/assets/fonts/README.md"
+
+[objects.draft-88e32dbf5669c092.fields]
+path = "app/ui/assets/fonts/README.md"
+state = "saved draft"
+
+[objects.draft-8a3a02fd49ff0baf]
+id = "draft-8a3a02fd49ff0baf"
+kind = "Draft"
+label = "docs/hermes-engineering-handoff.md"
+
+[objects.draft-8a3a02fd49ff0baf.fields]
+path = "docs/hermes-engineering-handoff.md"
+state = "saved draft"
+
+[objects.draft-8cbafbdb5b0c3a61]
+id = "draft-8cbafbdb5b0c3a61"
+kind = "Draft"
+label = "kernel/ACCEPTANCE-M2.md"
+
+[objects.draft-8cbafbdb5b0c3a61.fields]
+path = "kernel/ACCEPTANCE-M2.md"
+state = "saved draft"
+
+[objects.draft-8d35a373e32ba266]
+id = "draft-8d35a373e32ba266"
+kind = "Draft"
+label = "design/sketches/005-canvas-quiet-laboratory/README.md"
+
+[objects.draft-8d35a373e32ba266.fields]
+path = "design/sketches/005-canvas-quiet-laboratory/README.md"
+state = "saved draft"
+
+[objects.draft-8e889a8107636e54]
+id = "draft-8e889a8107636e54"
+kind = "Draft"
+label = "evidence/gates/gate-b/sources/helix-license-main.txt"
+
+[objects.draft-8e889a8107636e54.fields]
+path = "evidence/gates/gate-b/sources/helix-license-main.txt"
+state = "saved draft"
+
+[objects.draft-8f78f5669767bd08]
+id = "draft-8f78f5669767bd08"
+kind = "Draft"
+label = "kernel/REVIEW-m1-slice.md"
+
+[objects.draft-8f78f5669767bd08.fields]
+path = "kernel/REVIEW-m1-slice.md"
+state = "saved draft"
+
+[objects.draft-9002c2bae1b0de03]
+id = "draft-9002c2bae1b0de03"
+kind = "Draft"
+label = "spikes/gate-c/build/broker-contract/allowed.txt"
+
+[objects.draft-9002c2bae1b0de03.fields]
+path = "spikes/gate-c/build/broker-contract/allowed.txt"
+state = "saved draft"
+
+[objects.draft-904ee0586d1a23c1]
+id = "draft-904ee0586d1a23c1"
+kind = "Draft"
+label = "spikes/gate-c/fixtures/outside.txt"
+
+[objects.draft-904ee0586d1a23c1.fields]
+path = "spikes/gate-c/fixtures/outside.txt"
+state = "saved draft"
+
+[objects.draft-947f946742342afc]
+id = "draft-947f946742342afc"
+kind = "Draft"
+label = "design/sketches/003-spatial-canvas/README.md"
+
+[objects.draft-947f946742342afc.fields]
+path = "design/sketches/003-spatial-canvas/README.md"
+state = "saved draft"
+
+[objects.draft-949e2d08cf789a6b]
+id = "draft-949e2d08cf789a6b"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/fuel-exhausted.txt"
+
+[objects.draft-949e2d08cf789a6b.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/fuel-exhausted.txt"
+state = "saved draft"
+
+[objects.draft-99d120cb1415fd58]
+id = "draft-99d120cb1415fd58"
+kind = "Draft"
+label = "design/sketches/001-atelier-carousel/README.md"
+
+[objects.draft-99d120cb1415fd58.fields]
+path = "design/sketches/001-atelier-carousel/README.md"
+state = "saved draft"
+
+[objects.draft-a1c3205ce2e6399e]
+id = "draft-a1c3205ce2e6399e"
+kind = "Draft"
+label = "kernel/INTERFACES-M2b.md"
+
+[objects.draft-a1c3205ce2e6399e.fields]
+path = "kernel/INTERFACES-M2b.md"
+state = "saved draft"
+
+[objects.draft-a570081047b9f863]
+id = "draft-a570081047b9f863"
+kind = "Draft"
+label = "spikes/gate-d/README.md"
+
+[objects.draft-a570081047b9f863.fields]
+path = "spikes/gate-d/README.md"
+state = "saved draft"
+
+[objects.draft-a6b05c2882b55640]
+id = "draft-a6b05c2882b55640"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/provider-sha256.txt"
+
+[objects.draft-a6b05c2882b55640.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/provider-sha256.txt"
+state = "saved draft"
+
+[objects.draft-a7d174328d29960e]
+id = "draft-a7d174328d29960e"
+kind = "Draft"
+label = "spikes/gate-b/rust-tauri/README.md"
+
+[objects.draft-a7d174328d29960e.fields]
+path = "spikes/gate-b/rust-tauri/README.md"
+state = "saved draft"
+
+[objects.draft-ac5094a83f1f1b7e]
+id = "draft-ac5094a83f1f1b7e"
+kind = "Draft"
+label = "spikes/gate-c/build/race-outside/data.txt"
+
+[objects.draft-ac5094a83f1f1b7e.fields]
+path = "spikes/gate-c/build/race-outside/data.txt"
+state = "saved draft"
+
+[objects.draft-ac514c0736daddc6]
+id = "draft-ac514c0736daddc6"
+kind = "Draft"
+label = "docs/EDITOR-PROVIDER-IPC.md"
+
+[objects.draft-ac514c0736daddc6.fields]
+path = "docs/EDITOR-PROVIDER-IPC.md"
+state = "saved draft"
+
+[objects.draft-ae89bb1aa49d7b57]
+id = "draft-ae89bb1aa49d7b57"
+kind = "Draft"
+label = "evidence/gates/gate-b/logs/rust-desktop-build.txt"
+
+[objects.draft-ae89bb1aa49d7b57.fields]
+path = "evidence/gates/gate-b/logs/rust-desktop-build.txt"
+state = "saved draft"
+
+[objects.draft-afd0776d86fa4fde]
+id = "draft-afd0776d86fa4fde"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/evidence/oom-trap.txt"
+
+[objects.draft-afd0776d86fa4fde.fields]
+path = "spikes/gate-c2/probe-wasm/evidence/oom-trap.txt"
+state = "saved draft"
+
+[objects.draft-bd18f458e58b9afa]
+id = "draft-bd18f458e58b9afa"
+kind = "Draft"
+label = "spikes/gate-c/build/broker-contract/oversized.txt"
+
+[objects.draft-bd18f458e58b9afa.fields]
+path = "spikes/gate-c/build/broker-contract/oversized.txt"
+state = "saved draft"
+
+[objects.draft-bdeb3b3b916355c7]
+id = "draft-bdeb3b3b916355c7"
+kind = "Draft"
+label = "design/sketches/002-workshop-console/README.md"
+
+[objects.draft-bdeb3b3b916355c7.fields]
+path = "design/sketches/002-workshop-console/README.md"
+state = "saved draft"
+
+[objects.draft-c0086734fa744576]
+id = "draft-c0086734fa744576"
+kind = "Draft"
+label = "kernel/REVIEW-m2b-kernel.md"
+
+[objects.draft-c0086734fa744576.fields]
+path = "kernel/REVIEW-m2b-kernel.md"
+state = "saved draft"
+
+[objects.draft-c2beb2ca41d68389]
+id = "draft-c2beb2ca41d68389"
+kind = "Draft"
+label = "docs/VERIFICATION-m2b-2026-10-13.md"
+
+[objects.draft-c2beb2ca41d68389.fields]
+path = "docs/VERIFICATION-m2b-2026-10-13.md"
+state = "saved draft"
+
+[objects.draft-c6c8870bab1f63dd]
+id = "draft-c6c8870bab1f63dd"
+kind = "Draft"
+label = "design/sketches/006-canvas-moss-ember/README.md"
+
+[objects.draft-c6c8870bab1f63dd.fields]
+path = "design/sketches/006-canvas-moss-ember/README.md"
+state = "saved draft"
+
+[objects.draft-c840d9614b798976]
+id = "draft-c840d9614b798976"
+kind = "Draft"
+label = "spikes/gate-c/README.md"
+
+[objects.draft-c840d9614b798976.fields]
+path = "spikes/gate-c/README.md"
+state = "saved draft"
+
+[objects.draft-c94b818722b4493f]
+id = "draft-c94b818722b4493f"
+kind = "Draft"
+label = "kernel/ACCEPTANCE-M2b.md"
+
+[objects.draft-c94b818722b4493f.fields]
+path = "kernel/ACCEPTANCE-M2b.md"
+state = "saved draft"
+
+[objects.draft-cc451577538a8685]
+id = "draft-cc451577538a8685"
+kind = "Draft"
+label = "evidence/gates/gate-b/license-screen-helix-metrics.md"
+
+[objects.draft-cc451577538a8685.fields]
+path = "evidence/gates/gate-b/license-screen-helix-metrics.md"
+state = "saved draft"
+
+[objects.draft-cd236a9539228bfd]
+id = "draft-cd236a9539228bfd"
+kind = "Draft"
+label = "evidence/gates/gate-b/logs/rust-desktop-bundle.txt"
+
+[objects.draft-cd236a9539228bfd.fields]
+path = "evidence/gates/gate-b/logs/rust-desktop-bundle.txt"
+state = "saved draft"
+
+[objects.draft-ce5e5fc8ae537ef4]
+id = "draft-ce5e5fc8ae537ef4"
+kind = "Draft"
+label = "kernel/INTERFACES.md"
+
+[objects.draft-ce5e5fc8ae537ef4.fields]
+path = "kernel/INTERFACES.md"
+state = "saved draft"
+
+[objects.draft-d3ca9234ceff9c10]
+id = "draft-d3ca9234ceff9c10"
+kind = "Draft"
+label = "spikes/gate-c2/probe-wasm/README.md"
+
+[objects.draft-d3ca9234ceff9c10.fields]
+path = "spikes/gate-c2/probe-wasm/README.md"
+state = "saved draft"
+
+[objects.draft-de9f2cae2cb03e64]
+id = "draft-de9f2cae2cb03e64"
+kind = "Draft"
+label = "spikes/gate-e/README.md"
+
+[objects.draft-de9f2cae2cb03e64.fields]
+path = "spikes/gate-e/README.md"
+state = "saved draft"
+
+[objects.draft-e011b7d9ba0e2d21]
+id = "draft-e011b7d9ba0e2d21"
+kind = "Draft"
+label = "spikes/gate-c/fixtures/ambient-secret.txt"
+
+[objects.draft-e011b7d9ba0e2d21.fields]
+path = "spikes/gate-c/fixtures/ambient-secret.txt"
+state = "saved draft"
+
+[objects.draft-ecde8de3025a5387]
+id = "draft-ecde8de3025a5387"
+kind = "Draft"
+label = "kernel/SPRINT-M2b-REPORT.md"
+
+[objects.draft-ecde8de3025a5387.fields]
+path = "kernel/SPRINT-M2b-REPORT.md"
+state = "saved draft"
+
+[objects.draft-efa2145ab7233f88]
+id = "draft-efa2145ab7233f88"
+kind = "Draft"
+label = "app/assets/fonts/geist/OFL.txt"
+
+[objects.draft-efa2145ab7233f88.fields]
+path = "app/assets/fonts/geist/OFL.txt"
+state = "saved draft"
+
+[objects.draft-f010e42be0a266dc]
+id = "draft-f010e42be0a266dc"
+kind = "Draft"
+label = "design/sketches/007-canvas-synodos-field/README.md"
+
+[objects.draft-f010e42be0a266dc.fields]
+path = "design/sketches/007-canvas-synodos-field/README.md"
+state = "saved draft"
+
+[objects.draft-f0d5d34f48b06dec]
+id = "draft-f0d5d34f48b06dec"
+kind = "Draft"
+label = "docs/M3-ACCEPTANCE.md"
+
+[objects.draft-f0d5d34f48b06dec.fields]
+path = "docs/M3-ACCEPTANCE.md"
+state = "saved draft"
+
+[objects.draft-f72cf1ba2d2e3a45]
+id = "draft-f72cf1ba2d2e3a45"
+kind = "Draft"
+label = "spikes/gate-b/README.md"
+
+[objects.draft-f72cf1ba2d2e3a45.fields]
+path = "spikes/gate-b/README.md"
+state = "saved draft"
+
+[objects.draft-f82aa806a8bbf046]
+id = "draft-f82aa806a8bbf046"
+kind = "Draft"
+label = "docs/adr-kernel-native-fs-syscalls.md"
+
+[objects.draft-f82aa806a8bbf046.fields]
+path = "docs/adr-kernel-native-fs-syscalls.md"
+state = "saved draft"
+
+[objects.draft-fc5ff47f65d83795]
+id = "draft-fc5ff47f65d83795"
+kind = "Draft"
+label = "evidence/gates/gate-b/logs/rust-dynamic-libraries.txt"
+
+[objects.draft-fc5ff47f65d83795.fields]
+path = "evidence/gates/gate-b/logs/rust-dynamic-libraries.txt"
+state = "saved draft"
+
+[objects.draft-fceb65e73ea9bab5]
+id = "draft-fceb65e73ea9bab5"
+kind = "Draft"
+label = "docs/m0-window-report.md"
+
+[objects.draft-fceb65e73ea9bab5.fields]
+path = "docs/m0-window-report.md"
+state = "saved draft"

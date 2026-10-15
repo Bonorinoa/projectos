@@ -361,16 +361,19 @@ function renderTrace() {
   traceRows = [];
   const shown = RECEIPTS.filter(traceShown);
   shown.forEach((r) => {
+    const op = r.op || r.operation || "Activity";
+    const relPath = r.rel_path || (Array.isArray(r.changed_paths) && r.changed_paths.length ? r.changed_paths.join(", ") : "Project");
     const tr = document.createElement("tr");
     tr.tabIndex = 0;
     tr.dataset.id = r.id;
-    tr.setAttribute("aria-label", `${r.op} on ${r.rel_path}: ${r.outcome}`);
-    const cr = [r.requested_model || r.route, r.resolved_model ? "resolved: " + r.resolved_model : null, r.usage_tokens != null ? r.usage_tokens + " tokens" : null, r.provider_cost_usd != null ? "$" + r.provider_cost_usd + " provider cost" : null, r.billed_usd != null ? "$" + r.billed_usd + " billed" : "billed cost unknown", r.cost_state || r.cost].filter(Boolean).join(" · ");
-    const path = `<span class="td-path">${escapeHtml(r.rel_path)}</span>` +
-      (r.content_hash ? `<span class="td-hash"> · #${escapeHtml(r.content_hash)}</span>` : "");
+    tr.setAttribute("aria-label", `${op} on ${relPath}: ${r.outcome}`);
+    const cr = [r.requested_model || r.route, r.resolved_model ? "resolved: " + r.resolved_model : null, r.usage_tokens != null ? r.usage_tokens + " tokens" : null, r.provider_cost_usd != null ? "$" + r.provider_cost_usd + " provider cost" : null, r.billed_usd != null ? "$" + r.billed_usd + " billed" : null, r.cost_state || r.cost, Array.isArray(r.capability_scope) ? r.capability_scope.join(", ") : null].filter(Boolean).join(" · ");
+    const receiptHash = r.content_hash || r.review_hash;
+    const path = `<span class="td-path">${escapeHtml(relPath)}</span>` +
+      (receiptHash ? `<span class="td-hash"> · #${escapeHtml(receiptHash)}</span>` : "");
     tr.innerHTML =
       `<td>${fmtAt(r.at)}</td>` +
-      `<td class="td-op">${escapeHtml(r.op)}</td>` +
+      `<td class="td-op">${escapeHtml(op)}</td>` +
       `<td>${path}</td>` +
       `<td><span class="td-outcome ${outcomeClass(r)}">${escapeHtml(r.outcome)}</span></td>` +
       `<td class="td-cr">${cr ? escapeHtml(cr) : "—"}</td>`;
@@ -401,7 +404,7 @@ function focusTraceRow(i) {
 }
 function openTraceDetail(r, tr) {
   if (!r) return;
-  document.getElementById("td-op").textContent = `${r.op} · ${r.rel_path}`;
+  document.getElementById("td-op").textContent = `${r.op || r.operation || "Activity"} · ${r.rel_path || (r.changed_paths || []).join(", ") || "Project"}`;
   const fields = Object.entries(r).map(([k, v]) => [k.replaceAll("_", " "), v == null ? "Unknown / not recorded" : typeof v === "object" ? JSON.stringify(v) : v]);
   const t = document.querySelector(".td-fields");
   t.innerHTML = fields.map(([k, v]) => `<tr><td class="k">${escapeHtml(k)}</td><td>${escapeHtml(v)}</td></tr>`).join("");

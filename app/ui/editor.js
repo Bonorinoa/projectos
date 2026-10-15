@@ -5,7 +5,8 @@
   const el = id => document.getElementById(id);
   let workspace = null, doc = null, status = { configured: false, online: false, busy: false, unresolved: false };
   let operationBusy = false, inFlight = false, proposal = null, proposalHash = null, prepared = null, preparedHash = null;
-  let unsavedResolver = null, streamAttempt = null, folderCreate = false;
+  let unsavedResolver = null, streamAttempt = null, folderCreate = false, folderProjectType = null;
+  let closeRequested = false, exitConfirmed = false;
   const text = el("draft-text");
   function dirty() { return invariants.isDirty(doc, text.value); }
   function message(value, error = false) { el("app-status").textContent = String(value); el("app-status").classList.toggle("error", error); }
@@ -17,6 +18,7 @@
     el("workspace-name").textContent = workspace ? workspace.name : "No project open";
     el("folder-label").textContent = workspace ? workspace.folder : "Open an existing project, or register a folder as a new project.";
     for (const id of ["open-project", "register-project"]) el(id).disabled = !api.native || busy;
+    el("software-toggle").disabled = !workspace || workspace.declared_type !== "software" || busy;
     for (const id of ["close-project", "create-draft", "draft-path", "draft-list", "refresh-project", "milestone-name", "save-milestone"]) el(id).disabled = !workspace || busy;
     text.disabled = !invariants.canEdit(doc, operationBusy);
     for (const id of ["browse-folder", "submit-folder"]) el(id).disabled = !api.native || busy;
@@ -75,7 +77,8 @@
     message(text.value === displayedSnapshot ? "Draft saved. Previous contents retained for recovery." : "Draft saved; additional typing is still unsaved.");
     return !dirty();
   }
-  async function guardChanges() {
+  async function guardChanges(fromSoftware = false) {
+    if (!fromSoftware && window.ProjectOSSoftware?.isBusy()) { message("Finish the Software operation before continuing.", true); return false; }
     if (inFlight || status.busy) { message("Cancel or finish the current request first.", true); return false; }
     if (proposal) { message("Accept or reject the current proposal before switching files or leaving this draft.", true); return false; }
     if (!dirty()) return true;
@@ -100,26 +103,34 @@
     update();
   }
   window.addEventListener("workspace-changed", e => setWorkspace(e.detail));
-  async function openWorkspace(create, folder) {
+  async function openWorkspace(create, folder, projectType = folderProjectType) {
     if (!await guardChanges()) return;
-    const value = await api.invoke("workspace_open", { create, ...(folder ? { folder } : {}) });
+    const value = await api.invoke("workspace_open", { create, ...(folder ? { folder } : {}), ...(projectType ? { projectType } : {}) });
     if (value) { el("folder-dialog").close(); loadDocument(null); message(create ? "Project registered and opened. Create or select a draft." : "Project opened. Choose a draft to begin."); }
   }
-  function chooseFolder(create) {
+  function showFolderDialog(create) {
     folderCreate = create; el("workspace-folder").value = "";
     el("folder-dialog-title").textContent = create ? "Register a new project folder" : "Open project folder";
     el("folder-dialog-description").textContent = create ? "Choose an existing folder to register as a ProjectOS project. Paste its absolute path or browse on this computer." : "Choose an existing project folder. Paste its absolute path or browse on this computer.";
     el("submit-folder").textContent = create ? "Register project" : "Open folder";
     el("folder-dialog").showModal(); el("workspace-folder").focus();
   }
+  function chooseFolder(create) {
+    if (create) { folderProjectType = null; el("project-type-dialog").showModal(); el("project-type-substack").focus(); return; }
+    folderProjectType = null; showFolderDialog(false);
+  }
   el("open-project").onclick = () => chooseFolder(false);
   el("register-project").onclick = () => chooseFolder(true);
+  el("cancel-project-type").onclick = () => el("project-type-dialog").close();
+  for (const [id, projectType] of [["project-type-substack", "publication"], ["project-type-software", "software"]]) {
+    el(id).onclick = () => { folderProjectType = projectType; el("project-type-dialog").close(); showFolderDialog(true); };
+  }
   el("cancel-folder").onclick = () => el("folder-dialog").close();
-  el("browse-folder").onclick = () => run(() => openWorkspace(folderCreate));
+  el("browse-folder").onclick = () => run(() => openWorkspace(folderCreate, undefined, folderProjectType));
   el("folder-form").onsubmit = e => {
     e.preventDefault(); const folder = el("workspace-folder").value.trim();
     if (!folder) { message("Paste an absolute folder path, or use Browse.", true); return; }
-    run(() => openWorkspace(folderCreate, folder));
+    run(() => openWorkspace(folderCreate, folder, folderProjectType));
   };
   el("close-project").onclick = () => run(async () => { if (await guardChanges()) { await api.invoke("workspace_close"); loadDocument(null); message("Project closed."); } });
   el("draft-list").onchange = () => {
@@ -139,7 +150,7 @@
   el("refresh-project").onclick = () => run(async () => { await api.invoke("workspace_refresh"); await refreshStatus(); message("Project file list and saved activity refreshed. Your editor text is unchanged."); });
   el("save-draft").onclick = () => run(save);
   el("reload-draft").onclick = () => run(async () => { if (await guardChanges()) { loadDocument(await api.invoke("draft_open", { relPath: doc.rel_path })); message("Draft reloaded from disk."); } });
-  el("export-draft").onclick = () => run(async () => { if (await guardChanges()) { await api.invoke("draft_export", { relPath: doc.rel_path }); message("Export dialog closed. The export uses the saved draft on disk."); } });
+  el("export-draft").onclick = () => run(async () => { if (await guardChanges()) { const destination = await api.invoke("draft_export", { relPath: doc.rel_path }); message(destination == null ? "Export cancelled. No export file was written." : `Saved draft exported to ${destination}`); } });
   el("save-milestone").onclick = () => run(async () => {
     const name = el("milestone-name").value.trim(); if (!name) throw new Error("Give this milestone a name.");
     if (!await guardChanges()) return;
@@ -255,11 +266,31 @@
     await api.invoke("provider_reconcile", { attemptId: e.detail }); await api.invoke("workspace_refresh"); await refreshStatus();
     message("Unresolved request acknowledged. No request repeated. Actual provider billing may still be unknown.");
   }));
-  window.addEventListener("beforeunload", e => { if (invariants.needsCloseGuard(doc, text.value, proposal, inFlight, operationBusy)) { e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("beforeunload", e => { if (!exitConfirmed && invariants.needsCloseGuard(doc, text.value, proposal, inFlight, operationBusy)) { e.preventDefault(); e.returnValue = ""; } });
+  async function requestAppClose() {
+    // Cmd+Q and window Close can arrive together. One request owns the modal
+    // and the save/confirm sequence; another cannot bypass or duplicate it.
+    if (closeRequested) return;
+    if (operationBusy || window.ProjectOSSoftware?.isBusy()) { message("Finish the current file operation before closing.", true); return; }
+    closeRequested = true;
+    try {
+      await run(async () => {
+        if (!await guardChanges()) return;
+        await api.invoke("app_confirm_exit");
+        exitConfirmed = true;
+      });
+    } finally { closeRequested = false; }
+  }
   async function startup() {
     update();
     if (!api.native) { message("Browser preview only. Open ProjectOS desktop to edit project files and connect OpenRouter."); return; }
     try {
+      await api.listenClose(requestAppClose);
+      const currentWindow = window.__TAURI__?.window?.getCurrentWindow?.();
+      if (currentWindow?.onCloseRequested) await currentWindow.onCloseRequested(event => {
+        event.preventDefault();
+        return requestAppClose();
+      });
       await refreshStatus();
       await api.listenProgress(payload => {
         if (!inFlight || !payload || typeof payload.text !== "string") return;
@@ -269,15 +300,14 @@
         el("proposal-original").textContent = ""; el("proposal-text").textContent = payload.text;
         el("proposal-facts").textContent = "Request in progress. Usage and provider cost are not yet known.";
       });
-      const currentWindow = window.__TAURI__?.window?.getCurrentWindow?.();
-      if (currentWindow?.onCloseRequested) await currentWindow.onCloseRequested(async event => {
-        if (!invariants.needsCloseGuard(doc, text.value, proposal, inFlight, operationBusy)) return;
-        event.preventDefault();
-        if (operationBusy) { message("Finish the current file operation before closing.", true); return; }
-        await run(async () => { if (await guardChanges()) { doc = null; await currentWindow.destroy(); } });
-      });
       message("Open a project to start. Online access is off until you enable it.");
     } catch (error) { message(error?.message || String(error), true); }
+  }
+  window.ProjectOSEditor = { guardChanges };
+  if (window.ProjectOSSoftware) {
+    window.ProjectOSSoftware.init({ bridge: api, onBeforeAction: () => guardChanges(true), project: api.workspace() });
+    window.addEventListener("workspace-changed", e => window.ProjectOSSoftware.setProject(e.detail));
+    el("software-toggle").onclick = () => window.ProjectOSSoftware.open().catch(error => message(error?.message || String(error), true));
   }
   startup();
 })();

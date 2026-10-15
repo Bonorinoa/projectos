@@ -2,6 +2,9 @@
 mod credentials;
 mod provider_transport;
 mod workspace;
+mod software;
+mod software_commands;
+use software_commands::{software_status,software_create_worktree,software_review,software_export_review};
 use std::sync::Mutex;
 use projectos_kernel::{proposals::{Proposal,ProposalKind},selection::DocAnchor};
 use provider_transport::{LiveRequest,ModelInfo};
@@ -11,7 +14,7 @@ use tokio::sync::watch;
 use workspace::{Attempt,Document,Workspace,WorkspaceView};
 const ENDPOINT:&str="https://openrouter.ai/api/v1/chat/completions";
 #[derive(Default)] struct AppState { inner:Mutex<Inner> }
-#[derive(Default)] struct Inner { workspace:Option<Workspace>,online:bool,active:Option<Active>,prepared:Option<Prepared>,proposals:std::collections::HashMap<String,Pending> }
+#[derive(Default)] struct Inner { workspace:Option<Workspace>,software:Option<software::SoftwareBroker>,software_receipt_blocked:bool,online:bool,active:Option<Active>,prepared:Option<Prepared>,proposals:std::collections::HashMap<String,Pending>,exit_approved:bool }
 struct Active { id:String,cancel:watch::Sender<bool> }
 #[derive(Clone)] struct Prepared {view:PreparedView,anchor:DocAnchor,system:String,pricing:ModelInfo,project_uuid:String}
 struct Pending {anchor:DocAnchor,proposal:Proposal,result:ProposalResult}
@@ -24,17 +27,38 @@ fn workspace_mut(i:&mut Inner)->Result<&mut Workspace,String>{i.workspace.as_mut
 fn idle(i:&Inner)->Result<(),String>{if i.active.is_some(){Err("Cancel or finish the current request first.".into())}else{Ok(())}}
 fn status(i:&Inner)->Result<ProviderStatus,String>{Ok(ProviderStatus{configured:credentials::configured()?,online:i.online,busy:i.active.is_some(),unresolved:i.workspace.as_ref().is_some_and(Workspace::unresolved),endpoint:ENDPOINT})}
 #[tauri::command]
-async fn workspace_open(folder:Option<String>,create:bool,state:State<'_,AppState>)->Result<Option<WorkspaceView>,String>{
+async fn workspace_open(folder:Option<String>,create:bool,project_type:Option<String>,state:State<'_,AppState>)->Result<Option<WorkspaceView>,String>{
     {let i=locked(&state)?;idle(&i)?;}
+    if create && project_type.is_none(){return Err("Choose Substack or Software before registering a new project.".into())}
     let chosen=match folder{Some(f)=>Some(std::path::PathBuf::from(f)),None=>tauri::async_runtime::spawn_blocking(||rfd::FileDialog::new().set_title("Choose a ProjectOS project folder").pick_folder()).await.map_err(|_|"Folder picker could not open.")?};
     let Some(folder)=chosen else{return Ok(None)};
     let mut i=locked(&state)?;idle(&i)?;
     if i.workspace.as_ref().is_some_and(|w|std::fs::canonicalize(&folder).ok().as_ref()==Some(&w.project.folder)){return i.workspace.as_ref().unwrap().view().map(Some)}
-    let new=Workspace::open(&folder,create)?;let view=new.view()?;
-    i.workspace=Some(new);i.prepared=None;i.proposals.clear();Ok(Some(view))
+    let new=Workspace::open_typed(&folder,create,project_type.as_deref())?;let view=new.view()?;
+    i.workspace=Some(new);i.software=None;i.software_receipt_blocked=false;i.prepared=None;i.proposals.clear();Ok(Some(view))
 }
 #[tauri::command] fn workspace_refresh(state:State<AppState>)->Result<WorkspaceView,String>{let mut i=locked(&state)?;workspace_mut(&mut i)?.view()}
-#[tauri::command] fn workspace_close(state:State<AppState>)->Result<(),String>{let mut i=locked(&state)?;idle(&i)?;i.workspace=None;i.prepared=None;i.proposals.clear();Ok(())}
+#[tauri::command] fn workspace_close(state:State<AppState>)->Result<(),String>{let mut i=locked(&state)?;idle(&i)?;i.workspace=None;i.software=None;i.software_receipt_blocked=false;i.prepared=None;i.proposals.clear();Ok(())}
+#[tauri::command]
+fn app_confirm_exit<R:tauri::Runtime>(app:tauri::AppHandle<R>,state:State<AppState>)->Result<(),String>{
+    approve_exit(&state)?;
+    app.exit(0);
+    Ok(())
+}
+fn approve_exit(state:&AppState)->Result<(),String>{
+    {
+        let mut inner=locked(state)?;
+        idle(&inner)?;
+        if !inner.proposals.is_empty(){return Err("Accept or reject the current proposal before quitting.".into());}
+        // Tauri may terminate without Rust destructors after app.exit(). Release
+        // the writer session now so a normal quit never leaves a stale lock.
+        inner.workspace=None;
+        inner.software=None;
+        inner.prepared=None;
+        inner.exit_approved=true;
+    }
+    Ok(())
+}
 #[tauri::command] fn draft_open(rel_path:String,state:State<AppState>)->Result<Document,String>{let mut i=locked(&state)?;workspace_mut(&mut i)?.read(&rel_path)}
 #[tauri::command] fn draft_create(rel_path:String,state:State<AppState>)->Result<Document,String>{let mut i=locked(&state)?;idle(&i)?;i.prepared=None;workspace_mut(&mut i)?.create(&rel_path)}
 #[tauri::command] fn draft_save(rel_path:String,expected_hash:String,text:String,state:State<AppState>)->Result<Document,String>{let mut i=locked(&state)?;idle(&i)?;i.prepared=None;workspace_mut(&mut i)?.save(&rel_path,&expected_hash,&text)}
@@ -76,7 +100,7 @@ async fn action_prepare(rel_path:String,expected_hash:String,byte_start:usize,by
  i.prepared=Some(Prepared{view:view.clone(),anchor,system:system.into(),pricing,project_uuid});Ok(view)
 }
 #[tauri::command]
-async fn action_execute(prepared_id:String,app:tauri::AppHandle,state:State<'_,AppState>)->Result<ProposalResult,String>{
+async fn action_execute<R:tauri::Runtime>(prepared_id:String,app:tauri::AppHandle<R>,state:State<'_,AppState>)->Result<ProposalResult,String>{
  let(p,mut receipt,cancel)={let mut i=locked(&state)?;idle(&i)?;
   if !i.online{return Err("Live AI is off. Nothing was sent.".into())}
   let p=i.prepared.as_ref().filter(|p|p.view.id==prepared_id).cloned().ok_or("Prepare and review the request before sending.")?;
@@ -118,7 +142,52 @@ async fn draft_export(rel_path:String,state:State<'_,AppState>)->Result<Option<S
  let written=(||{file.write_all(doc.text.as_bytes())?;file.sync_all()?;std::fs::rename(&temp,&to)})().map_err(|_|"Could not export the draft.");
  if written.is_err(){let _=std::fs::remove_file(&temp);}written?;Ok(Some(to.to_string_lossy().into()))
 }
-fn main(){tauri::Builder::default().manage(AppState::default()).invoke_handler(tauri::generate_handler![workspace_open,workspace_refresh,workspace_close,draft_open,draft_create,draft_save,artifact_annotation,provider_status,provider_set_online,provider_store_key,provider_forget_key,action_prepare,action_execute,action_cancel,action_decide,provider_reconcile,draft_milestone,draft_export]).run(tauri::generate_context!()).expect("ProjectOS could not launch");}
+fn app_builder<R:tauri::Runtime>(builder:tauri::Builder<R>)->tauri::Builder<R>{
+    builder.manage(AppState::default()).invoke_handler(tauri::generate_handler![workspace_open,workspace_refresh,workspace_close,app_confirm_exit,draft_open,draft_create,draft_save,artifact_annotation,provider_status,provider_set_online,provider_store_key,provider_forget_key,action_prepare,action_execute,action_cancel,action_decide,provider_reconcile,draft_milestone,draft_export,software_status,software_create_worktree,software_review,software_export_review])
+}
+#[cfg(target_os="macos")]
+fn install_quit_menu(app:&tauri::App)->tauri::Result<()>{
+    use tauri::menu::{Menu,MenuItem,PredefinedMenuItem as Standard,Submenu};
+    // AppKit's predefined Quit calls terminate: directly, bypassing Tauri's
+    // cancellable ExitRequested event. Retain the standard editing/window
+    // menus, but replace the macOS application submenu with a reviewed Quit.
+    let menu=Menu::default(app.handle())?;
+    menu.remove_at(0)?;
+    let quit=MenuItem::with_id(app,"projectos_quit","Quit ProjectOS",true,Some("CmdOrCtrl+Q"))?;
+    let application=Submenu::with_items(app,"ProjectOS",true,&[
+        &Standard::about(app,Some("About ProjectOS"),None)?,
+        &Standard::separator(app)?,&Standard::services(app,None)?,
+        &Standard::separator(app)?,&Standard::hide(app,None)?,&Standard::hide_others(app,None)?,
+        &Standard::separator(app)?,&quit,
+    ])?;
+    menu.insert(&application,0)?;
+    app.set_menu(menu)?;
+    app.on_menu_event(|app,event|{
+        if event.id().as_ref()=="projectos_quit"{let _=app.emit("app-close-requested",());}
+    });
+    Ok(())
+}
+fn main(){
+    use tauri::Manager;
+    let builder=app_builder(tauri::Builder::default());
+    #[cfg(target_os="macos")]
+    let builder=builder.setup(|app|{install_quit_menu(app)?;Ok(())});
+    builder.build(tauri::generate_context!()).expect("ProjectOS could not launch")
+        .run(|app,event|{
+            if let tauri::RunEvent::ExitRequested {api,..}=event {
+                let approved=app.state::<AppState>().inner.lock().map(|inner|inner.exit_approved).unwrap_or(false);
+                if !approved && app.get_webview_window("main").is_some(){
+                    api.prevent_exit();
+                    // Ask the trusted renderer to review unsaved text even for
+                    // application Quit / Cmd-Q, which bypasses window-close events.
+                    let _=app.emit("app-close-requested",());
+                }
+            }
+        });
+}
+
+#[cfg(test)]
+mod command_tests;
 
 #[cfg(test)]
 mod integration_tests {

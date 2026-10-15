@@ -1,0 +1,33 @@
+/* Synodos Field surfaces and type for the local Software workbench. */
+.software-workspace{width:1040px;max-width:94vw;padding:22px;line-height:1.5}
+.software-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.software-heading h2{margin:0;font-size:22px}
+.software-heading button{flex:none}
+.software-workspace .software-intro{margin:10px 0 16px;font-size:14px}
+.software-message{padding:10px 12px;background:var(--pos-field);border-left:3px solid var(--pos-moss);overflow-wrap:anywhere;min-height:42px}
+.software-message.error{border-color:var(--pos-rust)}
+.software-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.software-block{min-width:0;padding:16px;border:1px solid var(--pos-ink);border-radius:var(--pos-radius);background:var(--pos-surface)}
+.software-workspace .software-block h3{font-size:15px;margin:0 0 10px}
+.software-workspace .software-note{font-size:13px;margin:8px 0 14px}
+.software-workspace .software-facts{display:grid;grid-template-columns:125px minmax(0,1fr);gap:7px;font-size:12px;margin:12px 0}
+.software-facts dd{font-family:var(--pos-font-mono);font-size:11px;overflow-wrap:anywhere}
+.software-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.software-workspace .software-actions button{margin:0}
+.software-workspace #software-create,.software-workspace #software-export{background:var(--pos-gold)}
+.software-dirty{font-size:13px;margin:12px 0 16px}
+.software-workspace summary{cursor:pointer;padding:7px 0;overflow-wrap:anywhere;font-size:13px}
+.software-workspace summary:focus-visible{outline:3px solid var(--pos-gold);outline-offset:2px}
+.software-dirty ul,.software-notes{padding-left:22px;font-size:12px;overflow-wrap:anywhere}
+.software-dirty li{font-family:var(--pos-font-mono);font-size:11px;margin:5px 0}
+.software-review-panel,.software-held{margin-top:16px}
+.software-held{border-style:dashed}
+.software-file{padding:8px 12px;margin:12px 0;border:1px solid var(--pos-line);background:var(--pos-field);border-radius:3px}
+.software-file summary{font-weight:600}
+.software-workspace .software-diff{font:12px/1.65 var(--pos-font-mono);white-space:pre;overflow:auto;max-height:420px;margin:12px 0;border:1px solid var(--pos-line);background:var(--pos-surface);padding:12px}
+.software-diff span{display:inline}
+.software-diff .software-add{background:#d9e9db;color:#1c4f31}
+.software-diff .software-remove{background:#f5ddd4;color:#80381f}
+.software-workspace [hidden]{display:none!important}
+@media(max-width:700px){.software-workspace{max-width:96vw;padding:16px}.software-columns{grid-template-columns:1fr}.software-workspace .software-facts{grid-template-columns:1fr;gap:3px}.software-facts dd{margin-bottom:7px}.software-heading h2{font-size:19px}.software-block{padding:12px}}
+@media(prefers-reduced-motion:reduce){.software-workspace,.software-workspace *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

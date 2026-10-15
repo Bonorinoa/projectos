@@ -27,6 +27,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 tokio = { version = "1", features = ["sync", "time", "macros"] }
 futures-util = "0.3"
 zeroize = "1"
+sha2 = "0.10"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3.6", features = ["apple-native"] }
@@ -36,6 +37,14 @@ keyring = { version = "3.6", features = ["sync-secret-service", "crypto-rust"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+# The pinned macOS MockRuntime needs this test-only feature to implement the
+# current runtime's WindowBuilder trait. Production dependencies stay unchanged.
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+tauri = { version = "=2.12.0", features = ["test", "macos-private-api"] }
+
+[target.'cfg(not(target_os = "macos"))'.dev-dependencies]
+tauri = { version = "=2.12.0", features = ["test"] }
 
 [features]
 default = []
