@@ -9,7 +9,10 @@
   let closeRequested = false, exitConfirmed = false;
   const text = el("draft-text");
   function dirty() { return invariants.isDirty(doc, text.value); }
-  function message(value, error = false) { el("app-status").textContent = String(value); el("app-status").classList.toggle("error", error); }
+  function message(value, error = false) {
+    el("app-status").textContent = String(value); el("app-status").classList.toggle("error", error);
+    if (el("folder-dialog").open) el("folder-error").textContent = error ? String(value) : "";
+  }
   function requestOptions() {
     return invariants.requestOptions(el("provider-model").value, el("max-tokens").value, el("ceiling-usd").value);
   }
@@ -110,6 +113,7 @@
   }
   function showFolderDialog(create) {
     folderCreate = create; el("workspace-folder").value = "";
+    el("folder-error").textContent = "";
     el("folder-dialog-title").textContent = create ? "Register a new project folder" : "Open project folder";
     el("folder-dialog-description").textContent = create ? "Choose an existing folder to register as a ProjectOS project. Paste its absolute path or browse on this computer." : "Choose an existing project folder. Paste its absolute path or browse on this computer.";
     el("submit-folder").textContent = create ? "Register project" : "Open folder";

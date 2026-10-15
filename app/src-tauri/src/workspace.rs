@@ -73,9 +73,9 @@ impl Workspace {
         Self::open_typed(folder, create, if create { Some("publication") } else { None })
     }
     pub fn open_typed(folder: &Path, create: bool, project_type: Option<&str>) -> Result<Self,String> {
-        let root = std::fs::canonicalize(folder).map_err(err)?;
+        let root = std::fs::canonicalize(folder).map_err(|_| "The folder could not be opened. Check that it exists and that ProjectOS has permission to read it.".to_string())?;
         // Refuse a malicious sidecar before invoking the legacy registry.
-        let files = DocumentStore::open(&root).map_err(err)?;
+        let files = DocumentStore::open(&root).map_err(|_| "ProjectOS cannot read this folder. Check its permissions or choose another project folder.".to_string())?;
         let manifest=files.read_metadata("project.toml").map_err(err)?;
         let supplied = match project_type {
             Some(value @ ("publication" | "software")) => Some(value),

@@ -33,7 +33,12 @@ async fn workspace_open(folder:Option<String>,create:bool,project_type:Option<St
     let chosen=match folder{Some(f)=>Some(std::path::PathBuf::from(f)),None=>tauri::async_runtime::spawn_blocking(||rfd::FileDialog::new().set_title("Choose a ProjectOS project folder").pick_folder()).await.map_err(|_|"Folder picker could not open.")?};
     let Some(folder)=chosen else{return Ok(None)};
     let mut i=locked(&state)?;idle(&i)?;
-    if i.workspace.as_ref().is_some_and(|w|std::fs::canonicalize(&folder).ok().as_ref()==Some(&w.project.folder)){return i.workspace.as_ref().unwrap().view().map(Some)}
+    if let Some(workspace)=i.workspace.as_ref().filter(|w|std::fs::canonicalize(&folder).ok().as_ref()==Some(&w.project.folder)) {
+        if project_type.as_deref().is_some_and(|requested|requested!=workspace.project.envelope.declared_type) {
+            return Err(format!("This project is registered as {}; reopen it without changing its type.",workspace.project.envelope.declared_type));
+        }
+        return workspace.view().map(Some)
+    }
     let new=Workspace::open_typed(&folder,create,project_type.as_deref())?;let view=new.view()?;
     i.workspace=Some(new);i.software=None;i.software_receipt_blocked=false;i.prepared=None;i.proposals.clear();Ok(Some(view))
 }

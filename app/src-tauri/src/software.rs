@@ -440,5 +440,31 @@ mod tests {
         let (_dir,mut broker)=fixture(); fs::create_dir(broker.root.join(".projectos")).unwrap(); fs::write(broker.root.join(".projectos/project.toml"),"private graph state").unwrap();
         git(&broker.root,&["add","--force",".projectos/project.toml"],false).unwrap(); git(&broker.root,&["commit","-qm","metadata fixture"],false).unwrap();
         let info=broker.create_worktree(true).unwrap(); assert!(!Path::new(&info.path).join(".projectos").exists());
+        fs::write(Path::new(&info.path).join("draft.txt"),"reviewable\n").unwrap();
+        let review=broker.review(&info.id).unwrap();assert_eq!(review.files.len(),1);
+        assert!(!broker.export_review(&review.id,&review.content_hash).unwrap().contains(".projectos"));
+    }
+
+    #[test]
+    fn stale_head_oversized_changes_and_unusual_names_are_bounded() {
+        let (_dir,mut broker)=fixture();let info=broker.create_worktree(true).unwrap();let stage=Path::new(&info.path);
+        fs::write(stage.join("space \"quote\" café.txt"),"literal text\n").unwrap();
+        let reviewed=broker.review(&info.id).unwrap();
+        let patch=broker.export_review(&reviewed.id,&reviewed.content_hash).unwrap();
+        let patch_path=broker.staging_parent.join("unusual.patch");fs::write(&patch_path,patch).unwrap();
+        git(&broker.root,&["apply","--check",patch_path.to_str().unwrap()],false).unwrap();
+        fs::write(stage.join("oversized"),vec![b'x';LIMIT+1]).unwrap();assert!(broker.review(&info.id).is_err());
+        fs::remove_file(stage.join("oversized")).unwrap();
+        git(&broker.root,&["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","--allow-empty","-qm","new head"],false).unwrap();
+        assert!(broker.export_review(&reviewed.id,&reviewed.content_hash).unwrap_err().contains("HEAD changed"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn symlinked_git_metadata_is_refused_before_git_runs() {
+        use std::os::unix::fs::symlink;
+        let (_dir,broker)=fixture();let config=broker.root.join(".git/config");let outside=broker.staging_parent.join("config");
+        fs::rename(&config,&outside).unwrap();symlink(&outside,&config).unwrap();
+        assert!(broker.inspect().unwrap_err().contains("Unsafe Git metadata"));
     }
 }

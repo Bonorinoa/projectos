@@ -30,11 +30,91 @@ fn dispatcher_requires_and_binds_camel_case_project_type() {
     let opened=invoke(&window,"workspace_open",json!({"folder":root.path().to_str().unwrap(),"create":true,"projectType":"software"})).unwrap();
     assert_eq!(opened["declared_type"],"software");
     assert!(opened["software_receipts"].as_array().unwrap().is_empty());
+    let same_project_mismatch=invoke(&window,"workspace_open",json!({"folder":root.path().to_str().unwrap(),"create":false,"projectType":"publication"})).unwrap_err();
+    assert!(same_project_mismatch.as_str().unwrap().contains("registered as software"));
     invoke(&window,"workspace_close",json!({})).unwrap();
     let mismatch=invoke(&window,"workspace_open",json!({"folder":root.path().to_str().unwrap(),"create":false,"projectType":"publication"})).unwrap_err();
     assert!(mismatch.as_str().unwrap().contains("registered as software"));
     let reopened=invoke(&window,"workspace_open",json!({"folder":root.path().to_str().unwrap(),"create":false})).unwrap();
     assert_eq!(reopened["declared_type"],"software");
+}
+
+fn software_fixture()->(tempfile::TempDir,tauri::App<MockRuntime>,tauri::WebviewWindow<MockRuntime>) {
+    let root=tempfile::tempdir().unwrap();
+    let git=|args:&[&str]| {
+        let out=std::process::Command::new("/usr/bin/git").env_clear().env("PATH","/usr/bin:/bin").env("HOME","/nonexistent")
+            .env("GIT_CONFIG_NOSYSTEM","1").env("GIT_CONFIG_GLOBAL","/dev/null").arg("-C").arg(root.path()).args(args).output().unwrap();
+        assert!(out.status.success(),"{}",String::from_utf8_lossy(&out.stderr));
+    };
+    git(&["init","-q"]);git(&["config","user.name","Fixture"]);git(&["config","user.email","fixture@example.invalid"]);
+    std::fs::write(root.path().join("draft.md"),"canonical\n").unwrap();git(&["add","draft.md"]);git(&["commit","-qm","bootstrap"]);
+    let (app,window)=app();
+    invoke(&window,"workspace_open",json!({"folder":root.path().to_str().unwrap(),"create":true,"projectType":"software"})).unwrap();
+    (root,app,window)
+}
+
+#[test]
+fn software_dispatch_records_refusal_and_preserves_project_isolation() {
+    let (root,app,window)=software_fixture();
+    assert!(invoke(&window,"software_create_worktree",json!({"confirmed":false})).is_err());
+    let stage=invoke(&window,"software_create_worktree",json!({"confirmed":true})).unwrap();
+    std::fs::write(std::path::Path::new(stage["path"].as_str().unwrap()).join("draft.md"),"staged\n").unwrap();
+    let review=invoke(&window,"software_review",json!({"worktreeId":stage["id"]})).unwrap();
+    let view=invoke(&window,"workspace_refresh",json!({})).unwrap();
+    let receipts=view["software_receipts"].as_array().unwrap();
+    assert_eq!(receipts.len(),3);assert_eq!(receipts[0]["outcome"],"refused");
+    assert_eq!(receipts[2]["run_id"],stage["id"]);assert_eq!(receipts[2]["review_hash"],review["content_hash"]);
+    assert_eq!(receipts[2]["changed_paths"],json!(["draft.md"]));
+    let serialized=serde_json::to_string(receipts).unwrap();
+    assert!(!serialized.contains(root.path().to_str().unwrap()));assert!(!serialized.contains(stage["path"].as_str().unwrap()));
+    std::fs::write(std::path::Path::new(stage["path"].as_str().unwrap()).join("draft.md"),"stale staging\n").unwrap();
+    assert!(invoke(&window,"software_export_review",json!({"reviewId":review["id"],"contentHash":review["content_hash"]})).unwrap_err().as_str().unwrap().contains("Worktree content changed"));
+    let refreshed=invoke(&window,"workspace_refresh",json!({})).unwrap();
+    let refusal=refreshed["software_receipts"].as_array().unwrap().last().unwrap();
+    assert_eq!(refusal["outcome"],"refused");assert_eq!(refusal["run_id"],stage["id"]);
+    assert_eq!(refusal["base_head"],review["base_head"]);assert_eq!(refusal["changed_paths"],json!(["draft.md"]));
+    assert_eq!(std::fs::read_to_string(root.path().join("draft.md")).unwrap(),"canonical\n");
+    assert!(invoke(&window,"software_apply",json!({})).is_err());
+    drop(app);
+}
+
+#[test]
+fn created_worktree_receipt_failure_reports_partial_effect_and_blocks_retry() {
+    let (root,app,window)=software_fixture();
+    std::fs::create_dir(root.path().join(".projectos/software-receipts.toml")).unwrap();
+    let error=invoke(&window,"software_create_worktree",json!({"confirmed":true})).unwrap_err();
+    assert!(error.as_str().unwrap().contains("Worktree created at"));
+    assert!(error.as_str().unwrap().contains("Do not repeat creation blindly"));
+    assert!(locked(&app.state::<AppState>()).unwrap().software_receipt_blocked);
+    assert!(invoke(&window,"software_create_worktree",json!({"confirmed":true})).unwrap_err().as_str().unwrap().contains("prior Software effect"));
+    assert_eq!(std::fs::read_to_string(root.path().join("draft.md")).unwrap(),"canonical\n");
+}
+
+#[test]
+fn export_revalidates_and_receipts_post_dialog_refusals_and_partial_success() {
+    let (root,app,window)=software_fixture();
+    let stage=invoke(&window,"software_create_worktree",json!({"confirmed":true})).unwrap();
+    let path=std::path::Path::new(stage["path"].as_str().unwrap()).join("draft.md");
+    std::fs::write(&path,"staged\n").unwrap();
+    let review=invoke(&window,"software_review",json!({"worktreeId":stage["id"]})).unwrap();
+    let state=app.state::<AppState>();let mut inner=locked(&state).unwrap();
+    let binding=inner.software.as_ref().unwrap().review_binding(review["id"].as_str().unwrap()).unwrap();
+    let destination=root.path().join("../").join(format!("projectos-export-{}.patch",uuid::Uuid::new_v4()));
+    std::fs::write(&path,"changed after review\n").unwrap();
+    assert!(software_commands::export_to(&mut inner,&binding,&binding.content_hash,&destination).unwrap_err().contains("Worktree content changed"));
+    assert!(!destination.exists());
+    std::fs::write(&path,"staged\n").unwrap();
+    let wrong=root.path().join("wrong.txt");
+    assert!(software_commands::export_to(&mut inner,&binding,&binding.content_hash,&wrong).is_err());
+    assert!(!wrong.exists());
+    std::fs::remove_file(root.path().join(".projectos/software-receipts.toml")).unwrap();
+    std::fs::create_dir(root.path().join(".projectos/software-receipts.toml")).unwrap();
+    let error=software_commands::export_to(&mut inner,&binding,&binding.content_hash,&destination).unwrap_err();
+    assert!(error.contains("Patch written, but its receipt could not be saved"));
+    assert!(destination.exists());assert!(inner.software_receipt_blocked);
+    assert!(software_commands::export_to(&mut inner,&binding,&binding.content_hash,&destination).unwrap_err().contains("prior Software effect"));
+    assert_eq!(std::fs::read_to_string(root.path().join("draft.md")).unwrap(),"canonical\n");
+    std::fs::remove_file(destination).unwrap();
 }
 
 #[test]

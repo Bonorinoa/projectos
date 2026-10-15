@@ -246,6 +246,7 @@ body{overflow:hidden;background:var(--pos-field);color:var(--pos-ink);font-famil
   <form id="folder-form"><h2 id="folder-dialog-title">Open project folder</h2>
   <p id="folder-dialog-description">Choose an existing folder. You can paste its absolute path or browse on this computer.</p>
   <label for="workspace-folder">Folder path</label><input id="workspace-folder" autocomplete="off" spellcheck="false" placeholder="Paste an absolute folder path" required>
+  <p id="folder-error" role="alert"></p>
   <div class="editor-buttons"><button type="button" id="cancel-folder">Cancel</button><button type="button" id="browse-folder">Browse…</button><button type="submit" id="submit-folder">Open folder</button></div></form>
 </dialog>
 <dialog id="provider-dialog" aria-labelledby="provider-title">

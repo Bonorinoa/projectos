@@ -45,3 +45,14 @@ dialog::backdrop{background:rgba(25,40,37,.6)}dialog h2{font-size:20px;margin-bo
 #empty-field{position:absolute;left:28px;top:24px;max-width:440px;padding:18px;background:var(--pos-surface);border:1px solid var(--pos-ink);border-radius:var(--pos-radius);box-shadow:var(--pos-shadow);line-height:1.7}
 
 .artifact-open,.reconcile-button{margin:14px 0 8px;padding:9px 12px;background:var(--pos-gold);color:var(--pos-ink);border:1px solid var(--pos-ink);border-radius:3px;font:13px var(--pos-font-ui);cursor:pointer;box-shadow:2px 2px 0 var(--pos-chrome-2)}
+
+/* Keep the locked palette; use its primary ink for readable functional text. */
+#listpanel caption,.trace-table caption,.trace-count,.hint,.lrowkey,.td-hash,.td-cr,
+#insp td.k,.td-fields td.k,#insp .typ,#tracedetail .typ,.td-rel b,.td-path b,
+.td-outcome.denied,.td-outcome.unknown,.td-outcome.ok,#proposal-warning{color:var(--pos-ink)}
+#listpanel th,.trace-table th,.td-op,.td-type,.td-outcome,.td-hash,.lrowkey{font-size:11px}
+#listpanel caption,.trace-table caption,.trace-count{font-size:12px;text-transform:none;letter-spacing:.02em}
+#listpanel table,.trace-table{font-size:12px}
+#folder-error{color:var(--pos-ink);font-weight:600}
+#folder-error:empty{display:none}
+#app-status.error{background:var(--pos-chrome);border-top:3px solid var(--pos-rust)}

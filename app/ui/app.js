@@ -340,7 +340,7 @@ function fmtAt(secs) {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
 }
 // Denial outcomes (kernel words them 'read not granted' / 'write not granted').
-function isDenied(r) { return /not granted/.test(r.outcome); }
+function isDenied(r) { return /not granted|refused/.test(r.outcome); }
 function traceShown(r) {
   if (traceFilter === "all") return true;
   if (traceFilter === "unknown") return window.ProjectOSEditorState.needsReconciliation(r) || r.outcome === "outcome-unknown";

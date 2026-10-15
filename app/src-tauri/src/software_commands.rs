@@ -76,7 +76,7 @@ pub fn software_review(worktree_id: String, state: State<AppState>) -> Result<Pa
         Err(error)=>{record(&mut inner,"ReviewPatch",&worktree_id,&head,None,vec![],REVIEW_SCOPE,"refused",Some("patch review refused"))?;return Err(error)}
     };
     let paths=review.files.iter().map(|file|file.path.clone()).collect();
-    record(&mut inner,"ReviewPatch",&review.id,&review.base_head,Some(&review.content_hash),paths,REVIEW_SCOPE,"reviewed",None)?;
+    record(&mut inner,"ReviewPatch",&review.worktree_id,&review.base_head,Some(&review.content_hash),paths,REVIEW_SCOPE,"reviewed",None)?;
     Ok(review)
 }
 
@@ -86,8 +86,11 @@ pub async fn software_export_review(review_id: String, content_hash: String, sta
     let (project_uuid,binding) = {
         let mut inner = locked(&state)?;
         if let Err(error)=broker(&mut inner)?.export_review(&review_id, &content_hash) {
-            let head=broker(&mut inner)?.inspect().map(|repo|repo.head).unwrap_or_else(|_|"unknown".into());
-            record(&mut inner,"ExportPatch",&run_id,&head,Some(&content_hash),vec![],EXPORT_SCOPE,"refused",Some("review revalidation refused"))?;
+            let binding=broker(&mut inner)?.review_binding(&review_id).ok();
+            let head=binding.as_ref().map(|review|review.base_head.clone()).unwrap_or_else(||"unknown".into());
+            let run=binding.as_ref().map(|review|review.worktree_id.as_str()).unwrap_or(&run_id);
+            let paths=binding.as_ref().map(|review|review.files.iter().map(|file|file.path.clone()).collect()).unwrap_or_default();
+            record(&mut inner,"ExportPatch",run,&head,Some(&content_hash),paths,EXPORT_SCOPE,"refused",Some("review revalidation refused"))?;
             return Err(error)
         }
         let binding=broker(&mut inner)?.review_binding(&review_id)?;
@@ -97,22 +100,42 @@ pub async fn software_export_review(review_id: String, content_hash: String, sta
     let Some(destination) = destination else {
         let mut inner=locked(&state)?;
         let paths=binding.files.iter().map(|file|file.path.clone()).collect();
-        record(&mut inner,"ExportPatch",&run_id,&binding.base_head,Some(&content_hash),paths,EXPORT_SCOPE,"cancelled",None)?;
+        record(&mut inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(&content_hash),paths,EXPORT_SCOPE,"cancelled",None)?;
         return Ok(None)
     };
     let mut inner = locked(&state)?;
     if inner.workspace.as_ref().map(|w| w.project.envelope.project_uuid) != Some(project_uuid) { return Err("The project changed. Review this patch again.".into()); }
     // Revalidate after the dialog: external changes while it was open invalidate export.
-    let patch = broker(&mut inner)?.export_review(&review_id, &content_hash)?;
-    if destination.extension().and_then(|s| s.to_str()) != Some("patch") { return Err("Choose a new file ending in .patch.".into()); }
+    export_to(&mut inner,&binding,&content_hash,&destination)?;
+    Ok(Some(destination.to_string_lossy().into_owned()))
+}
+
+/// Native-owned export path, shared by the dialog command and fault-injection tests.
+/// This helper is deliberately not exposed as a Tauri command.
+pub(crate) fn export_to(inner:&mut Inner,binding:&PatchReview,content_hash:&str,destination:&std::path::Path)->Result<(),String> {
+    let paths=binding.files.iter().map(|file|file.path.clone()).collect::<Vec<_>>();
+    let patch=match broker(inner)?.export_review(&binding.id,content_hash) {
+        Ok(patch)=>patch,
+        Err(error)=>{record(inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(content_hash),paths,EXPORT_SCOPE,"refused",Some("review revalidation refused"))?;return Err(error)}
+    };
+    if destination.extension().and_then(|s|s.to_str())!=Some("patch") {
+        record(inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(content_hash),paths,EXPORT_SCOPE,"refused",Some("patch extension required"))?;
+        return Err("Choose a new file ending in .patch.".into())
+    }
     // Never overwrite a source, existing export or a symlink through this operation.
     use std::io::Write;
-    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&destination).map_err(|_| "Choose a new patch filename; existing files are preserved.")?;
-    file.write_all(patch.as_bytes()).and_then(|_| file.sync_all()).map_err(|_| "Patch export failed; inspect the partial export before trying again.")?;
-    let paths=binding.files.iter().map(|file|file.path.clone()).collect();
-    if let Err(error)=record(&mut inner,"ExportPatch",&run_id,&binding.base_head,Some(&content_hash),paths,EXPORT_SCOPE,"exported",None) {
+    let mut file=match std::fs::OpenOptions::new().write(true).create_new(true).open(destination) {
+        Ok(file)=>file,
+        Err(_)=>{record(inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(content_hash),paths,EXPORT_SCOPE,"refused",Some("destination unavailable or already exists"))?;return Err("Choose a new patch filename; existing files are preserved.".into())}
+    };
+    if file.write_all(patch.as_bytes()).and_then(|_|file.sync_all()).is_err() {
+        inner.software_receipt_blocked=true;
+        let receipt=record(inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(content_hash),paths,EXPORT_SCOPE,"outcome-unknown",Some("partial export requires inspection"));
+        return Err(format!("Patch export may be partial; inspect the destination before continuing. Do not repeat export blindly.{}",if receipt.is_err(){" Its failure receipt could not be saved."}else{""}));
+    }
+    if let Err(error)=record(inner,"ExportPatch",&binding.worktree_id,&binding.base_head,Some(content_hash),paths,EXPORT_SCOPE,"exported",None) {
         inner.software_receipt_blocked=true;
         return Err(format!("Patch written, but its receipt could not be saved: {error}. Do not repeat export blindly."));
     }
-    Ok(Some(destination.to_string_lossy().into_owned()))
+    Ok(())
 }
