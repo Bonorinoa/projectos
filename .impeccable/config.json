@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "files": [
+          "app/ui/index.html"
+        ],
+        "createdAt": "2026-10-15T21:41:33.859Z",
+        "reason": "Recorded owner decision: design/DECISION-canvas-visual-language.md locks Synodos Field and Geist/Space Mono; this checkpoint preserves that identity."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "app/ui/index.html"
+        ],
+        "createdAt": "2026-10-15T21:41:33.947Z",
+        "reason": "Recorded owner decision: design/DECISION-canvas-visual-language.md locks the sand field and deep-teal ink palette; no new palette round is in scope."
+      }
+    ]
+  }
+}

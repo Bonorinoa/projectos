@@ -40,6 +40,9 @@ toolchains/
 # --- codebase-memory artifacts ---
 .codebase-memory/
 
+# --- design-linter runtime cache (config.json stays tracked) ---
+.impeccable/hook.cache.json
+
 # --- spike runtime noise ---
 spikes/**/work/
 spikes/gate-c/build/

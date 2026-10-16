@@ -1,0 +1,202 @@
+[[receipts]]
+id = "software-449e5034-dc72-487d-bd4b-79d7b712cb1a"
+at = 1792022860
+operation = "CreateWorktree"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "fbeca397-2ce9-4129-8ce4-9e8f18900789"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["canonical.read", "git.inspect", "git.worktree.create"]
+outcome = "staged"
+
+[[receipts]]
+id = "software-fa6516d8-2961-461d-b137-eb480f1e4731"
+at = 1792022937
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "fbeca397-2ce9-4129-8ce4-9e8f18900789"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "refused"
+failure = "patch review refused"
+
+[[receipts]]
+id = "software-c92fc02f-381c-44dd-b7d6-1cb98e51b9a6"
+at = 1792022947
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "fbeca397-2ce9-4129-8ce4-9e8f18900789"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "refused"
+failure = "patch review refused"
+
+[[receipts]]
+id = "software-05853162-8aef-4a1c-8712-be1b3bbc714b"
+at = 1792022954
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "fbeca397-2ce9-4129-8ce4-9e8f18900789"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "refused"
+failure = "patch review refused"
+
+[[receipts]]
+id = "software-c71b349c-ceb9-49b3-ba69-d2560222b19c"
+at = 1792022965
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "060650d2-61d2-4704-aaec-8fe9817aa6f1"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md"]
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "reviewed"
+
+[[receipts]]
+id = "software-6b4f735d-4fcf-4a73-871b-ee30e70ac7cf"
+at = 1792022982
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "be10887d-ba71-4f8b-ac68-ea6e107ac008"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md"]
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "exported"
+
+[[receipts]]
+id = "software-2dd83306-bc51-4ac0-bbca-cc91def52573"
+at = 1792099033
+operation = "CreateWorktree"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "de02f379-9a9b-4d3c-b2b9-1669721e4f7c"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["canonical.read", "git.inspect", "git.worktree.create"]
+outcome = "staged"
+
+[[receipts]]
+id = "software-50d9a19b-efd4-4e9a-9094-b11db0e896d8"
+at = 1792099082
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "de02f379-9a9b-4d3c-b2b9-1669721e4f7c"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md"]
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "reviewed"
+
+[[receipts]]
+id = "software-ac6fd5c6-cc07-4a5d-95b9-49577cb344f1"
+at = 1792099096
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "00439996-606a-49b3-a4ef-7213af53f423"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = []
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "refused"
+failure = "review revalidation refused"
+
+[[receipts]]
+id = "software-c4ffdf92-bd8d-4151-8a5b-901fec64a1de"
+at = 1792099105
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "de02f379-9a9b-4d3c-b2b9-1669721e4f7c"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md"]
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "reviewed"
+
+[[receipts]]
+id = "software-01ac88e7-0519-4c27-9eac-7a936af63665"
+at = 1792099146
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "de02f379-9a9b-4d3c-b2b9-1669721e4f7c"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md"]
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "exported"
+
+[[receipts]]
+id = "software-df479e09-494d-4129-b729-ec74411a131e"
+at = 1792099821
+operation = "CreateWorktree"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "0f69954f-9759-44d1-9de9-f34dfcc67825"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = []
+capability_scope = ["canonical.read", "git.inspect", "git.worktree.create"]
+outcome = "staged"
+
+[[receipts]]
+id = "software-14d24029-767d-4541-9e8e-fc6562eab578"
+at = 1792099872
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "0f69954f-9759-44d1-9de9-f34dfcc67825"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md", "research/source-ledger.md", "research/treg-keywords-phoenix-attempt.json"]
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "reviewed"
+
+[[receipts]]
+id = "software-e71c733e-0af9-48b7-8cd0-7478b7bac7ab"
+at = 1792099894
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "0f69954f-9759-44d1-9de9-f34dfcc67825"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md", "research/source-ledger.md", "research/treg-keywords-phoenix-attempt.json"]
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "exported"
+
+[[receipts]]
+id = "software-6c2196ce-ab2a-4a98-bcfa-4ced9a2470ac"
+at = 1792099920
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "13ab0aba-9669-47c9-9ae9-d852acab4778"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+changed_paths = []
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "refused"
+failure = "review revalidation refused"
+
+[[receipts]]
+id = "software-d311dfa0-eeb3-4d76-b2f4-94856b4de833"
+at = 1792099947
+operation = "ReviewPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "0f69954f-9759-44d1-9de9-f34dfcc67825"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md", "research/source-ledger.md", "research/treg-keywords-phoenix-attempt.json"]
+capability_scope = ["staged.read", "diff.generate", "hash.bind"]
+outcome = "reviewed"
+
+[[receipts]]
+id = "software-614432db-7a02-4e0e-b5a7-49775c6cbed1"
+at = 1792099958
+operation = "ExportPatch"
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+run_id = "0f69954f-9759-44d1-9de9-f34dfcc67825"
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+review_hash = "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2"
+changed_paths = ["drafts/01-heat-after-sunset.md", "outline.md", "research/source-ledger.md", "research/treg-keywords-phoenix-attempt.json"]
+capability_scope = ["review.revalidate", "patch.export"]
+outcome = "exported"

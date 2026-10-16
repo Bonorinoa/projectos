@@ -1,5 +1,7 @@
 # ProjectOS
 
+> **Frozen 2026-10-15** at tag [`checkpoint-2026-10-15`](https://github.com/Bonorinoa/projectos/tree/checkpoint-2026-10-15); the repository is archived (read-only) while the owner works on other priorities. State: [`docs/CHECKPOINT-2026-10-15.md`](docs/CHECKPOINT-2026-10-15.md) · Resume on a clean machine: [`docs/RESUME-FROM-CLONE.md`](docs/RESUME-FROM-CLONE.md).
+
 A local-first desktop operating environment for long-lived creative and technical projects — a Tauri app with a trusted Rust kernel that adds structure, provenance, and approval-gated AI assistance to ordinary folders, without replacing the files themselves as the authority.
 
 ## What problem does it solve?

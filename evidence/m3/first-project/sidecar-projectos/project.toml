@@ -1,0 +1,6 @@
+project_uuid = "e9d8e555-4c7b-4bc0-85cf-7b55fd2056e4"
+declared_type = "software"
+content_roots = []
+schema_version = 1
+engine_version = "0.0.1"
+export_version = "0.0.1"

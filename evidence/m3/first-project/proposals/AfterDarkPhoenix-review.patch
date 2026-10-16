@@ -1,0 +1,264 @@
+diff --git "a/drafts/01-heat-after-sunset.md" "b/drafts/01-heat-after-sunset.md"
+new file mode 100644
+--- /dev/null
++++ "b/drafts/01-heat-after-sunset.md"
+@@ -0,0 +1,54 @@
++# Heat After Sunset
++
++*A first sourced article proposal for After Dark Phoenix*
++
++Sunset is an unreliable promise in Phoenix. The sun drops behind the horizon, the light softens, and the official high temperature recedes into the day’s record. Yet the heat stored in asphalt, roofs, walls, and parking lots does not obey the clock. It moves back into the air. Air conditioners push more heat outdoors. A neighborhood with little vegetation can remain exposed long after a greener place begins to cool.
++
++That uneven release of heat is the subject of this project. After Dark Phoenix starts with a narrow question: who gets meaningful relief after sunset, and who does not? It is not yet a neighborhood ranking or a definitive heat map. It is a proposal for civic research that treats the nighttime low as infrastructure—something shaped by design, investment, access, and political choices, not merely by weather.
++
++## The heat that stays
++
++The *Greater Phoenix Heat Action Planning Guide*, produced through a partnership that included Arizona State University, the Maricopa County Department of Public Health, The Nature Conservancy, and community organizations, describes an urban heat island that is especially consequential at night. Under some conditions, the guide says, Phoenix and Mesa city centers can be more than 10°F warmer than the edges of those cities. The phrase “under some conditions” matters: this is not a fixed difference at every location or hour. It is evidence that metropolitan averages can hide the geography of relief. [1]
++
++The same guide says temperature differences can appear across only a few blocks. It describes areas without green space as about 5°F warmer than parks rich in plants and trees. That comparison should not be generalized to every park or street. It does make the physical point concrete: two residents under the same regional forecast may inhabit different thermal landscapes. [1]
++
++The long-run trend makes the nighttime question harder to ignore. The guide reports that Phoenix’s average nighttime low rose 17°F over 90 years, while the average daytime high rose 4°F. That striking comparison remains attributed here to the guide; a later research sprint should locate and reproduce the underlying station analysis before treating it as independently verified. Even with that caution, the planning document’s emphasis is clear. In a hot city, the disappearance of overnight recovery is its own public problem. [1]
++
++## A city of different thermal landscapes
++
++“Urban heat island” can sound like one blanket spread over a whole city. The local evidence points instead to a patchwork. Dark, impervious surfaces absorb solar energy. Building form can limit air movement. Sparse tree canopy removes shade and evapotranspiration. Traffic and mechanical cooling add waste heat. The result changes with season, hour, wind, land cover, and the temperature variable being measured.
++
++Those distinctions are not academic housekeeping. A daytime satellite surface temperature is not the same measurement as the nighttime air temperature a person experiences at a bus stop or in a bedroom. A single image can reveal spatial patterns but cannot establish a durable neighborhood hierarchy. A responsible public account therefore needs to state its time window, spatial resolution, measurement type, and uncertainty before labeling any area “hottest.”
++
++Two public GitHub projects offer useful implementation ideas without supplying authoritative facts for this article. One demonstrates a QGIS workflow that combines Landsat 8 imagery, vegetation and built-up indices, thermal conversion, and zonal summaries. Its own README flags limits including 30-meter resolution, mid-morning acquisition, and a single observation day. Another sketches a Streamlit and PostgreSQL dashboard joining satellite, weather, air-quality, and urban-feature data. These are patterns to reproduce and test—not evidence to quote. [3][4]
++
++## Inequality is also infrastructure
++
++The planning guide grounds its regional discussion in work with three communities: Edison-Eastlake in Phoenix, the Mesa Care neighborhood, and Lindo Park–Roesley Park. The selection considered relatively high surface temperatures, lower vegetation, exposure in public spaces and along transit, histories of heat illness or death, community readiness, and active local projects. That is a multidimensional definition of vulnerability. It connects physical exposure to the ability to act. [1]
++
++Residents and local organizations in the planning process identified priorities including shade, safer routes, coping resources, education, and community capacity. The details varied by place. This was not a representative survey of every Phoenix neighborhood, so it should not be reported as a universal ranking of public preferences. Its value is different: it shows that a technically sound heat strategy can still fail if it ignores the routes people walk, the stops where they wait, the homes they can afford to cool, and the institutions they trust. [1]
++
++That is why “inequity” cannot be reduced to a colored map. Tree canopy, reflective materials, shade structures, reliable transit, home energy costs, and accessible public facilities all influence whether nighttime heat becomes a prolonged exposure. So do tenancy, language, disability, age, outdoor work, and social isolation. The first version of After Dark Phoenix will not pretend to quantify all of these at once. It will define each claim, attach it to a source, and keep unsupported conclusions visibly open.
++
++## What people search for—and what they do not
++
++Search data can help an editor learn how a public question is phrased, but it is not a thermometer and not a measure of need. A Treg retrieval of U.S.-level Google Ads keyword metrics returned an average monthly search volume of 40 for “urban heat island Phoenix” and 70 for “Phoenix cooling centers.” Three other approved phrases—“Phoenix overnight heat,” “Phoenix heat inequity,” and “nighttime heat Phoenix”—returned `null`, not zero. The only accurate statement is that the provider returned no reportable metric for those phrases in this dataset. [2]
++
++These values are national, not Phoenix-only, and they were retrieved on one date. They do not tell us which residents face the greatest burden, whether a cooling center operates overnight, or whether searchers found usable help. They do suggest two recognizable entry points for public communication: the urban heat island as an explanatory concept, and cooling centers as a practical resource. A good civic project can use that signal without confusing visibility with importance.
++
++## What trustworthy research should build next
++
++The next phase should combine four kinds of evidence. First, institutional sources should establish definitions, historical context, and current public programs. Second, time-aware temperature data should distinguish surface from air temperature and daytime heat from overnight relief. Third, resident knowledge should identify exposures that a sensor or satellite misses. Fourth, every published claim should carry its provenance and uncertainty.
++
++The workflow matters too. Raw provider responses should remain available beside a human-readable source ledger. Analyses should record their date, geography, resolution, and transformations. Draft changes should arrive as reviewable patches rather than silent edits to the canonical project. When evidence cannot support a neighborhood comparison, the project should say so plainly.
++
++Several concrete questions remain open. Which authoritative, current datasets can measure nighttime air temperature at useful spatial and temporal resolution? How should the project describe heat exposure without stigmatizing neighborhoods? What public facilities are actually accessible after ordinary daytime hours? Which interventions deliver cooling where residents already travel and gather? Answering those questions requires more than a dashboard. It requires a compact public research practice that residents can audit.
++
++Phoenix has learned to organize much of daily life around the daytime high. But the hours after sunset determine whether bodies, homes, and neighborhoods can recover before heat returns. If overnight relief were treated as essential neighborhood infrastructure, what would the city measure, build, and fund differently?
++
++## Sources
++
++1. *Greater Phoenix Heat Action Planning Guide*, Arizona State University, Maricopa County Department of Public Health, The Nature Conservancy, and community partners: https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf
++2. After Dark Phoenix Treg keyword response and source ledger: `research/treg-keywords.json` and `research/source-ledger.md` (retrieved 2026-10-14).
++3. `ProgressMomoh/Geospatial-Analysis-of-Urban-Heat-Island-UHI-Vulnerability-in-Phoenix-AZ`, pinned README blob `8beee745ca2f9f6cb0ea78278cb5231d347b8cf6` (implementation example only).
++4. `PYN17/Urban_Heat_Island_Effect`, pinned README blob `6f48406fc9cfb89bcabefa99764cd36e22c26ec5` (implementation example only).
+diff --git "a/outline.md" "b/outline.md"
+--- "a/outline.md"
++++ "b/outline.md"
+@@ -1,28 +1,29 @@
+-# “Heat After Sunset” outline
+-
+-**Status:** Research assembled; drafting not started in the canonical checkout.
+-
+-## 1. The heat that stays
+-
+-Open at sunset, when daytime heat has not translated into equal nighttime relief. Establish that the institutional planning guide describes Phoenix’s urban core as especially warmer at night and reports block-scale differences.
+-
+-## 2. A city made of different thermal landscapes
+-
+-Explain how surfaces, building arrangement, vegetation, vehicles, and air-conditioning exhaust shape local heat. Carefully separate documented citywide patterns from neighborhood-specific conclusions that need additional measurement.
+-
+-## 3. Inequality is also infrastructure
+-
+-Use the planning process in Edison-Eastlake, Mesa Care, and Lindo Park–Roesley Park to show why transit routes, shade, public space, and community capacity matter. Present resident priorities as local evidence, not a universal ranking of neighborhoods.
+-
+-## 4. What people search for—and what they do not
+-
+-Report the Treg keyword results as an editorial-discovery signal: two seeds returned measurable U.S. volume; three returned no reportable metric. Explain why this is not a measure of heat burden.
+-
+-## 5. What a trustworthy civic heat project should build next
+-
+-Propose a reproducible, local-first evidence workflow: institutional sources, time-aware temperature data, resident knowledge, explicit uncertainty, and reviewable patches. Mention the pinned GitHub repositories only as implementation examples for geospatial and dashboard approaches.
+-
+-## 6. End with a public question
+-
+-Ask what Phoenix would measure and fund if overnight relief—not only daytime highs—were treated as essential neighborhood infrastructure.
+-
++# “Heat After Sunset” outline
++
++**Status:** First sourced draft completed in the isolated review worktree; the canonical checkout remains unchanged.
++
++## 1. The heat that stays
++
++Open at sunset, when daytime heat has not translated into equal nighttime relief. Establish that the institutional planning guide describes Phoenix’s urban core as especially warmer at night and reports block-scale differences.
++
++## 2. A city made of different thermal landscapes
++
++Explain how surfaces, building arrangement, vegetation, vehicles, and air-conditioning exhaust shape local heat. Carefully separate documented citywide patterns from neighborhood-specific conclusions that need additional measurement.
++
++## 3. Inequality is also infrastructure
++
++Use the planning process in Edison-Eastlake, Mesa Care, and Lindo Park–Roesley Park to show why transit routes, shade, public space, and community capacity matter. Present resident priorities as local evidence, not a universal ranking of neighborhoods.
++
++## 4. What people search for—and what they do not
++
++Report the Treg keyword results as an editorial-discovery signal: two seeds returned measurable U.S. volume; three returned no reportable metric. Explain why this is not a measure of heat burden.
++
++## 5. What a trustworthy civic heat project should build next
++
++Propose a reproducible, local-first evidence workflow: institutional sources, time-aware temperature data, resident knowledge, explicit uncertainty, and reviewable patches. Mention the pinned GitHub repositories only as implementation examples for geospatial and dashboard approaches.
++
++## 6. End with a public question
++
++Ask what Phoenix would measure and fund if overnight relief—not only daytime highs—were treated as essential neighborhood infrastructure.
++
++Research gate: the Phoenix-specific keyword correction was approved for $0.09 on 2026-10-15, but Treg refused it without charge because DataForSEO capacity was unavailable. The national metrics remain explicitly national; do not present them as Phoenix-only demand. See the staged source ledger and raw refusal.
+diff --git "a/research/source-ledger.md" "b/research/source-ledger.md"
+--- "a/research/source-ledger.md"
++++ "b/research/source-ledger.md"
+@@ -1,41 +1,50 @@
+-# Source ledger
+-
+-Retrieved 2026-10-14. Costs are settled Treg charges, not provider-body estimates.
+-
+-## Treg calls
+-
+-| Endpoint | Retrieval time (UTC) | Query/input | Settled cost | Call ID | Result |
+-|---|---:|---|---:|---|---|
+-| `dataforseo.google.serp.organic` | 2026-10-14T23:47:43Z | `Phoenix overnight heat urban heat island neighborhoods`; `Phoenix,Arizona,United States`; `en`; depth 10 | $0.002 | `18f50fb758f3464dab12eba7450f8428` | 9 organic results |
+-| `dataforseo.google.keywords.volume` | 2026-10-14T23:48:00Z | Five approved seeds; United States (`2840`); `en` | $0.090 | `9517eb5b0aaf441cb004e631a67c9880` | 5 rows; 2 with reported volume |
+-
+-The first SERP attempt used `Phoenix, Arizona, United States`; the provider returned `Invalid Field: location_name` and Treg charged $0 (`d14740bc458347c3bea1b8c5819329c9`). It was not replayed unchanged. The corrected provider spelling received a new idempotency key.
+-
+-## Claim ledger
+-
+-| Claim or use | Source URL | Source type | Support status | Notes |
+-|---|---|---|---|---|
+-| Phoenix and Mesa city centers can be more than 10°F hotter than city edges under some conditions, especially at night. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide produced with Arizona State University, Maricopa County Department of Public Health, The Nature Conservancy, and community partners | **Supported** | Guide pp. 6–7; discovered as the first organic Treg result. Phrase carefully as conditional, not a constant citywide difference. |
+-| Temperature differences can occur across a few blocks; areas without green space are described as about 5°F warmer than parks with abundant plants and trees. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported** | Guide p. 6. Do not imply this exact contrast holds at every place or hour. |
+-| The guide reports that Phoenix average nighttime lows increased 17°F over 90 years, compared with a 4°F rise in average daytime highs. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported as reported by the guide** | Guide p. 8. Retain attribution; a future sprint should trace the underlying station analysis before treating this as independently reproduced. |
+-| Three selected communities had relatively high surface temperatures, lower vegetation, public-space/transit exposure, and histories of heat illness or death. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported** | Guide pp. 10–11. The selection process also considered community readiness and active projects. |
+-| Residents across the three planning areas prioritized shade, safer routes, coping resources, education, and local capacity, with solutions differing by neighborhood. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Participatory institutional planning guide | **Supported** | Guide pp. 4–5. Present as findings from this process, not a representative citywide survey. |
+-| “Urban heat island Phoenix” has 40 average monthly U.S. searches and “Phoenix cooling centers” has 70. | `research/treg-keywords.json` | DataForSEO Google Ads keyword metrics via Treg | **Supported for the retrieved dataset** | Values are U.S.-level, retrieved 2026-10-14, not Phoenix-only demand. |
+-| The other three seed phrases have zero demand. | `research/treg-keywords.json` | DataForSEO via Treg | **Uncertain / not supported** | The provider returned `null`, not zero. Say “no reportable metric returned.” |
+-| Phoenix heat burden can be ranked neighborhood-by-neighborhood from the current research. | — | — | **Uncertain / not supported** | Requires a defined temperature variable, time window, spatial resolution, and authoritative current dataset. |
+-| Cooling-center availability matches overnight need. | — | — | **Uncertain / not supported** | Requires current hours, access rules, transit, and overnight-operation data. Do not assert in the first draft. |
+-
+-## GitHub implementation examples — not authoritative evidence
+-
+-| Repository | Pinned README blob | Useful implementation idea | Evidence boundary |
+-|---|---|---|---|
+-| `ProgressMomoh/Geospatial-Analysis-of-Urban-Heat-Island-UHI-Vulnerability-in-Phoenix-AZ` | `8beee745ca2f9f6cb0ea78278cb5231d347b8cf6` | QGIS workflow combining Landsat 8, NDVI/NDBI, thermal conversion, city boundaries, and zonal summaries; README explicitly notes 30 m resolution, mid-morning timing, and single-day limits. | Student/project README; none of its numeric findings support article claims without reproducing and validating the analysis. |
+-| `PYN17/Urban_Heat_Island_Effect` | `6f48406fc9cfb89bcabefa99764cd36e22c26ec5` | Streamlit/PostgreSQL pattern for joining satellite, weather, air-quality, and urban-feature tables with interactive filters. | Implementation sketch; data provenance and calculations are not established in the README. |
+-
+-## SERP-discovered leads not yet promoted to authority
+-
+-- KJZZ report: https://www.kjzz.org/news/2024-07-10/heres-how-much-hotter-the-urban-heat-island-effect-makes-metro-phoenix
+-- Transportation Research Board project record: https://rip.trb.org/View/1987458
+-
+-These may guide follow-up, but the first draft does not rely on their snippets for factual claims.
+-
++# Source ledger
++
++Retrieved 2026-10-14. Costs are settled Treg charges, not provider-body estimates.
++
++## Treg calls
++
++| Endpoint | Retrieval time (UTC) | Query/input | Settled cost | Call ID | Result |
++|---|---:|---|---:|---|---|
++| `dataforseo.google.serp.organic` | 2026-10-14T23:47:43Z | `Phoenix overnight heat urban heat island neighborhoods`; `Phoenix,Arizona,United States`; `en`; depth 10 | $0.002 | `18f50fb758f3464dab12eba7450f8428` | 9 organic results |
++| `dataforseo.google.keywords.volume` | 2026-10-14T23:48:00Z | Five approved seeds; United States (`2840`); `en` | $0.090 | `9517eb5b0aaf441cb004e631a67c9880` | 5 rows; 2 with reported volume |
++
++The first SERP attempt used `Phoenix, Arizona, United States`; the provider returned `Invalid Field: location_name` and Treg charged $0 (`d14740bc458347c3bea1b8c5819329c9`). It was not replayed unchanged. The corrected provider spelling received a new idempotency key.
++
++## Claim ledger
++
++| Claim or use | Source URL | Source type | Support status | Notes |
++|---|---|---|---|---|
++| Phoenix and Mesa city centers can be more than 10°F hotter than city edges under some conditions, especially at night. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide produced with Arizona State University, Maricopa County Department of Public Health, The Nature Conservancy, and community partners | **Supported** | Guide pp. 6–7; discovered as the first organic Treg result. Phrase carefully as conditional, not a constant citywide difference. |
++| Temperature differences can occur across a few blocks; areas without green space are described as about 5°F warmer than parks with abundant plants and trees. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported** | Guide p. 6. Do not imply this exact contrast holds at every place or hour. |
++| The guide reports that Phoenix average nighttime lows increased 17°F over 90 years, compared with a 4°F rise in average daytime highs. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported as reported by the guide** | Guide p. 8. Retain attribution; a future sprint should trace the underlying station analysis before treating this as independently reproduced. |
++| Three selected communities had relatively high surface temperatures, lower vegetation, public-space/transit exposure, and histories of heat illness or death. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Institutional planning guide | **Supported** | Guide pp. 10–11. The selection process also considered community readiness and active projects. |
++| Residents across the three planning areas prioritized shade, safer routes, coping resources, education, and local capacity, with solutions differing by neighborhood. | https://heathealth.info/wp-content/uploads/Greater-Phoenix-Heat-Action-Planning-Guide.pdf | Participatory institutional planning guide | **Supported** | Guide pp. 4–5. Present as findings from this process, not a representative citywide survey. |
++| “Urban heat island Phoenix” has 40 average monthly U.S. searches and “Phoenix cooling centers” has 70. | `research/treg-keywords.json` | DataForSEO Google Ads keyword metrics via Treg | **Supported for the retrieved dataset** | Values are U.S.-level, retrieved 2026-10-14, not Phoenix-only demand. |
++| The other three seed phrases have zero demand. | `research/treg-keywords.json` | DataForSEO via Treg | **Uncertain / not supported** | The provider returned `null`, not zero. Say “no reportable metric returned.” |
++| Phoenix heat burden can be ranked neighborhood-by-neighborhood from the current research. | — | — | **Uncertain / not supported** | Requires a defined temperature variable, time window, spatial resolution, and authoritative current dataset. |
++| Cooling-center availability matches overnight need. | — | — | **Uncertain / not supported** | Requires current hours, access rules, transit, and overnight-operation data. Do not assert in the first draft. |
++
++## GitHub implementation examples — not authoritative evidence
++
++| Repository | Pinned README blob | Useful implementation idea | Evidence boundary |
++|---|---|---|---|
++| `ProgressMomoh/Geospatial-Analysis-of-Urban-Heat-Island-UHI-Vulnerability-in-Phoenix-AZ` | `8beee745ca2f9f6cb0ea78278cb5231d347b8cf6` | QGIS workflow combining Landsat 8, NDVI/NDBI, thermal conversion, city boundaries, and zonal summaries; README explicitly notes 30 m resolution, mid-morning timing, and single-day limits. | Student/project README; none of its numeric findings support article claims without reproducing and validating the analysis. |
++| `PYN17/Urban_Heat_Island_Effect` | `6f48406fc9cfb89bcabefa99764cd36e22c26ec5` | Streamlit/PostgreSQL pattern for joining satellite, weather, air-quality, and urban-feature tables with interactive filters. | Implementation sketch; data provenance and calculations are not established in the README. |
++
++## SERP-discovered leads not yet promoted to authority
++
++- KJZZ report: https://www.kjzz.org/news/2024-07-10/heres-how-much-hotter-the-urban-heat-island-effect-makes-metro-phoenix
++- Transportation Research Board project record: https://rip.trb.org/View/1987458
++
++These may guide follow-up, but the first draft does not rely on their snippets for factual claims.
++
++## Phoenix keyword geography correction — blocked
++
++On 2026-10-15 the owner approved one additional $0.09 call to correct the original United States geography to `Phoenix,Arizona,United States`, with English and the same five seeds. This raises the authorized total ceiling to $0.182, not the settled cost.
++
++At 2026-10-15T21:27:26Z, `dataforseo.google.keywords.volume` returned HTTP 503 `provider_capacity_unavailable` (call `6c10ed59fe3f40d2a5105728b82149b0`). Treg explicitly reported no charge and capacity expected around 2026-10-15T22:04:31Z. Raw refusal: `research/treg-keywords-phoenix-attempt.json`. Settled research spend remains $0.092.
++
++The alternative catalog endpoints observed support national databases or require an unavailable own Google Ads account; none matches both Phoenix-city geography and English without new credentials. No silent fallback was made. The Phoenix-specific keyword requirement remains an external blocker, not completed research. The article's national figures are labeled national and must not be treated as Phoenix demand.
++
++Canonical parameters use recursively sorted object keys and array order preserved. The SHA256 of endpoint ID concatenated directly with canonical JSON was `eb00b5017d640eb574a12c3f3fae0b471cd4b907b0b520cd4e69752671fa8d90`. This was a known refusal, not an unknown-result retry; a genuinely new later call needs a new request identity while retaining this record.
+diff --git "a/research/treg-keywords-phoenix-attempt.json" "b/research/treg-keywords-phoenix-attempt.json"
+new file mode 100644
+--- /dev/null
++++ "b/research/treg-keywords-phoenix-attempt.json"
+@@ -0,0 +1,44 @@
++{
++  "retrieved_at": "2026-10-15T21:27:26Z",
++  "parameters": [
++    {
++      "keywords": [
++        "Phoenix overnight heat",
++        "urban heat island Phoenix",
++        "Phoenix heat inequity",
++        "nighttime heat Phoenix",
++        "Phoenix cooling centers"
++      ],
++      "language_code": "en",
++      "location_name": "Phoenix,Arizona,United States"
++    }
++  ],
++  "response": {
++    "call_id": "6c10ed59fe3f40d2a5105728b82149b0",
++    "status": 503,
++    "retry_after": null,
++    "endpoint_id": "dataforseo.google.keywords.volume",
++    "replayed": null,
++    "body": {
++      "detail": {
++        "error": "provider_capacity_unavailable",
++        "provider": "dataforseo",
++        "endpoint_id": "dataforseo.google.keywords.volume",
++        "resets_at": "2026-10-15T22:04:31.923633Z",
++        "alternatives": [
++          "serpstat.google.keywords.volume  ~$0.0005/call  (callable now on treg's key)",
++          "seranking.google.keywords.volume  ~$0.00179/call  (callable now on treg's key)",
++          "google-ads.google.keywords.volume  free  (needs your own google-ads credential)"
++        ],
++        "message": "treg's own dataforseo account is out of capacity right now — dataforseo.google.keywords.volume can't be served on treg's key until about 2026-10-15 22:04 UTC; nothing about your plan or balance changed and nothing was charged\n  treg retries the vendor about once a minute and lifts this as soon as it answers, so a retry later may succeed\nanother provider serves google.keywords.volume:\n  serpstat.google.keywords.volume  ~$0.0005/call  (callable now on treg's key)\n  seranking.google.keywords.volume  ~$0.00179/call  (callable now on treg's key)\n  google-ads.google.keywords.volume  free  (needs your own google-ads credential)\n  or use your own key: treg secret add dataforseo --env-var DATAFORSEO_API_KEY  (own keys are never affected)"
++      }
++    },
++    "cost_usd": null,
++    "served_via": null,
++    "whose_error": "treg",
++    "hint": null,
++    "did_you_mean": null,
++    "error": null,
++    "detail": null
++  }
++}

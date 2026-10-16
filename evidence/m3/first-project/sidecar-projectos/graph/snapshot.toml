@@ -1,0 +1,241 @@
+edges = []
+
+[objects.draft-3f15cf6f633a5d62]
+id = "draft-3f15cf6f633a5d62"
+kind = "Draft"
+label = "README.md"
+
+[objects.draft-3f15cf6f633a5d62.fields]
+path = "README.md"
+state = "saved draft"
+
+[objects.draft-9f2d483e991278f8]
+id = "draft-9f2d483e991278f8"
+kind = "Draft"
+label = "outline.md"
+
+[objects.draft-9f2d483e991278f8.fields]
+path = "outline.md"
+state = "saved draft"
+
+[objects.draft-f3b0f2455be5d5d6]
+id = "draft-f3b0f2455be5d5d6"
+kind = "Draft"
+label = "project-brief.md"
+
+[objects.draft-f3b0f2455be5d5d6.fields]
+path = "project-brief.md"
+state = "saved draft"
+
+[objects.draft-f426d8ac54059af5]
+id = "draft-f426d8ac54059af5"
+kind = "Draft"
+label = "research/source-ledger.md"
+
+[objects.draft-f426d8ac54059af5.fields]
+path = "research/source-ledger.md"
+state = "saved draft"
+
+[objects.software-01ac88e7-0519-4c27-9eac-7a936af63665]
+id = "software-01ac88e7-0519-4c27-9eac-7a936af63665"
+kind = "Receipt"
+label = "ExportPatch · exported"
+
+[objects.software-01ac88e7-0519-4c27-9eac-7a936af63665.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md"
+operation = "ExportPatch"
+outcome = "exported"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-05853162-8aef-4a1c-8712-be1b3bbc714b]
+id = "software-05853162-8aef-4a1c-8712-be1b3bbc714b"
+kind = "Receipt"
+label = "ReviewPatch · refused"
+
+[objects.software-05853162-8aef-4a1c-8712-be1b3bbc714b.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "ReviewPatch"
+outcome = "refused"
+review_hash = ""
+
+[objects.software-14d24029-767d-4541-9e8e-fc6562eab578]
+id = "software-14d24029-767d-4541-9e8e-fc6562eab578"
+kind = "Receipt"
+label = "ReviewPatch · reviewed"
+
+[objects.software-14d24029-767d-4541-9e8e-fc6562eab578.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md, research/source-ledger.md, research/treg-keywords-phoenix-attempt.json"
+operation = "ReviewPatch"
+outcome = "reviewed"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+
+[objects.software-2dd83306-bc51-4ac0-bbca-cc91def52573]
+id = "software-2dd83306-bc51-4ac0-bbca-cc91def52573"
+kind = "Receipt"
+label = "CreateWorktree · staged"
+
+[objects.software-2dd83306-bc51-4ac0-bbca-cc91def52573.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "CreateWorktree"
+outcome = "staged"
+review_hash = ""
+
+[objects.software-449e5034-dc72-487d-bd4b-79d7b712cb1a]
+id = "software-449e5034-dc72-487d-bd4b-79d7b712cb1a"
+kind = "Receipt"
+label = "CreateWorktree · staged"
+
+[objects.software-449e5034-dc72-487d-bd4b-79d7b712cb1a.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "CreateWorktree"
+outcome = "staged"
+review_hash = ""
+
+[objects.software-50d9a19b-efd4-4e9a-9094-b11db0e896d8]
+id = "software-50d9a19b-efd4-4e9a-9094-b11db0e896d8"
+kind = "Receipt"
+label = "ReviewPatch · reviewed"
+
+[objects.software-50d9a19b-efd4-4e9a-9094-b11db0e896d8.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md"
+operation = "ReviewPatch"
+outcome = "reviewed"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-614432db-7a02-4e0e-b5a7-49775c6cbed1]
+id = "software-614432db-7a02-4e0e-b5a7-49775c6cbed1"
+kind = "Receipt"
+label = "ExportPatch · exported"
+
+[objects.software-614432db-7a02-4e0e-b5a7-49775c6cbed1.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md, research/source-ledger.md, research/treg-keywords-phoenix-attempt.json"
+operation = "ExportPatch"
+outcome = "exported"
+review_hash = "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2"
+
+[objects.software-6b4f735d-4fcf-4a73-871b-ee30e70ac7cf]
+id = "software-6b4f735d-4fcf-4a73-871b-ee30e70ac7cf"
+kind = "Receipt"
+label = "ExportPatch · exported"
+
+[objects.software-6b4f735d-4fcf-4a73-871b-ee30e70ac7cf.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md"
+operation = "ExportPatch"
+outcome = "exported"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-6c2196ce-ab2a-4a98-bcfa-4ced9a2470ac]
+id = "software-6c2196ce-ab2a-4a98-bcfa-4ced9a2470ac"
+kind = "Receipt"
+label = "ExportPatch · refused"
+
+[objects.software-6c2196ce-ab2a-4a98-bcfa-4ced9a2470ac.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "ExportPatch"
+outcome = "refused"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+
+[objects.software-ac6fd5c6-cc07-4a5d-95b9-49577cb344f1]
+id = "software-ac6fd5c6-cc07-4a5d-95b9-49577cb344f1"
+kind = "Receipt"
+label = "ExportPatch · refused"
+
+[objects.software-ac6fd5c6-cc07-4a5d-95b9-49577cb344f1.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "ExportPatch"
+outcome = "refused"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-c4ffdf92-bd8d-4151-8a5b-901fec64a1de]
+id = "software-c4ffdf92-bd8d-4151-8a5b-901fec64a1de"
+kind = "Receipt"
+label = "ReviewPatch · reviewed"
+
+[objects.software-c4ffdf92-bd8d-4151-8a5b-901fec64a1de.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md"
+operation = "ReviewPatch"
+outcome = "reviewed"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-c71b349c-ceb9-49b3-ba69-d2560222b19c]
+id = "software-c71b349c-ceb9-49b3-ba69-d2560222b19c"
+kind = "Receipt"
+label = "ReviewPatch · reviewed"
+
+[objects.software-c71b349c-ceb9-49b3-ba69-d2560222b19c.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md"
+operation = "ReviewPatch"
+outcome = "reviewed"
+review_hash = "2b799fa5a917f5ce2b9c830650c96bdd1548df68228cd6b0f6c2128e127933f3"
+
+[objects.software-c92fc02f-381c-44dd-b7d6-1cb98e51b9a6]
+id = "software-c92fc02f-381c-44dd-b7d6-1cb98e51b9a6"
+kind = "Receipt"
+label = "ReviewPatch · refused"
+
+[objects.software-c92fc02f-381c-44dd-b7d6-1cb98e51b9a6.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "ReviewPatch"
+outcome = "refused"
+review_hash = ""
+
+[objects.software-d311dfa0-eeb3-4d76-b2f4-94856b4de833]
+id = "software-d311dfa0-eeb3-4d76-b2f4-94856b4de833"
+kind = "Receipt"
+label = "ReviewPatch · reviewed"
+
+[objects.software-d311dfa0-eeb3-4d76-b2f4-94856b4de833.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md, research/source-ledger.md, research/treg-keywords-phoenix-attempt.json"
+operation = "ReviewPatch"
+outcome = "reviewed"
+review_hash = "3a5f9d76a2a0fe79264d9e11bc4436cfc50299506a4f5af66f457d6613f4dcc2"
+
+[objects.software-df479e09-494d-4129-b729-ec74411a131e]
+id = "software-df479e09-494d-4129-b729-ec74411a131e"
+kind = "Receipt"
+label = "CreateWorktree · staged"
+
+[objects.software-df479e09-494d-4129-b729-ec74411a131e.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "CreateWorktree"
+outcome = "staged"
+review_hash = ""
+
+[objects.software-e71c733e-0af9-48b7-8cd0-7478b7bac7ab]
+id = "software-e71c733e-0af9-48b7-8cd0-7478b7bac7ab"
+kind = "Receipt"
+label = "ExportPatch · exported"
+
+[objects.software-e71c733e-0af9-48b7-8cd0-7478b7bac7ab.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = "drafts/01-heat-after-sunset.md, outline.md, research/source-ledger.md, research/treg-keywords-phoenix-attempt.json"
+operation = "ExportPatch"
+outcome = "exported"
+review_hash = "47c85bbc6e84c68aebdad88a8647c8ac3786dd88c638ca98f730d15708660a78"
+
+[objects.software-fa6516d8-2961-461d-b137-eb480f1e4731]
+id = "software-fa6516d8-2961-461d-b137-eb480f1e4731"
+kind = "Receipt"
+label = "ReviewPatch · refused"
+
+[objects.software-fa6516d8-2961-461d-b137-eb480f1e4731.fields]
+base_head = "6ff1b97f2b2672f739d91ddbedb863fd21c0ba39"
+changed_paths = ""
+operation = "ReviewPatch"
+outcome = "refused"
+review_hash = ""
